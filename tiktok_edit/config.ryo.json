@@ -1,0 +1,40 @@
+{
+  "url": "https://www.youtube.com/watch?v=6SdzK7E24_s",
+  "song": "input/lagu.mp3",
+  "song_start": "auto",
+  "drop_at": 9,
+  "output": "output/chou_ryo.mp4",
+
+  "layout": "ipad43",
+  "max_duration": 45,
+  "music_volume": 1.0,
+  "game_audio_volume": 0.15,
+
+  "transition": "whip",
+  "fx_from_drop": true,
+  "beat_zoom": 0.05,
+  "shake": 0,
+  "rgb_split": 0,
+  "flash": 0,
+  "saturation": 1.15,
+  "contrast": 1.05,
+
+  "caption": {
+    "text": "Bila enemy ingat Chou dah tak meta...",
+    "to": "drop",
+    "y": 0.42
+  },
+
+  "clips": [
+    {"start": "2:15:20", "until_drop": true},
+
+    {"start": "9:58:20", "beats": 2},
+    {"start": "4:07:45", "beats": 2},
+    {"image": "input/flex_history.jpg", "beats": 2},
+    {"image": "input/flex_title.jpg", "beats": 2, "transition": "zoom"},
+    {"image": "input/flex_profile.jpg", "beats": 2},
+    {"start": "6:31:10", "beats": 2},
+
+    {"start": "9:58:10", "beats": 16}
+  ]
+}

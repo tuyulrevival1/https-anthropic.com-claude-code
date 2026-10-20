@@ -12,6 +12,64 @@ dan tambah efek yang biasa ada dalam edit FYP:
 - output menegak: `ipad` 1080x1440 (3:4) atau `tiktok` 1080x1920 (9:16, latar blur)
 - panjang maksimum 58 saat (bawah 1 minit)
 
+## 🎯 Gaya edit @ryonsann (config.ryo.json)
+
+Hasil analisa 11 video terbaru @ryonsann (Ryo, yamadaツ, 294K follower, view 100K–585K):
+
+| Apa | Gaya Ryo | Dalam config |
+|---|---|---|
+| Saiz | **4:3 (960x720)**, macam skrin iPad, kadang 1:1 | `"layout": "ipad43"` (1440x1080) |
+| Hook | **Satu ayat meme di tengah skrin** (tulisan putih, outline nipis), kekal sampai lagu drop. Contoh: *"How it feels playing midlaner as a boy"*, *"Why do ppl still playing sun roam even after the nerf?"* | `"caption"` |
+| Awal video | **Satu gameplay panjang tanpa potong** (8–11 saat) masa lagu build-up | klip `"until_drop": true` |
+| Bila lagu drop | **Potong laju ikut beat** (1–2 beat setiap klip), peralihan **whip/swipe blur** | `"transition": "whip"`, `"beats": 2` |
+| Flex | Match history Victory/MVP, **"Legend Title – Global No. 1"**, profil | klip `"image"` (screenshot) |
+| Effect | Tak banyak: tiada shake, tiada RGB, tiada flash putih | `"shake": 0`, `"flash": 0` |
+| Panjang | 15–35 saat | `"max_duration": 45` |
+
+### Lagu yang Ryo selalu pakai (dikenal pasti dari audio video dia)
+
+| Lagu | Tempo | Video Ryo |
+|---|---|---|
+| **Toca Toca (Radio Edit)** – Fly Project | ~123 BPM | 572K view ⭐ paling sesuai untuk Chou |
+| **Hot N Cold** – Katy Perry | ~129 BPM | potong 9/9 tepat atas beat |
+| **Jane! (Hoodtrap)** – Qura & pipenpodol | ~96 BPM | banyak potongan laju |
+| **love nwantiti (ah ah ah)** – CKay | ~129 BPM | dipakai 2 kali |
+| **Luo Lei (Douyin Remix)** – DJ XS | ~117 BPM | 532K view |
+| **I'm God** – Clams Casino & Imogen Heap | ~108 BPM | gaya chill/flex |
+| **Skyfall (Slowed + Reverb)** – LustEcho | ~96 BPM | klip pendek 8 saat |
+
+Lagu montagem pun kena dengan gaya ni (Passo Bem Solto, Montagem Tomada, Sleepwalker).
+`"song_start": "auto"` cari sendiri bahagian **drop** dalam lagu dan susun supaya drop
+jatuh tepat masa gameplay panjang habis (`"drop_at": 9` saat). Lagu apa pun boleh.
+
+### Hook untuk FYP (pilih satu, letak dalam `caption.text`)
+
+- `Bila enemy ingat Chou dah tak meta...`
+- `Kenapa orang masih main Chou lepas kena nerf?`
+- `How it feels playing Chou at Global rank`
+- `POV: enemy 5 orang, Chou sorang`
+- `Bagaimana user Chou melihat enemy dengan sisa hp 1%`
+- `Chou main macam ni baru layak Global 1?`
+
+Hook yang bertanya / relate (bukan "SAVAGE!!") buat orang komen dan tengok sampai habis.
+
+### Cara guna
+
+```bash
+pip install -r requirements.txt deno
+# 1. letak lagu di input/lagu.mp3 (cadangan: Toca Toca)
+# 2. tukar "start" dalam config.ryo.json:
+#      klip pertama  = teamfight paling best (main 9 saat tanpa potong)
+#      klip 2 beat   = kill / combo pendek
+#      klip terakhir = savage / momen penutup
+# 3. (pilihan) screenshot flex: input/flex_history.jpg, flex_title.jpg, flex_profile.jpg
+#    (match history, gelaran Global, profil) - kalau tiada, klip tu dilangkau sendiri
+python3 edit.py fetch  config.ryo.json
+python3 edit.py render config.ryo.json   # hasil: output/chou_ryo.mp4
+```
+
+Nak menegak? Tukar `"layout"` kepada `"ipad"` (3:4) atau `"tiktok"` (9:16).
+
 ## ⚡ Cara cepat: edit live "PUSH GLOBAL 1 CHOU DUNIA" gaya Top Global
 
 Config siap pakai: `config.global.json` (layout TikTok 9:16, badge emas
@@ -101,6 +159,13 @@ Salin `config.example.json` ke `config.json`, tukar masa `start` ikut live awak.
 | `song_start` | mula lagu dari saat berapa (terus ke bahagian drop) |
 | `layout` | `ipad` (3:4) atau `tiktok` (9:16) |
 | `url` | link live YouTube (untuk `fetch`, ganti `source`) |
+| `song_start` | `"auto"` = cari drop lagu sendiri (guna dengan `drop_at`) |
+| `drop_at` | saat ke berapa dalam video lagu patut drop (default 9) |
+| `until_drop` | klip main terus tanpa potong sampai drop |
+| `image` | klip gambar/screenshot (gantikan `start`), zoom perlahan |
+| `transition` | `whip` (swipe blur), `zoom`, `flash` atau `none`; boleh set per klip |
+| `fx_from_drop` | `true` = zoom beat hanya selepas drop |
+| `caption` | ayat hook tengah skrin `{"text", "to": "drop", "y": 0.42}` |
 | `badge` | badge emas rank, contoh `{"title": "TOP 1 GLOBAL", "text": "CHOU"}` |
 
 ## 6. Render

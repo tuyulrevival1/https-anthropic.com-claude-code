@@ -31,8 +31,14 @@ FPS = 30
 LAYOUTS = {
     # name: (output size, gameplay area size inside it)
     "ipad": ((1080, 1440), (1080, 1440)),    # 3:4, full frame gameplay
+    "ipad43": ((1440, 1080), (1440, 1080)),  # 4:3 landscape (ryonsann style)
+    "square": ((1080, 1080), (1080, 1080)),  # 1:1
     "tiktok": ((1080, 1920), (1080, 1350)),  # 9:16, 4:5 gameplay on blurred bg
 }
+CAPTION_FONTS = [
+    "/usr/share/fonts/opentype/inter/Inter-SemiBold.otf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+]
 FONT_CANDIDATES = [
     "/usr/share/fonts/opentype/inter/Inter-ExtraBold.otf",
     "/usr/share/fonts/opentype/inter/InterDisplay-Bold.otf",
@@ -156,7 +162,10 @@ def clip_file(base, clip):
 def clip_window(clip):
     """Generous source span a clip can need (any tempo >= 90 BPM)."""
     beats = max(1, int(clip.get("beats", 4)))
-    return beats * (60 / 90) * float(clip.get("speed", 1.0)) + 2.0
+    span = beats * (60 / 90)
+    if clip.get("until_drop"):
+        span = max(span, float(clip.get("max_len", 14)))
+    return span * float(clip.get("speed", 1.0)) + 2.0
 
 
 def resolve_source(cfg, base, clip):
@@ -184,6 +193,8 @@ def cmd_fetch(args):
     fmt = cfg.get("format",
                   "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080]")
     for clip in cfg["clips"]:
+        if clip.get("image"):
+            continue
         out = clip_file(base, clip)
         if os.path.exists(out):
             print(f"  have {os.path.basename(out)}")
@@ -211,9 +222,39 @@ def cmd_fetch(args):
 
 # ----------------------------------------------------------------- beats
 
+def find_drop(song, drop_at):
+    """Song time (s) where the beat drops: biggest jump in loudness."""
+    import librosa
+    y, sr = librosa.load(song, sr=22050, mono=True, duration=150)
+    hop = 512
+    rms = librosa.feature.rms(y=y, hop_length=hop)[0]
+    fps = sr / hop
+    win = int(3 * fps)
+    k = np.ones(win) / win
+    after = np.convolve(rms, k, mode="full")[win - 1:]   # mean of next 3s
+    before = np.convolve(rms, k, mode="full")[:len(rms)]  # mean of last 3s
+    score = (after / (before + 1e-4)) * after
+    lo = int(max(drop_at, 3) * fps)
+    hi = max(lo + 1, len(rms) - win)
+    i = lo + int(np.argmax(score[lo:hi]))
+    t = i / fps
+    tempo, frames = librosa.beat.beat_track(y=y, sr=sr, hop_length=hop)
+    bt = librosa.frames_to_time(frames, sr=sr, hop_length=hop)
+    if len(bt):
+        t = float(bt[np.argmin(np.abs(bt - t))])
+    return t
+
+
 def get_beats(cfg, total):
     """Return (beat_times, is_strong) relative to edit start."""
     song = cfg.get("song")
+    if song and str(cfg.get("song_start", 0)).lower() == "auto":
+        drop_at = float(cfg.get("drop_at", 9))
+        d = find_drop(song, drop_at)
+        cfg["song_start"] = max(0.0, d - drop_at)
+        cfg["drop_at"] = d - cfg["song_start"]
+        print(f"Drop found at {d:.1f}s in the song -> song_start "
+              f"{cfg['song_start']:.2f}s, drop lands at {cfg['drop_at']:.2f}s")
     if song:
         import librosa
         y, sr = librosa.load(song, sr=22050, mono=True,
@@ -250,7 +291,12 @@ def plan_segments(cfg, beats):
     while idx < len(ext) and ext[idx] < 0.1:
         idx += 1
     for clip in cfg["clips"]:
-        idx += max(1, int(clip.get("beats", 4)))
+        if clip.get("until_drop") and cfg.get("drop_at") is not None:
+            # Run this clip uncut until the drop beat (ryonsann style).
+            j = int(np.argmin(np.abs(np.array(ext) - float(cfg["drop_at"]))))
+            idx = max(idx + 1, j + 1)
+        else:
+            idx += max(1, int(clip.get("beats", 4)))
         t1 = ext[idx - 1] if idx - 1 < len(ext) else ext[-1]
         if t1 > max_dur:
             t1 = max_dur
@@ -266,14 +312,20 @@ def plan_segments(cfg, beats):
 # ------------------------------------------------------------------ text
 
 def render_text(text, font_path, size, max_w, fill=(255, 255, 255),
-                stroke=(0, 0, 0)):
+                stroke=(0, 0, 0), stroke_w=None):
     """Return an RGBA numpy image of bold outlined text, word-wrapped."""
     font = (ImageFont.truetype(font_path, size) if font_path
             else ImageFont.load_default())
-    sw = max(3, size // 11)
+    sw = stroke_w if stroke_w is not None else max(3, size // 11)
     probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
     lines, cur = [], ""
-    for word in text.split():
+    for word in text.replace("\n", " \n ").split(" "):
+        if word == "\n":
+            lines.append(cur)
+            cur = ""
+            continue
+        if not word:
+            continue
         trial = (cur + " " + word).strip()
         if probe.textlength(trial, font=font) + 2 * sw > max_w and cur:
             lines.append(cur)
@@ -395,6 +447,38 @@ def rgb_split(frame, px):
     return cv2.merge([b, g, r])
 
 
+def transition(frame, kind, e, direction=1):
+    """Cut transition. e: 1 at the cut, fading to 0 (either side)."""
+    if e <= 0.01 or kind in (None, "none", "flash"):
+        return frame
+    h, w = frame.shape[:2]
+    if kind == "whip":
+        # Fast horizontal pan + motion blur, like a swipe.
+        dx = direction * e * w * 0.35
+        M = np.float32([[1, 0, dx], [0, 1, 0]])
+        frame = cv2.warpAffine(frame, M, (w, h), borderMode=cv2.BORDER_REFLECT)
+        k = int(2 + e * w * 0.12) | 1
+        return cv2.blur(frame, (k, 1))
+    if kind == "zoom":
+        s = 1 + 0.35 * e
+        M = cv2.getRotationMatrix2D((w / 2, h / 2), 0, s)
+        frame = cv2.warpAffine(frame, M, (w, h), borderMode=cv2.BORDER_REFLECT)
+        acc = frame.astype(np.float32)
+        for i in range(1, 4):  # cheap radial (zoom) blur
+            Mi = cv2.getRotationMatrix2D((w / 2, h / 2), 0, 1 + 0.04 * e * i)
+            acc += cv2.warpAffine(frame, Mi, (w, h),
+                                  borderMode=cv2.BORDER_REFLECT)
+        return (acc / 4).astype(np.uint8)
+    return frame
+
+
+def load_image(path, GW, GH):
+    img = cv2.imread(path)
+    if img is None:
+        sys.exit(f"Cannot read image {path}")
+    return img
+
+
 # ---------------------------------------------------------------- render
 
 def read_frames(src, start, span, speed, n, smooth):
@@ -425,6 +509,15 @@ def cmd_render(args):
     font = find_font(cfg.get("font"))
     random.seed(7)
 
+    # Screenshot clips are optional: skip any image that is not there yet.
+    kept = []
+    for c in cfg["clips"]:
+        if c.get("image") and not os.path.exists(path(c["image"])):
+            print(f"  (skip {c['image']}: file not found)")
+            continue
+        kept.append(c)
+    cfg["clips"] = kept
+
     max_dur = float(cfg.get("max_duration", 58))
     beats, strong = get_beats(cfg, max_dur)
     segs = plan_segments(cfg, beats)
@@ -438,6 +531,14 @@ def cmd_render(args):
                if b < total]
     strong_ev = [(b, 1.0) for b, st in zip(beats, strong) if st and b < total]
     flash_ev = [(c, 1.0) for c in cuts]
+    # Optionally keep the build-up clean and only hit effects after the drop.
+    if cfg.get("fx_from_drop") and cfg.get("drop_at") is not None:
+        fx0 = float(cfg["drop_at"]) - 0.05
+        beat_ev = [e for e in beat_ev if e[0] >= fx0]
+        strong_ev = [e for e in strong_ev if e[0] >= fx0]
+    trans_default = cfg.get("transition", "flash")
+    trans = [c.get("transition", trans_default) for _, _, c in segs]
+    flash_ev = [(c, 1.0) for c, k in zip(cuts, trans) if k == "flash"]
     zoom_amt = float(cfg.get("beat_zoom", 0.10))
     shake_px = float(cfg.get("shake", 22))
     split_px = float(cfg.get("rgb_split", 14))
@@ -457,6 +558,20 @@ def cmd_render(args):
     clip_imgs = [render_text(c["text"], font, int(c.get("text_size", 120)),
                              W * 0.9, fill=(255, 220, 40))
                  if c.get("text") else None for _, _, c in segs]
+    # Centre meme caption (ryonsann style): TikTok-like white text, thin
+    # outline, stays on screen through the gameplay part.
+    cap = cfg.get("caption") or {}
+    cap_img = None
+    if cap.get("text"):
+        cap_font = find_font(cap.get("font")) if cap.get("font") else next(
+            (f for f in CAPTION_FONTS if os.path.exists(f)), font)
+        size = int(H * float(cap.get("size", 0.048)))
+        cap_img = render_text(cap["text"], cap_font, size, W * 0.8,
+                              stroke_w=max(2, size // 16))
+    cap_from = parse_time(cap.get("from", 0))
+    cap_to = cap.get("to", "drop")
+    cap_to = (float(cfg.get("drop_at", total)) if cap_to == "drop"
+              else total if cap_to in (None, "end") else parse_time(cap_to))
     badge = cfg.get("badge") or {}
     badge_img = (render_badge(badge.get("title", "TOP 1 GLOBAL"),
                               badge.get("text", "CHOU"), font,
@@ -476,27 +591,40 @@ def cmd_render(args):
         speed = float(clip.get("speed", 1.0))
         n = int(round(t1 * FPS)) - frame_idx
         span = (t1 - t0) * speed
-        src, start = resolve_source(cfg, base, clip)
-        sw, sh = probe_size(src)
-        print(f"  clip {si + 1}: src {fmt_time(parse_time(clip['start']))} "
-              f"x{speed} -> {t0:5.2f}-{t1:5.2f}s ({n} frames)")
-        proc = read_frames(src, start, span, speed, n,
-                           cfg.get("smooth_slowmo", True))
+        still = None
+        if clip.get("image"):
+            still = load_image(path(clip["image"]), GW, GH)
+            sh, sw = still.shape[:2]
+            proc = None
+            print(f"  clip {si + 1}: image {clip['image']} -> "
+                  f"{t0:5.2f}-{t1:5.2f}s ({n} frames)")
+        else:
+            src, start = resolve_source(cfg, base, clip)
+            sw, sh = probe_size(src)
+            print(f"  clip {si + 1}: src {fmt_time(parse_time(clip['start']))}"
+                  f" x{speed} -> {t0:5.2f}-{t1:5.2f}s ({n} frames)")
+            proc = read_frames(src, start, span, speed, n,
+                               cfg.get("smooth_slowmo", True))
         fsize = sw * sh * 3
         # Gameplay crop in source pixels (centre on "focus", zoom in).
-        z = float(clip.get("zoom", 1.0))
+        z = float(clip.get("zoom", 1.0 if still is None else 1.0))
         fx, fy = clip.get("focus", [0.5, 0.5])
         ch = sh / z
         cw = ch * GW / GH
         if cw > sw:
             cw = sw
             ch = cw * GH / GW
+        if still is not None:
+            # Cover the frame (crop, never letterbox) for screenshots.
+            ch = min(sh, sw * GH / GW) / z
+            cw = ch * GW / GH
         cx = min(max(fx * sw, cw / 2), sw - cw / 2)
         cy = min(max(fy * sh, ch / 2), sh - ch / 2)
         last = None
         for i in range(n):
-            buf = proc.stdout.read(fsize)
-            if len(buf) == fsize:
+            if still is not None:
+                last = still
+            elif len(buf := proc.stdout.read(fsize)) == fsize:
                 last = np.frombuffer(buf, np.uint8).reshape(sh, sw, 3)
             if last is None:
                 last = np.zeros((sh, sw, 3), np.uint8)
@@ -507,6 +635,8 @@ def cmd_render(args):
             # Zoom punch + shake on beats.
             p = pulse(t, beat_ev, 0.22)
             s = 1.0 + zoom_amt * p
+            if still is not None:  # slow push-in on screenshots
+                s *= 1.0 + 0.08 * lt / max(0.1, t1 - t0)
             sp = pulse(t, strong_ev, 0.18)
             dx = shake_px * sp * math.sin(t * 90)
             dy = shake_px * sp * math.cos(t * 77)
@@ -517,6 +647,12 @@ def cmd_render(args):
                                   borderMode=cv2.BORDER_REPLICATE)
             game = grade(game, cfg)
             game = rgb_split(game, split_px * sp)
+
+            # Whip / zoom transitions around each cut.
+            if si > 0 and lt < 0.12:
+                game = transition(game, trans[si], 1 - lt / 0.12, -1)
+            if si + 1 < len(segs) and t1 - t < 0.08:
+                game = transition(game, trans[si + 1], 1 - (t1 - t) / 0.08, 1)
 
             if (GW, GH) == (W, H):
                 frame = game
@@ -536,6 +672,9 @@ def cmd_render(args):
             if fl > 0.01:
                 frame = cv2.addWeighted(frame, 1 - fl,
                                         np.full_like(frame, 255), fl, 0)
+
+            if cap_img is not None and cap_from <= t < cap_to:
+                overlay(frame, cap_img, W / 2, H * float(cap.get("y", 0.42)))
 
             # Clip caption ("SAVAGE", "1 VS 3"...): pop in, pulse on beats.
             ci = clip_imgs[si]
@@ -579,8 +718,9 @@ def cmd_render(args):
                         alpha=min(1.0, (t - (total - 2.0)) / 0.2))
 
             enc.stdin.write(np.ascontiguousarray(frame).tobytes())
-        proc.stdout.close()
-        proc.wait()
+        if proc is not None:
+            proc.stdout.close()
+            proc.wait()
         frame_idx += n
     enc.stdin.close()
     enc.wait()
@@ -598,13 +738,19 @@ def cmd_render(args):
         mix.append("[music]")
         k += 1
     gv = float(cfg.get("game_audio_volume", 0.15))
-    srcs = [resolve_source(cfg, base, c) for _, _, c in segs]
-    if gv > 0 and all(has_audio(p) for p, _ in srcs):
+    srcs = [(None, 0) if c.get("image") else resolve_source(cfg, base, c)
+            for _, _, c in segs]
+    if gv > 0 and all(has_audio(p) for p, _ in srcs if p):
         parts = []
         for (t0, t1, clip), (src, start) in zip(segs, srcs):
             speed = float(clip.get("speed", 1.0))
-            inputs += ["-ss", f"{start:.3f}",
-                       "-t", f"{(t1 - t0) * speed:.3f}", "-i", src]
+            if src is None:  # screenshot: silence
+                inputs += ["-f", "lavfi", "-t", f"{t1 - t0:.3f}", "-i",
+                           "anullsrc=r=44100:cl=stereo"]
+                speed = 1.0
+            else:
+                inputs += ["-ss", f"{start:.3f}",
+                           "-t", f"{(t1 - t0) * speed:.3f}", "-i", src]
             tempo, chain = speed, []
             while tempo < 0.5:
                 chain.append("atempo=0.5")
@@ -613,7 +759,8 @@ def cmd_render(args):
                 chain.append("atempo=2.0")
                 tempo /= 2.0
             chain.append(f"atempo={tempo:.4f}")
-            filters.append(f"[{k}:a]aresample=44100,{','.join(chain)},"
+            filters.append(f"[{k}:a]aresample=44100,"
+                           f"aformat=channel_layouts=stereo,{','.join(chain)},"
                            f"apad,atrim=0:{t1 - t0:.3f}[g{k}]")
             parts.append(f"[g{k}]")
             k += 1
