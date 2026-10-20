@@ -12,6 +12,30 @@ dan tambah efek yang biasa ada dalam edit FYP:
 - output menegak: `ipad` 1080x1440 (3:4) atau `tiktok` 1080x1920 (9:16, latar blur)
 - panjang maksimum 58 saat (bawah 1 minit)
 
+## ⚡ Cara cepat: edit live "PUSH GLOBAL 1 CHOU DUNIA" gaya Top Global
+
+Config siap pakai: `config.global.json` (layout TikTok 9:16, badge emas
+**TOP 1 GLOBAL · CHOU** yang berkilau setiap beat, hook `TOP 1 GLOBAL CHOU DUNIA`).
+Tak perlu download live 10 jam: `fetch` cuma ambil bahagian klip yang dipakai.
+
+```bash
+pip install -r requirements.txt deno   # deno diperlukan yt-dlp untuk YouTube
+# 1. tukar masa "start" dalam config.global.json ikut momen best (lihat langkah 3)
+# 2. letak lagu di input/lagu.mp3 (atau buang "song" dan tambah "bpm": 130)
+python3 edit.py fetch  config.global.json
+python3 edit.py render config.global.json   # hasil: output/chou_global.mp4
+```
+
+> Masa `start` dalam `config.global.json` masih **contoh**. Cari momen sebenar
+> dengan download audio sahaja (~220MB) lalu scan:
+> `yt-dlp -f ba -o input/audio.m4a "https://www.youtube.com/watch?v=6SdzK7E24_s"`
+> kemudian `python3 edit.py scan input/audio.m4a`.
+> YouTube minta "Sign in / not a bot"? Export cookies ke `cookies.txt` lalu
+> `python3 edit.py fetch config.global.json --cookies cookies.txt`.
+
+Badge boleh ditukar dalam config: `"badge": {"title": "TOP 1 GLOBAL", "text": "CHOU"}`
+(buang baris `badge` kalau tak nak).
+
 ## 1. Pasang
 
 ```bash
@@ -76,6 +100,8 @@ Salin `config.example.json` ke `config.json`, tukar masa `start` ikut live awak.
 | `zoom`, `focus` | zoom masuk (1.3) dan titik tengah `[x, y]` (0–1) |
 | `song_start` | mula lagu dari saat berapa (terus ke bahagian drop) |
 | `layout` | `ipad` (3:4) atau `tiktok` (9:16) |
+| `url` | link live YouTube (untuk `fetch`, ganti `source`) |
+| `badge` | badge emas rank, contoh `{"title": "TOP 1 GLOBAL", "text": "CHOU"}` |
 
 ## 6. Render
 

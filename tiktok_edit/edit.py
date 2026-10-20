@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """Beat-synced TikTok montage maker for MLBB gameplay (Chou edit style).
 
-Two commands:
+Commands:
   scan   - find loud moments (kills, "SAVAGE", teamfights) in a long livestream
+  fetch  - download only the clip sections listed in the config from the
+           live URL (no need to download a 10-hour stream)
   render - cut clips on the beat of a song, add zoom punches, flashes,
-           RGB split, shake, hook text, and export a vertical video (<60s)
+           RGB split, shake, hook text, TOP GLOBAL badge, and export a
+           vertical video (<60s)
 
 Usage:
   python3 edit.py scan   input/live.mp4
+  python3 edit.py fetch  config.json
   python3 edit.py render config.json
 """
 import argparse
@@ -138,6 +142,73 @@ def cmd_scan(args):
         print(f"\nThumbnails: {sheet}")
 
 
+# ----------------------------------------------------------------- fetch
+
+PRE_ROLL = 2.0  # seconds kept before each clip start in fetched sections
+
+
+def clip_file(base, clip):
+    t = int(parse_time(clip["start"]))
+    return os.path.join(base, "input", "clips",
+                        f"{t // 3600}h{t % 3600 // 60:02d}m{t % 60:02d}s.mp4")
+
+
+def clip_window(clip):
+    """Generous source span a clip can need (any tempo >= 90 BPM)."""
+    beats = max(1, int(clip.get("beats", 4)))
+    return beats * (60 / 90) * float(clip.get("speed", 1.0)) + 2.0
+
+
+def resolve_source(cfg, base, clip):
+    """(path, start-in-that-file) for a clip: fetched section or full video."""
+    if cfg.get("url"):
+        f = clip_file(base, clip)
+        if os.path.exists(f):
+            return f, min(PRE_ROLL, parse_time(clip["start"]))
+    src = cfg.get("source")
+    if not src:
+        sys.exit(f"Clip {clip['start']} not fetched yet: run "
+                 f"'python3 edit.py fetch <config>' first")
+    src = src if os.path.isabs(src) else os.path.join(base, src)
+    return src, parse_time(clip["start"])
+
+
+def cmd_fetch(args):
+    with open(args.config) as f:
+        cfg = json.load(f)
+    base = os.path.dirname(os.path.abspath(args.config))
+    url = cfg.get("url")
+    if not url:
+        sys.exit('Config needs "url" (the YouTube live link) for fetch')
+    os.makedirs(os.path.join(base, "input", "clips"), exist_ok=True)
+    fmt = cfg.get("format",
+                  "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080]")
+    for clip in cfg["clips"]:
+        out = clip_file(base, clip)
+        if os.path.exists(out):
+            print(f"  have {os.path.basename(out)}")
+            continue
+        t = parse_time(clip["start"])
+        a = max(0.0, t - PRE_ROLL)
+        b = t + clip_window(clip)
+        print(f"  fetching {fmt_time(t)} ({b - a:.0f}s)")
+        cmd = ["yt-dlp", "-f", fmt, "--download-sections",
+               f"*{a:.2f}-{b:.2f}", "--force-keyframes-at-cuts",
+               "--merge-output-format", "mp4", "-o", out, url]
+        if args.cookies:
+            cmd[1:1] = ["--cookies", args.cookies]
+        for attempt in range(4):
+            if subprocess.run(cmd).returncode == 0 and os.path.exists(out):
+                break
+            print(f"  retry in {15 * (attempt + 1)}s...")
+            import time
+            time.sleep(15 * (attempt + 1))
+        else:
+            sys.exit(f"Could not download {fmt_time(t)}. If YouTube says "
+                     f"'not a bot', pass --cookies cookies.txt")
+    print("All clips fetched. Now: python3 edit.py render", args.config)
+
+
 # ----------------------------------------------------------------- beats
 
 def get_beats(cfg, total):
@@ -223,6 +294,55 @@ def render_text(text, font_path, size, max_w, fill=(255, 255, 255),
     return arr[:, :, [2, 1, 0, 3]]  # RGBA -> BGRA
 
 
+def render_badge(title, sub, font_path, width):
+    """Gold 'TOP GLOBAL' rank badge (like the in-game title) as BGRA."""
+    def font(size):
+        return (ImageFont.truetype(font_path, size) if font_path
+                else ImageFont.load_default())
+    f1, f2 = font(int(width * 0.11)), font(int(width * 0.17))
+    probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    tw = max(probe.textlength(title, font=f1), probe.textlength(sub, font=f2))
+    pad = int(width * 0.04)
+    w = int(tw + 2 * pad)
+    h = int(f1.size * 1.25 + f2.size * 1.2 + pad * 1.2)
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    # Vertical gold gradient plate with dark border.
+    grad = Image.new("RGBA", (w, h))
+    gd = ImageDraw.Draw(grad)
+    for y in range(h):
+        k = y / max(1, h - 1)
+        top, mid, bot = (255, 236, 150), (232, 170, 40), (150, 90, 10)
+        c = [int(a + (b - a) * (k * 2 if k < 0.5 else k * 2 - 1))
+             for a, b in zip(*(top, mid) if k < 0.5 else (mid, bot))]
+        gd.line([(0, y), (w, y)], fill=tuple(c) + (255,))
+    mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, w - 1, h - 1],
+                                           radius=h // 4, fill=255)
+    img.paste(grad, (0, 0), mask)
+    d.rounded_rectangle([2, 2, w - 3, h - 3], radius=h // 4,
+                        outline=(70, 35, 0, 255), width=max(3, h // 30))
+    y = pad * 0.5
+    for text, f, fill in ((title, f1, (90, 40, 0)), (sub, f2, (255, 255, 255))):
+        lw = probe.textlength(text, font=f)
+        d.text(((w - lw) / 2, y), text, font=f, fill=fill + (255,),
+               stroke_width=max(2, f.size // 12), stroke_fill=(60, 25, 0, 255))
+        y += f.size * 1.2
+    return np.array(img)[:, :, [2, 1, 0, 3]]
+
+
+def shine(bgra, phase):
+    """Diagonal light sweep across a badge; phase 0..1."""
+    h, w = bgra.shape[:2]
+    out = bgra.copy()
+    xs = np.arange(w)[None, :] + np.arange(h)[:, None] * 0.6
+    centre = -0.3 * w + phase * 1.9 * w
+    band = np.clip(1 - np.abs(xs - centre) / (w * 0.08), 0, 1)[..., None]
+    rgb = out[:, :, :3].astype(np.float32)
+    out[:, :, :3] = np.clip(rgb + band * 140, 0, 255).astype(np.uint8)
+    return out
+
+
 def overlay(frame, bgra, cx, cy, scale=1.0, alpha=1.0):
     if alpha <= 0.01:
         return
@@ -296,14 +416,12 @@ def cmd_render(args):
     def path(p):
         return p if os.path.isabs(p) else os.path.join(base, p)
 
-    src = path(cfg["source"])
     if cfg.get("song"):
         cfg["song"] = path(cfg["song"])
     out = path(cfg.get("output", "output/chou_edit.mp4"))
     os.makedirs(os.path.dirname(out), exist_ok=True)
     layout = cfg.get("layout", "ipad")
     (W, H), (GW, GH) = LAYOUTS[layout]
-    sw, sh = probe_size(src)
     font = find_font(cfg.get("font"))
     random.seed(7)
 
@@ -339,6 +457,11 @@ def cmd_render(args):
     clip_imgs = [render_text(c["text"], font, int(c.get("text_size", 120)),
                              W * 0.9, fill=(255, 220, 40))
                  if c.get("text") else None for _, _, c in segs]
+    badge = cfg.get("badge") or {}
+    badge_img = (render_badge(badge.get("title", "TOP 1 GLOBAL"),
+                              badge.get("text", "CHOU"), font,
+                              W * float(badge.get("width", 0.42)))
+                 if badge else None)
 
     tmp = out + ".video.mp4"
     enc = subprocess.Popen([
@@ -353,9 +476,10 @@ def cmd_render(args):
         speed = float(clip.get("speed", 1.0))
         n = int(round(t1 * FPS)) - frame_idx
         span = (t1 - t0) * speed
-        start = parse_time(clip["start"])
-        print(f"  clip {si + 1}: src {fmt_time(start)} x{speed} -> "
-              f"{t0:5.2f}-{t1:5.2f}s ({n} frames)")
+        src, start = resolve_source(cfg, base, clip)
+        sw, sh = probe_size(src)
+        print(f"  clip {si + 1}: src {fmt_time(parse_time(clip['start']))} "
+              f"x{speed} -> {t0:5.2f}-{t1:5.2f}s ({n} frames)")
         proc = read_frames(src, start, span, speed, n,
                            cfg.get("smooth_slowmo", True))
         fsize = sw * sh * 3
@@ -434,6 +558,22 @@ def cmd_render(args):
                             hy + hook_img.shape[0] + sub_img.shape[0] * 0.7,
                             alpha=a)
 
+            # Gold "TOP GLOBAL" badge: drops in after the hook, shines on
+            # every strong beat, sits top-centre for the rest of the edit.
+            if badge_img is not None:
+                b0 = hook_dur if hook_img is not None else 0.0
+                if t >= b0:
+                    bt = t - b0
+                    pop = 1.0 + 0.8 * max(0, 1 - bt / 0.15)
+                    a = min(1.0, bt / 0.1)
+                    by = (H * 0.07 if (GW, GH) == (W, H)
+                          else (H - GH) / 4)
+                    by = max(by, badge_img.shape[0] * 0.6)
+                    ph = 1 - pulse(t, strong_ev, 0.35)
+                    img = shine(badge_img, ph) if ph < 1 else badge_img
+                    overlay(frame, img, W / 2, by,
+                            scale=pop * (1 + 0.06 * p), alpha=a)
+
             if end_img is not None and t > total - 2.0:
                 overlay(frame, end_img, W / 2, H * 0.5,
                         alpha=min(1.0, (t - (total - 2.0)) / 0.2))
@@ -458,11 +598,12 @@ def cmd_render(args):
         mix.append("[music]")
         k += 1
     gv = float(cfg.get("game_audio_volume", 0.15))
-    if gv > 0 and has_audio(src):
+    srcs = [resolve_source(cfg, base, c) for _, _, c in segs]
+    if gv > 0 and all(has_audio(p) for p, _ in srcs):
         parts = []
-        for t0, t1, clip in segs:
+        for (t0, t1, clip), (src, start) in zip(segs, srcs):
             speed = float(clip.get("speed", 1.0))
-            inputs += ["-ss", str(parse_time(clip["start"])),
+            inputs += ["-ss", f"{start:.3f}",
                        "-t", f"{(t1 - t0) * speed:.3f}", "-i", src]
             tempo, chain = speed, []
             while tempo < 0.5:
@@ -507,12 +648,15 @@ def main():
     s.add_argument("--gap", type=float, default=25,
                    help="min seconds between picks")
     s.add_argument("--out", default="scan")
+    f = sub.add_parser("fetch", help="download only the clip sections")
+    f.add_argument("config")
+    f.add_argument("--cookies", help="cookies.txt if YouTube asks to sign in")
     r = sub.add_parser("render", help="render the edit from a config file")
     r.add_argument("config")
     args = ap.parse_args()
     if shutil.which("ffmpeg") is None:
         sys.exit("ffmpeg is required")
-    {"scan": cmd_scan, "render": cmd_render}[args.cmd](args)
+    {"scan": cmd_scan, "fetch": cmd_fetch, "render": cmd_render}[args.cmd](args)
 
 
 if __name__ == "__main__":
