@@ -1,0 +1,6 @@
+input/
+output/
+scan/
+*.mp4
+*.mp3
+*.wav
