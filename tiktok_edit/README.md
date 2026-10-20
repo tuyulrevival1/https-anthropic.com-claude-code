@@ -68,6 +68,7 @@ python3 edit.py fetch  config.ryo.json
 python3 edit.py render config.ryo.json   # hasil: output/chou_ryo.mp4
 ```
 
+Output: **1080p 60fps** (`"fps": 60`), `fetch` ambil stream 1080p60 dari live.
 Nak menegak? Tukar `"layout"` kepada `"ipad"` (3:4) atau `"tiktok"` (9:16).
 
 ## ⚡ Cara cepat: edit live "PUSH GLOBAL 1 CHOU DUNIA" gaya Top Global
@@ -157,7 +158,9 @@ Salin `config.example.json` ke `config.json`, tukar masa `start` ikut live awak.
 | `text` | caption pop kuning (kosongkan kalau tak nak) |
 | `zoom`, `focus` | zoom masuk (1.3) dan titik tengah `[x, y]` (0–1) |
 | `song_start` | mula lagu dari saat berapa (terus ke bahagian drop) |
-| `layout` | `ipad` (3:4) atau `tiktok` (9:16) |
+| `layout` | `ipad43` (4:3, 1440x1080), `ipad` (3:4, 1080x1440), `square` (1:1) atau `tiktok` (9:16, 1080x1920) |
+| `fps` | `60` = 60fps (preset Ryo & Global dah set 60), default 30 |
+| `crf` | kualiti video, lebih kecil = lebih tajam (17 = sangat tajam) |
 | `url` | link live YouTube (untuk `fetch`, ganti `source`) |
 | `song_start` | `"auto"` = cari drop lagu sendiri (guna dengan `drop_at`) |
 | `drop_at` | saat ke berapa dalam video lagu patut drop (default 9) |

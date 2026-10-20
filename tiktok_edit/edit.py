@@ -27,7 +27,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-FPS = 30
+FPS = 30  # default; set "fps": 60 in the config for 60fps output
 LAYOUTS = {
     # name: (output size, gameplay area size inside it)
     "ipad": ((1080, 1440), (1080, 1440)),    # 3:4, full frame gameplay
@@ -203,7 +203,8 @@ def cmd_fetch(args):
         a = max(0.0, t - PRE_ROLL)
         b = t + clip_window(clip)
         print(f"  fetching {fmt_time(t)} ({b - a:.0f}s)")
-        cmd = ["yt-dlp", "-f", fmt, "--download-sections",
+        # Prefer the 1080p60 stream (highest res up to 1080, then fps).
+        cmd = ["yt-dlp", "-f", fmt, "-S", "res:1080,fps", "--download-sections",
                f"*{a:.2f}-{b:.2f}", "--force-keyframes-at-cuts",
                "--merge-output-format", "mp4", "-o", out, url]
         if args.cookies:
@@ -493,8 +494,10 @@ def read_frames(src, start, span, speed, n, smooth):
 
 
 def cmd_render(args):
+    global FPS
     with open(args.config) as f:
         cfg = json.load(f)
+    FPS = int(cfg.get("fps", FPS))
     base = os.path.dirname(os.path.abspath(args.config))
 
     def path(p):
@@ -523,7 +526,7 @@ def cmd_render(args):
     segs = plan_segments(cfg, beats)
     total = segs[-1][1]
     print(f"Edit length: {total:.1f}s, {len(segs)} clips, layout {layout} "
-          f"{W}x{H}")
+          f"{W}x{H} @ {FPS}fps")
 
     # Effect events on the edit timeline.
     cuts = [s[0] for s in segs]
@@ -582,6 +585,7 @@ def cmd_render(args):
     enc = subprocess.Popen([
         "ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24",
         "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-", "-c:v", "libx264",
+        "-profile:v", "high", "-level:v", "4.2", "-g", str(FPS * 2),
         "-preset", cfg.get("preset", "medium"), "-crf", str(cfg.get("crf", 18)),
         "-pix_fmt", "yuv420p", tmp,
     ], stdin=subprocess.PIPE)
@@ -782,7 +786,7 @@ def cmd_render(args):
             out]
     run(cmd)
     os.remove(tmp)
-    print(f"\nDone: {out}  ({total:.1f}s, {W}x{H})")
+    print(f"\nDone: {out}  ({total:.1f}s, {W}x{H}, {FPS}fps)")
 
 
 def main():

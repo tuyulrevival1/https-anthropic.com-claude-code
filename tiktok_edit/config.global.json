@@ -5,6 +5,8 @@
   "output": "output/chou_global.mp4",
 
   "layout": "tiktok",
+  "fps": 60,
+  "crf": 17,
   "max_duration": 45,
   "music_volume": 1.0,
   "game_audio_volume": 0.2,
