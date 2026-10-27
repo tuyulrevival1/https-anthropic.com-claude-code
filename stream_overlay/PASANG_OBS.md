@@ -64,7 +64,7 @@ Banner minimal: `http://127.0.0.1:8787/overlay.html?banner=minimal` · tanpa han
 Data sama dengan portrait (queue, W/L, timer, lagu, OPEN/CLOSED). **KEMASKINI.bat** kemaskini dua-dua.
 
 1. OBS (scene / profile lain) › Settings › Video › Base & Output `1920x1080`.
-2. Browser source › Width `1920`, Height `1080`, URL pilih satu:
+2. Browser source › Width `1920`, Height `1080`, URL: **`http://127.0.0.1:8787/landscape.html`** (overlay kiri + banner minimal). Layout lain kalau perlu:
 
 | Layout | URL | Gameplay (X, Y, W, H) | Kamera (X, Y, W, H) |
 |---|---|---|---|
@@ -73,7 +73,7 @@ Data sama dengan portrait (queue, W/L, timer, lagu, OPEN/CLOSED). **KEMASKINI.ba
 | Hitam kiri & kanan | `http://127.0.0.1:8787/overlay.html?layout=tengah` | 288, 14, 1344, 896 | 1644, 14, 264, 198 |
 
 3. Letak source gameplay & kamera di **bawah** overlay, ikut kotak dalam jadual (klik kanan › Transform › Edit Transform).
-4. Tanpa kamera: tambah `&hand=0`. Tambahan sama macam portrait: `&banner=minimal`, `&bgfx=0`.
+4. Landscape guna **banner minimal** (portrait kekal banner power). Tukar: `?banner=power`. PC lag: `?bgfx=0`. Kamera / WIN-LOSE / dll boleh on-off dari App › Live › Tunjuk di overlay › Landscape.
 
 ## 6. App Kawalan SYNO
 

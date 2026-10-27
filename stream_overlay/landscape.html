@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<title>SYNO Overlay Landscape</title>
+<style>html, body { margin: 0; background: transparent; }</style>
+</head>
+<body>
+<!--
+  Browser source OBS: 1920 x 1080 (landscape). Overlay di kiri, gameplay di kanan, banner minimal.
+  Tambahan sama macam overlay.html: &hand=0 &bgfx=0 &banner=power
+-->
+<script>
+  const q = new URLSearchParams(location.search);
+  if (!q.has("layout")) q.set("layout", "kiri");
+  location.replace("overlay.html?" + q.toString());
+</script>
+</body>
+</html>

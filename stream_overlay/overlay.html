@@ -31,7 +31,7 @@
   new URLSearchParams(location.search).forEach((v, k) => { P[k] = v; });
   const root = document.getElementById("root");
   const o = ChouOverlay.mount(root, {
-    layout: P.layout || 1, banner: P.banner || "power", accent: P.accent || undefined,
+    layout: P.layout || 1, banner: P.banner || undefined, accent: P.accent || undefined,
     bgfx: String(P.bgfx) !== "0", hand: String(P.hand) !== "0", demo: "demo" in P
   });
   ChouOverlay.fitStage(o.stage, root, o.layout.w || 1080, o.layout.h || 1920);

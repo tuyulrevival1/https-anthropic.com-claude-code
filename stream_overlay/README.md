@@ -18,6 +18,7 @@ Semua dalam HTML: tak perlu edit video, tak perlu install Python.
 | `rank_tool.html` | Potong logo rank dari satu gambar (latar putih) dan simpan ke overlay |
 | `AMBIL_LOGO_RANK.bat` | Muat turun logo rank MLBB asli (Epic hingga Immortal) dari wiki |
 | `overlay.html` | Overlay 1080×1920 untuk OBS. Landscape 1920×1080: `?layout=kiri` / `kanan` / `tengah` |
+| `landscape.html` | Overlay landscape 1920×1080 (kiri + banner minimal) |
 | `control.html` | **App Kawalan SYNO**: timer, W/L, game habis, queue (ID ML + tarikh), baki VIP, order Sociabuzz, YouTube, link |
 | `viewer.html` | Halaman penonton (lihat sahaja): Waiting list, Hutang mabar, MVP, Slot akaun, Peraturan |
 | `assets/seed_doc.js` | Data lama dari dokumen MABAR VIP SYNO (tak ada dalam repo: letak sendiri, diimport sekali) |

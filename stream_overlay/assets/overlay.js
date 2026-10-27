@@ -705,7 +705,7 @@
     kiri: landSide("kiri"),
     kanan: landSide("kanan"),
     tengah: {
-      name: "Landscape tengah", w: 1920, h: 1080,
+      name: "Landscape tengah", w: 1920, h: 1080, banner: "minimal",
       band: 1048, bandX: 0, bandW: 1920,
       bannerY: 922, bannerX: 622, bannerScale: .625,
       slots: [
@@ -724,7 +724,7 @@
   function landSide(side) {
     const colX = side === "kiri" ? 0 : 1536, gx = side === "kiri" ? 384 : 0, px = colX + 12;
     return {
-      name: "Landscape " + side, w: 1920, h: 1080,
+      name: "Landscape " + side, w: 1920, h: 1080, banner: "minimal",
       band: 1048, bandX: 0, bandW: 1920,
       bannerY: 954, bannerX: px, bannerScale: 360 / 1080,
       slots: [
@@ -1055,7 +1055,7 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
       if (api.banner && L.bannerScale) Object.assign(api.banner.el.style, { left: (L.bannerX || 0) + "px", transformOrigin: "0 0", transform: `scale(${L.bannerScale})` });
       if (api.banner) api.banner.el.style.display = Store.state.showBanner && !hideOf(Store.state).banner ? "" : "none";
     };
-    api.setBanner(opts.banner || "pro");
+    api.setBanner(opts.banner || L.banner || "pro");
     if (L.energy) { const en = energyLayer(L); en.style.zIndex = 4; stage.appendChild(en); }
 
     function render(s, prev) {
