@@ -249,7 +249,6 @@
       ],
       panels: [
         { type: "queue", variant: "compact", x: 24, y: 1474, w: 500, h: 290 },
-        { type: "music", x: 24, y: 1786, w: 500, h: 116 },
         { type: "score", x: 548, y: 1798, w: 508, h: 108 }
       ],
       tags: [{ slot: "hand" }]

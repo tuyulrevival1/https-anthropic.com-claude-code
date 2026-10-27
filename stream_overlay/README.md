@@ -26,7 +26,7 @@ Semua dalam HTML: tak perlu edit video, tak perlu install Python.
 
 ## Layout
 
-Satu layout sahaja (atas ke bawah): facecam 1080×522 › bar LIVE (timer stream, jam, penonton YouTube) › **gameplay 1080×720** › banner › queue Mabar + bingkai lagu (kiri), handcam + DEVICE + W/L (kanan).
+Satu layout sahaja (atas ke bawah): facecam 1080×522 › bar LIVE (timer stream, jam, penonton YouTube) › **gameplay 1080×720** › banner › queue Mabar (kiri, bawahnya kosong), handcam + DEVICE + W/L (kanan).
 Koordinat penuh dalam [PASANG_OBS.md](PASANG_OBS.md). `&hand=0` buang handcam · `&bgfx=0` matikan asap latar.
 
 ## Banner

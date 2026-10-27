@@ -96,12 +96,11 @@
     <div class="lay"><div class="shot" data-layout="1"></div></div>
     <div class="lay info">
       <h3>Layout 1 <span>SATU-SATUNYA LAYOUT</span></h3>
-      <p>Facecam di atas dengan bar LIVE (timer stream, jam, penonton YouTube). Gameplay 1080×720 ikut skrin tablet. Banner terus di bawah gameplay. Queue Mabar + baki VIP dan bingkai lagu di kiri; handcam dengan DEVICE dan W/L kecil di kanan.</p>
+      <p>Facecam di atas dengan bar LIVE (timer stream, jam, penonton YouTube). Gameplay 1080×720 ikut skrin tablet. Banner terus di bawah gameplay. Queue Mabar + baki VIP di kiri (bawahnya dibiar kosong); handcam dengan DEVICE dan W/L kecil di kanan.</p>
       <div class="tbl"><table><thead><tr><th>Source OBS</th><th>x, y</th><th>w × h</th></tr></thead><tbody>
         <tr><td>Facecam</td><td>0, 0</td><td>1080 × 522</td></tr>
         <tr><td>Gameplay</td><td>0, 550</td><td>1080 × 720</td></tr>
         <tr><td>Handcam</td><td>548, 1474</td><td>508 × 286</td></tr>
-        <tr><td>Widget lagu</td><td>36, 1806</td><td>476 × 88</td></tr>
         <tr><td>Overlay</td><td>0, 0</td><td>1080 × 1920</td></tr></tbody></table></div>
       <code>http://127.0.0.1:8787/overlay.html</code>
     </div>
@@ -168,12 +167,11 @@
         <tr><td>Facecam</td><td>0, 0</td><td>1080 × 522</td></tr>
         <tr><td>Gameplay</td><td>0, 550</td><td>1080 × 720</td></tr>
         <tr><td>Handcam</td><td>548, 1474</td><td>508 × 286</td></tr>
-        <tr><td>Widget lagu</td><td>36, 1806</td><td>476 × 88</td></tr></tbody></table></div>
       <p>Edit Transform (Ctrl+E): Scale to outer bounds + Crop to Bounding Box.</p></div>
     <div class="step"><h4>3 · Overlay</h4><ul>
       <li>Browser source, URL <code>http://127.0.0.1:8787/overlay.html</code>, 1080×1920.</li>
       <li>Page permissions: <b>Read access to OBS status information</b> (timer mula sendiri bila Start Streaming).</li>
-      <li>Move to Top. Widget lagu letak atas overlay.</li></ul></div>
+      <li>Move to Top.</li></ul></div>
     <div class="step"><h4>4 · Link kekal &amp; Sociabuzz</h4><ul>
       <li>Pasang Tailscale, jalankan <code>tailscale funnel 8787</code> sekali › link tetap <code>https://….ts.net</code>.</li>
       <li>Penonton (Linktree / bio): <code>…/viewer.html</code> · admin dari mana-mana: <code>…/control.html</code> + PIN.</li>

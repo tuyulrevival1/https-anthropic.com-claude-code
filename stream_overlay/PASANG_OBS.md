@@ -35,12 +35,11 @@ Tambah source ikut urutan (yang dulu duduk paling bawah):
 | 2 | Gameplay (capture / scrcpy / Window Capture) | 0, 550 | 1080 × 720 |
 | 3 | Handcam (Video Capture Device) | 548, 1474 | 508 × 286 |
 | 4 | **Overlay** (Browser, langkah 5) | 0, 0 | 1080 × 1920 |
-| 5 | Widget lagu (letak **atas** overlay) | 36, 1806 | 476 × 88 |
 
 Cara letak tepat: klik kanan source › Transform › **Edit Transform** (Ctrl+E):
 Position = x, y · Bounding Box Type = **Scale to outer bounds** · Bounding Box Size = w × h · tanda **Crop to Bounding Box**.
 
-Susunan skrin (atas ke bawah): facecam › bar LIVE › gameplay › banner › queue Mabar + lagu (kiri), handcam + DEVICE + W/L (kanan).
+Susunan skrin (atas ke bawah): facecam › bar LIVE › gameplay › banner › queue Mabar (kiri, bawahnya kosong), handcam + DEVICE + W/L (kanan).
 
 **Bar LIVE** di bawah facecam:
 - **● LIVE 01:23:45** = berapa lama live sudah berjalan (timer stream)
@@ -53,7 +52,7 @@ Susunan skrin (atas ke bawah): facecam › bar LIVE › gameplay › banner › 
 2. Local file: **jangan tanda**. URL: `http://127.0.0.1:8787/overlay.html`
 3. Width `1080`, Height `1920`, FPS `30`.
 4. **Page permissions**: **Read access to OBS status information** (atau lebih tinggi). Timer live mula sendiri bila tekan **Start Streaming**.
-5. OK › klik kanan Overlay › Order › **Move to Top** (widget lagu kekal di atasnya).
+5. OK › klik kanan Overlay › Order › **Move to Top**.
 
 Banner minimal: `http://127.0.0.1:8787/overlay.html?banner=minimal` · tanpa handcam: `?hand=0` · PC lag: `?bgfx=0`.
 
