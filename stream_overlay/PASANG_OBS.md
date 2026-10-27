@@ -289,11 +289,29 @@ Server di PC dengar bunyi app **IndoFinity** dan baca teks dalam tetingkapnya (t
 
 Tajuk / nama tak keluar? App › Lagu › buka **Teks dibaca dari IndoFinity** dan hantar screenshot.
 
-## 13. Efek kill automatik (FIRST BLOOD, MANIAC, SAVAGE…)
+## 13. Efek kill automatik (kill anda sahaja)
 
-Server di PC baca skrin game guna pengecaman teks Windows (OCR). Bila banner kill MLBB keluar, overlay tunjuk efek penuh skrin dengan bunyi. Tak perlu tekan apa-apa.
+Server di PC baca skrin game guna pengecaman teks Windows (OCR). Bila banner kill MLBB keluar dengan **nama anda di sebelah kiri** (anda yang bunuh), overlay tunjuk efek penuh skrin dengan bunyi. Kill orang lain, dan bila anda yang mati (nama di kanan): tiada efek.
 
-Dikesan: **FIRST BLOOD, DOUBLE KILL, TRIPLE KILL, MANIAC, SAVAGE, SHUT DOWN, KILLING SPREE, MONSTER KILL, MEGA KILL, UNSTOPPABLE, GODLIKE, LEGENDARY, RAMPAGE, WIPED OUT**. Kill biasa / solo kill tiada banner tulisan, jadi tak dikesan.
+Setiap kill ada efek sendiri:
+
+| Kill | Efek |
+|---|---|
+| **SOLO KILL** (kill biasa anda) | satu tetakan pedang, tulisan terbelah dua, bunyi "shing" |
+| **FIRST BLOOD** | darah menitis dari atas, tulisan menghentak, bunyi degupan jantung |
+| **DOUBLE KILL** | dua tetakan bersilang, tulisan ×2 bergema |
+| **TRIPLE KILL** | tiga kesan cakaran, tulisan ×3 bergema |
+| **MANIAC** | kilat ungu, tulisan glitch, bunyi elektrik |
+| **SAVAGE** | skrin terbakar, tulisan menyala, ngauman |
+| **SHUT DOWN** | skrin "TV padam", ais merayap, tulisan beku menggigil |
+| **KILLING SPREE** | garisan laju (manga), tulisan meluru dari kamera |
+| **MONSTER KILL** | cakaran raksasa, tulisan jatuh menghentak, tanah retak |
+| **MEGA KILL** | letupan putih, 3 gelombang kejutan |
+| **UNSTOPPABLE** | garisan laju mendatar, tulisan merempuh dari kanan |
+| **GODLIKE** | cahaya syurga dari atas, bulu pelepah jatuh, koir |
+| **LEGENDARY** | sinar emas berpusing, huruf muncul satu-satu, fanfare |
+| **RAMPAGE** | skrin merah berdegup, tulisan menggeletar, gendang perang |
+| **WIPED OUT** | skrin gelap, kaca pecah, huruf runtuh, gong |
 
 1. Jalankan **KEMASKINI.bat**, tutup dan buka semula **START_OVERLAY.bat**.
 2. Game mesti ada dalam satu tetingkap di PC:
@@ -301,18 +319,20 @@ Dikesan: **FIRST BLOOD, DOUBLE KILL, TRIPLE KILL, MANIAC, SAVAGE, SHUT DOWN, KIL
    - dalam OBS: klik kanan source game › **Windowed Projector (Source)**. Tetingkap tu boleh di belakang, tapi **jangan minimize**.
 3. MLBB guna bahasa **English** (Settings › Language).
 4. App › tab **Live** › **Auto efek kill**:
-   - pilih **Tetingkap game** (tekan ↻ kalau tak nampak),
-   - **Bahagian skrin dibaca**: biar **Atas tengah**,
-   - **Kill siapa**: *Semua kill*, atau *Pasukan kita sahaja (biru)*,
+   - **Kill siapa**: *Kill saya sahaja (ikut nama)*,
+   - **Nama dalam game (IGN)**: taip nama MLBB anda (huruf / nombor sahaja dibaca; simbol khas diabaikan),
+   - **Kill biasa saya = SOLO KILL**: hidup = setiap kill anda tanpa banner streak tunjuk SOLO KILL,
+   - pilih **Tetingkap game** (tekan ↻ kalau tak nampak), **Bahagian skrin dibaca**: *Atas tengah*,
    - tanda **Auto detect kill**.
-5. Kotak **Status** tunjuk teks yang dibaca. Masa game, bila banner keluar, baris **Terakhir:** berubah dan efek keluar di overlay.
+5. Kotak **Status** tunjuk teks yang dibaca dan **Nama anda: kiri = anda bunuh / kanan = anda mati**. Masa game, baris **Terakhir:** berubah bila efek keluar.
 
-Butang **FIRST BLOOD / DOUBLE / … / LEGENDARY** dalam kad tu = uji efek. Stream Deck: `http://localhost:8787/api/do/kill-savage` (ganti `savage` dengan `first`, `double`, `triple`, `maniac`, `shutdown`, `legendary`…).
+Butang dalam kad tu = uji setiap efek. Stream Deck: fail `deck\SOLO_KILL.bat`, atau `http://localhost:8787/api/do/kill-solo` (ganti `solo` dengan `first`, `double`, `triple`, `maniac`, `savage`, `shutdown`, `spree`, `monster`, `mega`, `unstoppable`, `godlike`, `legendary`, `rampage`, `wiped`).
 
 | Status | Maksud |
 |---|---|
 | Skrin **GELAP** | Tetingkap tak dapat ditangkap: jangan minimize; untuk OBS guna *Windowed Projector*. |
 | Tiada bahasa OCR | Windows Settings › Time & Language › Language › tambah **English (United States)**. |
+| Nama anda: **tak nampak** semasa banner keluar | Semak ejaan IGN. Nama dengan huruf khas / bukan Latin susah dibaca: hantar screenshot kotak Status. |
 | Teks dibaca tapi efek tak keluar | Hantar screenshot kotak Status. |
 
 ## Masalah biasa

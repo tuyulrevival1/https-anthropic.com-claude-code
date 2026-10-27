@@ -87,9 +87,11 @@ ${embedded ? "" : `<header class="app-top">
 
   <section class="card killfx">
     <h3>Auto efek kill <span id="ap-kst"></span></h3>
-    <p class="muted">Server di PC baca skrin game. Bila banner MLBB keluar (FIRST BLOOD, DOUBLE KILL, MANIAC, SAVAGE, SHUT DOWN…), efek penuh skrin keluar sendiri. MLBB mesti bahasa <b>English</b>. Kill biasa tiada tulisan, jadi tak dikesan.</p>
+    <p class="muted">Server di PC baca skrin game. Bila banner kill MLBB keluar dengan <b>nama anda di sebelah kiri</b> (anda yang bunuh), efek penuh skrin keluar sendiri. Kill orang lain dan bila anda yang mati: tiada efek. MLBB mesti bahasa <b>English</b>.</p>
     <div class="row toggles"><label class="tog"><input id="ap-kon" type="checkbox"><span>Auto detect kill</span></label>
-      <label class="fld kteam">Kill siapa<select id="ap-kteam"><option value="all">Semua kill</option><option value="ally">Pasukan kita sahaja (biru)</option></select></label></div>
+      <label class="fld kteam">Kill siapa<select id="ap-kteam"><option value="me">Kill saya sahaja (ikut nama)</option><option value="ally">Pasukan kita (biru)</option><option value="all">Semua kill</option></select></label></div>
+    <div class="row kme"><label class="fld kign">Nama dalam game (IGN) anda<input id="ap-kign" type="text" maxlength="24" placeholder="contoh: SYNO.Aqil" autocomplete="off"></label>
+      <label class="tog"><input id="ap-ksolo" type="checkbox"><span>Kill biasa saya = SOLO KILL</span></label></div>
     <label class="fld">Tetingkap game di PC (mirror tablet / OBS Windowed Projector)<div class="row kwin"><select id="ap-kwin"><option value="">— pilih tetingkap —</option></select><button class="btn small ghost" type="button" id="ap-kwinr">↻ Muat semula</button></div></label>
     <label class="fld">Bahagian skrin dibaca<select id="ap-kreg">
       <option value="0.2,0.08,0.6,0.32">Atas tengah (banner kill MLBB, asal)</option>
@@ -97,7 +99,7 @@ ${embedded ? "" : `<header class="app-top">
       <option value="0.1,0.25,0.8,0.5">Tengah</option>
       <option value="0,0,1,1">Seluruh tetingkap</option></select></label>
     <div class="kdbg" id="ap-kdbg"><b>Status</b><span>—</span></div>
-    <div class="row ktest">${["first:FIRST BLOOD", "double:DOUBLE", "triple:TRIPLE", "maniac:MANIAC", "savage:SAVAGE", "shutdown:SHUT DOWN", "legendary:LEGENDARY"].map(x => `<button class="btn small" type="button" data-a="ktest" data-k="${x.split(":")[0]}">${x.split(":")[1]}</button>`).join("")}</div>
+    <div class="row ktest">${["solo:SOLO KILL", "first:FIRST BLOOD", "double:DOUBLE", "triple:TRIPLE", "maniac:MANIAC", "savage:SAVAGE", "shutdown:SHUT DOWN", "spree:SPREE", "monster:MONSTER", "mega:MEGA", "unstoppable:UNSTOPPABLE", "godlike:GODLIKE", "legendary:LEGENDARY", "rampage:RAMPAGE", "wiped:WIPED OUT"].map(x => `<button class="btn small" type="button" data-a="ktest" data-k="${x.split(":")[0]}">${x.split(":")[1]}</button>`).join("")}</div>
     <p class="muted">Tip: kalau game cuma ada dalam OBS, klik kanan source game › <b>Windowed Projector (Source)</b>, kemudian pilih tetingkap projector tu di atas. Jangan minimize tetingkap tu.</p>
   </section>
 
@@ -422,7 +424,7 @@ ${embedded ? "" : `<header class="app-top">
     $("ap-fx").addEventListener("change", e => Q.patch({ fx: e.target.checked }));
     /* ---------- auto kill effects (PC server reads the game window with Windows OCR) ---------- */
     const kHdr = () => ({ "X-Pin": lsGet(PIN_KEY, "") });
-    const KNAME = { first: "FIRST BLOOD", double: "DOUBLE KILL", triple: "TRIPLE KILL", maniac: "MANIAC", savage: "SAVAGE", shutdown: "SHUT DOWN", spree: "KILLING SPREE", monster: "MONSTER KILL", mega: "MEGA KILL", unstoppable: "UNSTOPPABLE", godlike: "GODLIKE", legendary: "LEGENDARY", rampage: "RAMPAGE", wiped: "WIPED OUT" };
+    const KNAME = { solo: "SOLO KILL", first: "FIRST BLOOD", double: "DOUBLE KILL", triple: "TRIPLE KILL", maniac: "MANIAC", savage: "SAVAGE", shutdown: "SHUT DOWN", spree: "KILLING SPREE", monster: "MONSTER KILL", mega: "MEGA KILL", unstoppable: "UNSTOPPABLE", godlike: "GODLIKE", legendary: "LEGENDARY", rampage: "RAMPAGE", wiped: "WIPED OUT" };
     let kCfg = null;
     const kSave = patch => {
       const body = Object.entries(patch).map(([k2, v]) => k2 + "=" + encodeURIComponent(v)).join("&");
@@ -430,7 +432,9 @@ ${embedded ? "" : `<header class="app-top">
     };
     function kShow() {
       if (!kCfg) return;
-      $("ap-kon").checked = !!kCfg.on; $("ap-kteam").value = kCfg.team || "all";
+      $("ap-kon").checked = !!kCfg.on; $("ap-kteam").value = kCfg.team || "me"; $("ap-ksolo").checked = kCfg.solo !== false;
+      if (root.activeElement !== $("ap-kign")) $("ap-kign").value = kCfg.ign || "";
+      root.querySelector(".killfx .kme").hidden = (kCfg.team || "me") !== "me";
       const reg = [kCfg.x, kCfg.y, kCfg.w, kCfg.h].join(","), sel = $("ap-kreg");
       if (![...sel.options].some(o => o.value === reg)) sel.insertAdjacentHTML("beforeend", `<option value="${esc(reg)}">Custom (${esc(reg)})</option>`);
       sel.value = reg;
@@ -448,6 +452,8 @@ ${embedded ? "" : `<header class="app-top">
     fetch("api/killcfg", { headers: kHdr(), cache: "no-store" }).then(r => r.ok ? r.json() : null).then(j => { if (j) { kCfg = j; kShow(); kWins(); } else $("ap-kst").textContent = "perlu server baru"; }).catch(() => {});
     $("ap-kon").addEventListener("change", e => kSave({ on: e.target.checked ? 1 : 0 }));
     $("ap-kteam").addEventListener("change", e => kSave({ team: e.target.value }));
+    $("ap-ksolo").addEventListener("change", e => kSave({ solo: e.target.checked ? 1 : 0 }));
+    $("ap-kign").addEventListener("change", e => kSave({ ign: e.target.value.trim() }));
     $("ap-kwin").addEventListener("change", e => kSave({ win: e.target.value }));
     $("ap-kwinr").addEventListener("click", kWins);
     $("ap-kreg").addEventListener("change", e => { const [x, y, w, h] = e.target.value.split(","); kSave({ x, y, w, h }); });
@@ -457,8 +463,11 @@ ${embedded ? "" : `<header class="app-top">
         if (!j) return;
         const box = $("ap-kdbg"), inf = String(j.info || "").split(",");
         const ago = j.hitAt ? Math.round((Date.now() - j.hitAt) / 1000) : null;
-        const st = !kCfg.cap ? "Tangkap skrin tak dapat dimuat di PC ni." : j.err && !j.ocr ? j.err : !j.on ? "Dimatikan." : !kCfg.win ? "Pilih tetingkap game dulu." : inf.length < 5 ? (j.info || "Menunggu…") : `Membaca ${inf[0]}×${inf[1]} · biru ${inf[2]} · merah ${inf[3]}${+inf[4] > 4000 ? " · skrin GELAP (tetingkap tak dapat ditangkap?)" : ""}`;
-        const html = `<b>Status</b><span>${esc(st)}</span>${j.hit ? `<span class="khit">Terakhir: <b>${esc(KNAME[j.hit] || j.hit)}</b>${ago != null ? ` · ${ago}s lepas` : ""}</span>` : ""}${j.text ? `<code>${esc(j.text)}</code>` : ""}${j.err && j.ocr ? `<span class="warn">${esc(j.err)}</span>` : ""}`;
+        const ignN = String(kCfg.ign || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+        const st = !kCfg.cap ? "Tangkap skrin tak dapat dimuat di PC ni." : j.err && !j.ocr ? j.err : !j.on ? "Dimatikan." : !kCfg.win ? "Pilih tetingkap game dulu." : kCfg.team === "me" && ignN.length < 2 ? "Isi nama dalam game (IGN) anda dulu. Nama mesti ada huruf A–Z / nombor." : inf.length < 5 ? (j.info || "Menunggu…") : `Membaca ${inf[0]}×${inf[1]} · biru ${inf[2]} · merah ${inf[3]}${+inf[4] > 4000 ? " · skrin GELAP (tetingkap tak dapat ditangkap?)" : ""}`;
+        const mex = typeof j.mex === "number" ? j.mex : -1;
+        const meTxt = kCfg.team === "me" && ignN.length >= 2 && j.ocr && j.on ? `<span>Nama anda: ${mex < 0 ? "tak nampak" : mex < .5 ? `<b class="kok">kiri (${Math.round(mex * 100)}%) = anda bunuh</b>` : `kanan (${Math.round(mex * 100)}%) = anda mati / bukan kill anda`}</span>` : "";
+        const html = `<b>Status</b><span>${esc(st)}</span>${meTxt}${j.hit ? `<span class="khit">Terakhir: <b>${esc(KNAME[j.hit] || j.hit)}</b>${ago != null ? ` · ${ago}s lepas` : ""}</span>` : ""}${j.text ? `<code>${esc(j.text)}</code>` : ""}${j.err && j.ocr ? `<span class="warn">${esc(j.err)}</span>` : ""}`;
         if (box._h !== html) { box.innerHTML = html; box._h = html; }
         $("ap-kst").textContent = j.on && kCfg.win ? "● aktif" : "";
       }).catch(() => {});

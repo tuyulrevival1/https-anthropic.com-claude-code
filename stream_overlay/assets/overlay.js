@@ -461,7 +461,7 @@
   };
   // MLBB kill announcements: from the PC screen reader (auto) or Stream Deck / App
   const FX_BOOT = Date.now();
-  const KILL_TYPES = ["first", "double", "triple", "maniac", "savage", "shutdown", "spree", "monster", "mega", "unstoppable", "godlike", "legendary", "rampage", "wiped"];
+  const KILL_TYPES = ["solo", "first", "double", "triple", "maniac", "savage", "shutdown", "spree", "monster", "mega", "unstoppable", "godlike", "legendary", "rampage", "wiped"];
   KILL_TYPES.forEach(k => { ACTIONS["kill-" + k] = () => Store.set(s => { s.fxTest = { k: "kill", type: k, at: Date.now() }; }, { noHist: true }); });
   // Stream Deck presses wait on the PC server; whichever open overlay / app asks first runs them once
   let cmdBusy = false;

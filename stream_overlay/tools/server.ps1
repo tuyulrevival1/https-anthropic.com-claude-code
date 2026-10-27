@@ -387,12 +387,13 @@ namespace SynoCap {
 $capOk = $false
 try { Add-Type -TypeDefinition $capCs -ReferencedAssemblies System.Drawing -ErrorAction Stop; $capOk = $true } catch { Write-Host 'Pengesan kill (tangkap skrin) tak dapat dimuat.' -ForegroundColor DarkYellow }
 $killFile = Join-Path $dataDir 'killfx.txt'
-$killShared = [hashtable]::Synchronized(@{ on = $false; win = ''; x = 0.2; y = 0.08; w = 0.6; h = 0.32; team = 'all'; last = '{}'; events = [System.Collections.ArrayList]::Synchronized((New-Object System.Collections.ArrayList)) })
+$killShared = [hashtable]::Synchronized(@{ on = $false; win = ''; x = 0.2; y = 0.08; w = 0.6; h = 0.32; team = 'me'; ign = ''; solo = $true; last = '{}'; events = [System.Collections.ArrayList]::Synchronized((New-Object System.Collections.ArrayList)) })
 function KillNum([string]$v, [double]$d) { $o = 0.0; if ([double]::TryParse($v, [Globalization.NumberStyles]::Float, [Globalization.CultureInfo]::InvariantCulture, [ref]$o)) { return [Math]::Max(0.0, [Math]::Min(1.0, $o)) } return $d }
 if (Test-Path -LiteralPath $killFile) {
   try {
     $kv = ([System.IO.File]::ReadAllText($killFile)).Trim().Split('|')
     if ($kv.Count -ge 7) { $killShared.on = ($kv[0] -eq '1'); $killShared.win = $kv[1]; $killShared.x = KillNum $kv[2] 0.2; $killShared.y = KillNum $kv[3] 0.08; $killShared.w = KillNum $kv[4] 0.6; $killShared.h = KillNum $kv[5] 0.32; $killShared.team = $kv[6] }
+    if ($kv.Count -ge 9) { $killShared.ign = $kv[7]; $killShared.solo = ($kv[8] -ne '0') }
   } catch { }
 }
 $killBg = $null
@@ -418,6 +419,19 @@ function Has([string]$txt, [string]$key) {
   }
   return $false
 }
+function NormT([string]$s) { return ($s.ToUpper() -replace '[^A-Z0-9]', '') }
+# kedudukan nama dalam teks (boleh beza 1 huruf kalau nama 6 huruf ke atas); -1 = tiada
+function FindAt([string]$txt, [string]$key) {
+  $i0 = $txt.IndexOf($key); if ($i0 -ge 0) { return $i0 }
+  $n = $key.Length
+  if ($n -lt 6 -or $txt.Length -lt $n) { return -1 }
+  for ($i = 0; $i -le $txt.Length - $n; $i++) {
+    $d = 0
+    for ($j = 0; $j -lt $n; $j++) { if ($txt[$i + $j] -ne $key[$j]) { $d++; if ($d -gt 1) { break } } }
+    if ($d -le 1) { return $i }
+  }
+  return -1
+}
 $ocr = $null; $err = ''
 try {
   [void][Windows.Media.Ocr.OcrEngine, Windows.Foundation, ContentType = WindowsRuntime]
@@ -436,7 +450,7 @@ while ($true) {
     $K.last = '{"on":' + ([string][bool]$K.on).ToLower() + ',"ocr":' + ([string][bool]$ocr).ToLower() + ',"err":' + (JsonStr $err) + ',"hit":' + (JsonStr $hitName) + ',"hitAt":' + $hitAt + '}'
     Start-Sleep -Milliseconds 800; continue
   }
-  $info = ''; $txt = ''; $e2 = ''
+  $info = ''; $txt = ''; $e2 = ''; $res = $null; $imgW = 1.0; $meX = -1.0; $other = $false
   try {
     $png = [SynoCap.Cap]::Grab([string]$K.win, [double]$K.x, [double]$K.y, [double]$K.w, [double]$K.h, 1.6, [ref]$info)
     if ($png) {
@@ -445,7 +459,7 @@ while ($true) {
       $dec = NpAwait ([Windows.Graphics.Imaging.BitmapDecoder]::CreateAsync($ras)) ([Windows.Graphics.Imaging.BitmapDecoder])
       if ($dec) {
         $sbm = NpAwait ($dec.GetSoftwareBitmapAsync()) ([Windows.Graphics.Imaging.SoftwareBitmap])
-        if ($sbm) { $res = NpAwait ($ocr.RecognizeAsync($sbm)) ([Windows.Media.Ocr.OcrResult]); if ($res) { $txt = [string]$res.Text } }
+        if ($sbm) { $imgW = [double]$sbm.PixelWidth; $res = NpAwait ($ocr.RecognizeAsync($sbm)) ([Windows.Media.Ocr.OcrResult]); if ($res) { $txt = [string]$res.Text } }
       }
       $ms.Dispose()
     }
@@ -453,17 +467,38 @@ while ($true) {
   $norm = ($txt.ToUpper() -replace '[^A-Z]', '')
   $found = ''
   foreach ($w in $words) { $p = $w.Split('='); if (Has $norm $p[0]) { $found = $p[1]; break } }
+  # kill saya sahaja: cari nama dalam game. Banner MLBB: pembunuh di kiri, yang mati di kanan
+  $ign = NormT ([string]$K.ign)
+  if ($res -and $ign.Length -ge 2) {
+    try {
+      $all = @(); foreach ($ln in $res.Lines) { $acc = ''; $st = @(); $lw = @(); foreach ($wd in $ln.Words) { $st += $acc.Length; $acc += (NormT ([string]$wd.Text)); $lw += $wd; $all += $wd }
+        if ($meX -ge 0) { continue }
+        $at = FindAt $acc $ign; if ($at -lt 0) { continue }
+        $endAt = $at + $ign.Length - 1; $l = 1e9; $r = -1.0; $cy = 0.0; $hh = 0.0
+        for ($q = 0; $q -lt $lw.Count; $q++) {
+          $s1 = $(if ($q + 1 -lt $lw.Count) { $st[$q + 1] } else { $acc.Length }) - 1
+          if ($s1 -ge $at -and $st[$q] -le $endAt) { $b = $lw[$q].BoundingRect; if ($b.X -lt $l) { $l = $b.X }; if ($b.X + $b.Width -gt $r) { $r = $b.X + $b.Width }; $cy = $b.Y + $b.Height / 2; $hh = $b.Height }
+        }
+        if ($r -ge 0) { $meX = (($l + $r) / 2) / $imgW; $meR = $r; $meCy = $cy; $meH = [Math]::Max($hh, 8) }
+      }
+      if ($meX -ge 0) { foreach ($o in $all) { $b = $o.BoundingRect; if ($b.X -gt ($meR + 6) -and [Math]::Abs(($b.Y + $b.Height / 2) - $meCy) -lt $meH -and (NormT ([string]$o.Text)).Length -ge 2) { $other = $true; break } } }
+    } catch { $e2 = $_.Exception.Message }
+  }
+  $mine = ($meX -ge 0 -and $meX -lt 0.5)
+  # kill biasa saya (nama saya di kiri, nama lawan di kanan, tiada tulisan streak) = SOLO KILL
+  if (-not $found -and $K.team -eq 'me' -and $K.solo -and $mine -and $meX -lt 0.45 -and $other -and ((Get-Date) - $lastAny).TotalSeconds -ge 3) { $found = 'solo' }
   if ($found) {
     $now = Get-Date
     $teamOk = $true
     if ($K.team -eq 'ally') { $ci = $info.Split(','); if ($ci.Count -ge 4) { $teamOk = ([int]$ci[2] -gt [int]$ci[3]) } }
+    elseif ($K.team -eq 'me') { $teamOk = $mine }
     $fresh = (-not $lastAt.ContainsKey($found)) -or (($now - $lastAt[$found]).TotalSeconds -ge 6)
     if ($teamOk -and $fresh -and (($now - $lastAny).TotalSeconds -ge 1.2)) {
       [void]$K.events.Add($found); $lastAt[$found] = $now; $lastAny = $now
       $hitName = $found; $hitAt = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
     }
   }
-  $K.last = '{"on":true,"ocr":true,"info":' + (JsonStr $info) + ',"text":' + (JsonStr (($txt -replace '[\x00-\x1f]', ' ').Trim())) + ',"hit":' + (JsonStr $hitName) + ',"hitAt":' + $hitAt + ',"err":' + (JsonStr $e2) + '}'
+  $K.last = '{"on":true,"ocr":true,"mex":' + [Math]::Round($meX, 2).ToString([Globalization.CultureInfo]::InvariantCulture) + ',"info":' + (JsonStr $info) + ',"text":' + (JsonStr (($txt -replace '[\x00-\x1f]', ' ').Trim())) + ',"hit":' + (JsonStr $hitName) + ',"hitAt":' + $hitAt + ',"err":' + (JsonStr $e2) + '}'
   Start-Sleep -Milliseconds 250
 }
 '@)
@@ -474,7 +509,7 @@ while ($true) {
 $hookHits = New-Object System.Collections.ArrayList   # 15 cubaan webhook terakhir (untuk App > Status webhook)
 $cmds = New-Object System.Collections.ArrayList       # arahan Stream Deck menunggu overlay / App ambil
 $stateRev = [long]((Get-Date) - [DateTime]'2026-01-01').TotalMilliseconds   # naik setiap kali state disimpan (/api/rev)
-$deckActs = @('win', 'lose', 'win-1', 'lose-1', 'end-win', 'end-lose', 'end', 'timer-start', 'timer-pause', 'timer-reset', 'queue-on', 'queue-off', 'mabar-open', 'mabar-close', 'mabar-toggle', 'facecam-on', 'facecam-off', 'facecam-toggle', 'handcam-on', 'handcam-off', 'handcam-toggle', 'kill-first', 'kill-double', 'kill-triple', 'kill-maniac', 'kill-savage', 'kill-shutdown', 'kill-spree', 'kill-monster', 'kill-mega', 'kill-unstoppable', 'kill-godlike', 'kill-legendary', 'kill-rampage', 'kill-wiped', 'banner-on', 'banner-off', 'wl-reset', 'win-reset', 'lose-reset')
+$deckActs = @('win', 'lose', 'win-1', 'lose-1', 'end-win', 'end-lose', 'end', 'timer-start', 'timer-pause', 'timer-reset', 'queue-on', 'queue-off', 'mabar-open', 'mabar-close', 'mabar-toggle', 'facecam-on', 'facecam-off', 'facecam-toggle', 'handcam-on', 'handcam-off', 'handcam-toggle', 'kill-solo', 'kill-first', 'kill-double', 'kill-triple', 'kill-maniac', 'kill-savage', 'kill-shutdown', 'kill-spree', 'kill-monster', 'kill-mega', 'kill-unstoppable', 'kill-godlike', 'kill-legendary', 'kill-rampage', 'kill-wiped', 'banner-on', 'banner-off', 'wl-reset', 'win-reset', 'lose-reset')
 $fwdHeaders = @('x-forwarded-for', 'cf-connecting-ip', 'x-forwarded-host', 'forwarded', 'x-real-ip', 'tailscale-funnel-request')
 
 while ($true) {
@@ -616,13 +651,15 @@ while ($true) {
             if ($kf.ContainsKey('y')) { $killShared.y = KillNum $kf['y'] 0.08 }
             if ($kf.ContainsKey('w')) { $killShared.w = KillNum $kf['w'] 0.6 }
             if ($kf.ContainsKey('h')) { $killShared.h = KillNum $kf['h'] 0.32 }
-            if ($kf.ContainsKey('team')) { if ($kf['team'] -eq 'ally') { $killShared.team = 'ally' } else { $killShared.team = 'all' } }
+            if ($kf.ContainsKey('team')) { if ($kf['team'] -eq 'ally' -or $kf['team'] -eq 'me') { $killShared.team = $kf['team'] } else { $killShared.team = 'all' } }
+            if ($kf.ContainsKey('ign')) { $killShared.ign = ($kf['ign'] -replace '[|\r\n]', ' ').Trim() }
+            if ($kf.ContainsKey('solo')) { $killShared.solo = ($kf['solo'] -ne '0') }
             $ic = [Globalization.CultureInfo]::InvariantCulture
-            try { [System.IO.File]::WriteAllText($killFile, ((@($(if ($killShared.on) { '1' } else { '0' }), $killShared.win, $killShared.x.ToString($ic), $killShared.y.ToString($ic), $killShared.w.ToString($ic), $killShared.h.ToString($ic), $killShared.team)) -join '|')) } catch { }
+            try { [System.IO.File]::WriteAllText($killFile, ((@($(if ($killShared.on) { '1' } else { '0' }), $killShared.win, $killShared.x.ToString($ic), $killShared.y.ToString($ic), $killShared.w.ToString($ic), $killShared.h.ToString($ic), $killShared.team, $killShared.ign, $(if ($killShared.solo) { '1' } else { '0' }))) -join '|')) } catch { }
           }
         }
         $ic = [Globalization.CultureInfo]::InvariantCulture
-        $body = ToBytes ('{"cap":' + ([string]$capOk).ToLower() + ',"run":' + ([string][bool]$killBg).ToLower() + ',"on":' + ([string][bool]$killShared.on).ToLower() + ',"win":' + (JsonStr ([string]$killShared.win)) + ',"x":' + $killShared.x.ToString($ic) + ',"y":' + $killShared.y.ToString($ic) + ',"w":' + $killShared.w.ToString($ic) + ',"h":' + $killShared.h.ToString($ic) + ',"team":' + (JsonStr ([string]$killShared.team)) + '}')
+        $body = ToBytes ('{"cap":' + ([string]$capOk).ToLower() + ',"run":' + ([string][bool]$killBg).ToLower() + ',"on":' + ([string][bool]$killShared.on).ToLower() + ',"win":' + (JsonStr ([string]$killShared.win)) + ',"x":' + $killShared.x.ToString($ic) + ',"y":' + $killShared.y.ToString($ic) + ',"w":' + $killShared.w.ToString($ic) + ',"h":' + $killShared.h.ToString($ic) + ',"team":' + (JsonStr ([string]$killShared.team)) + ',"ign":' + (JsonStr ([string]$killShared.ign)) + ',"solo":' + ([string][bool]$killShared.solo).ToLower() + '}')
       } elseif ($path -eq 'api/killlog') {
         $type = 'application/json'; $body = ToBytes ([string]$killShared.last)
       } elseif ($path -eq 'api/windows') {

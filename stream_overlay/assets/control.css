@@ -332,3 +332,5 @@
 .app .kdbg .khit b { color: var(--c-win); } .app .kdbg .warn { color: #ff8a9b; }
 .app .kdbg code { font: 12px/1.4 ui-monospace, Consolas, monospace; color: #ffb3bf; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 90px; overflow: auto; }
 .app .killfx .ktest { gap: 6px; }
+.app .killfx .kme { align-items: flex-end; } .app .killfx .kign { flex: 1; min-width: 180px; } .app .killfx .kme[hidden] { display: none; }
+.app .kdbg .kok { color: var(--c-win); }
