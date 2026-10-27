@@ -322,3 +322,4 @@
 .app .ovparts > b { grid-column: 1 / -1; }
 .app .ovp-col { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .app .ovp-t { font: 700 12px/1 "OV Raj", Rajdhani, sans-serif; letter-spacing: .16em; text-transform: uppercase; color: var(--c-gold); }
+.app .ovp-obs { margin: 4px 0 0; font-size: 12px; }

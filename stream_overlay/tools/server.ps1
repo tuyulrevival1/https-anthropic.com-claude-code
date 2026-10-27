@@ -296,7 +296,7 @@ function Get-IfxTexts {
 $mediaJson = ''; $mediaAt = [DateTime]::MinValue
 $hookHits = New-Object System.Collections.ArrayList   # 15 cubaan webhook terakhir (untuk App > Status webhook)
 $cmds = New-Object System.Collections.ArrayList       # arahan Stream Deck menunggu overlay / App ambil
-$deckActs = @('win', 'lose', 'win-1', 'lose-1', 'end-win', 'end-lose', 'end', 'timer-start', 'timer-pause', 'timer-reset', 'queue-on', 'queue-off', 'mabar-open', 'mabar-close', 'mabar-toggle', 'banner-on', 'banner-off', 'wl-reset', 'win-reset', 'lose-reset')
+$deckActs = @('win', 'lose', 'win-1', 'lose-1', 'end-win', 'end-lose', 'end', 'timer-start', 'timer-pause', 'timer-reset', 'queue-on', 'queue-off', 'mabar-open', 'mabar-close', 'mabar-toggle', 'facecam-on', 'facecam-off', 'facecam-toggle', 'handcam-on', 'handcam-off', 'handcam-toggle', 'banner-on', 'banner-off', 'wl-reset', 'win-reset', 'lose-reset')
 $fwdHeaders = @('x-forwarded-for', 'cf-connecting-ip', 'x-forwarded-host', 'forwarded', 'x-real-ip', 'tailscale-funnel-request')
 
 while ($true) {
@@ -419,15 +419,25 @@ while ($true) {
         else { $body = ToBytes ('[' + ($cmds -join ',') + ']'); $cmds.Clear() }
       } elseif ($path -eq 'api/wl') {
         # untuk plugin Stream Deck: bilangan W/L sekarang (dibaca dari state.txt)
-        $type = 'application/json'; $w = 0; $l = 0
+        $type = 'application/json'; $w = 0; $l = 0; $cf = 0; $chh = 0; $mc = 0
         if (Test-Path -LiteralPath $stateFile) {
           try {
             $txt = [Uri]::UnescapeDataString([System.IO.File]::ReadAllText($stateFile))
             if ($txt -match '"wins":(\d+)') { $w = [int]$matches[1] }
             if ($txt -match '"losses":(\d+)') { $l = [int]$matches[1] }
+            if ($txt -match '"mabarClosed":true') { $mc = 1 }
+            # bahagian "hide" (on / off kamera): {"p":{...},"l":{...}}
+            $hi = $txt.IndexOf('"hide":{')
+            if ($hi -ge 0) {
+              $dep = 0; $j = $hi + 7
+              for (; $j -lt $txt.Length; $j++) { $ch0 = $txt[$j]; if ($ch0 -eq '{') { $dep++ } elseif ($ch0 -eq '}') { $dep--; if ($dep -eq 0) { break } } }
+              $hs = $txt.Substring($hi, [Math]::Min($j - $hi + 1, $txt.Length - $hi))
+              if ($hs -match '"l":\{[^}]*"cam":true') { $cf = 1 }
+              if ($hs -match '"l":\{[^}]*"hand":true') { $chh = 1 }
+            }
           } catch { }
         }
-        $body = ToBytes ('{"w":' + $w + ',"l":' + $l + '}'); $cors = $true
+        $body = ToBytes ('{"w":' + $w + ',"l":' + $l + ',"faceOff":' + $cf + ',"handOff":' + $chh + ',"closed":' + $mc + '}'); $cors = $true
       } elseif ($path -eq 'api/versi') {
         # versi yang dipasang oleh KEMASKINI.bat (App bandingkan dengan GitHub)
         $vf = Join-Path $dataDir 'versi.txt'; $v = ''; if (Test-Path -LiteralPath $vf) { $v = ([System.IO.File]::ReadAllText($vf)).Trim() }

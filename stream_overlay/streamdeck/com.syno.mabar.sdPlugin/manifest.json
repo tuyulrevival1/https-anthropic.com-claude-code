@@ -1,9 +1,9 @@
 {
   "Name": "SYNO Mabar",
   "Author": "SYNOSTORE",
-  "Version": "1.2.0",
+  "Version": "1.3.0",
   "SDKVersion": 2,
-  "Description": "Win / Lose untuk overlay SYNO. Tekan = tambah, tahan = tolak 1, tahan 2 saat = reset butang tu sahaja.",
+  "Description": "Win / Lose dan On / Off untuk overlay SYNO. Win/Lose: tekan = tambah, tahan = tolak 1, tahan 2 saat = reset. On/Off: facecam, handcam atau Mabar OPEN / CLOSED.",
   "Category": "SYNO Mabar",
   "CategoryIcon": "img/cat",
   "Icon": "img/plugin",
@@ -52,6 +52,21 @@
         }
       ],
       "SupportedInMultiActions": false
+    },
+    {
+      "UUID": "com.syno.mabar.toggle",
+      "Name": "On / Off (kamera, Mabar)",
+      "Icon": "img/toggle_list",
+      "Tooltip": "Tekan: on / off facecam, handcam atau Mabar OPEN / CLOSED. Butang tunjuk ON / OFF sekarang.",
+      "States": [
+        {
+          "Image": "img/toggle_key",
+          "TitleAlignment": "middle",
+          "FontSize": "16",
+          "ShowTitle": false
+        }
+      ],
+      "SupportedInMultiActions": true
     }
   ]
 }

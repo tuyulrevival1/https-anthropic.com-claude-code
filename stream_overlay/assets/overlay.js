@@ -438,6 +438,9 @@
     "end-win": () => Q.endGame("W"), "end-lose": () => Q.endGame("L"), "end": () => Q.endGame("X"),
     "timer-start": () => Q.timer("start"), "timer-pause": () => Q.timer("pause"), "timer-reset": () => Q.timer("reset"),
     "queue-on": () => Q.patch({ showQueue: true }), "queue-off": () => Q.patch({ showQueue: false }),
+    "facecam-on": () => Q.hideSet("l", "cam", false), "facecam-off": () => Q.hideSet("l", "cam", true),
+    "facecam-toggle": () => Q.hideSet("l", "cam", !((Store.state.hide || {}).l || {}).cam),
+    "handcam-on": () => camHand(false), "handcam-off": () => camHand(true), "handcam-toggle": () => camHand(!((Store.state.hide || {}).l || {}).hand),
     "mabar-open": () => Q.patch({ mabarClosed: false }), "mabar-close": () => Q.patch({ mabarClosed: true }), "mabar-toggle": () => Q.patch({ mabarClosed: !Store.state.mabarClosed }),
     "banner-on": () => Q.patch({ showBanner: true }), "banner-off": () => Q.patch({ showBanner: false }),
     "wl-reset": () => Q.patch({ wins: 0, losses: 0, streak: 0 }),
@@ -619,6 +622,8 @@
     return bad(wt) ? "" : wt.slice(0, 90);
   }
 
+  // the same physical handcam: portrait "Handcam" and landscape "Handcam" switch together
+  const camHand = off => Store.set(s => { s.hide = s.hide || {}; s.hide.p = Object.assign({}, s.hide.p, { cam: off }); s.hide.l = Object.assign({}, s.hide.l, { hand: off }); });
   let ordersBusy = false, songPause = false;
   // Orders stay in the server journal with a number; the shared state remembers the last number
   // handled (orderSeq), so a page that fails or a lost write never drops an order.
@@ -693,7 +698,7 @@
       slots: [
         { id: "face", x: 0, y: 0, w: 1080, h: 522, frame: false },
         { id: "game", x: 0, y: 550, w: 1080, h: 720, frame: false },
-        { id: "hand", x: 548, y: 1474, w: 508, h: 286, cut: 16, optional: true }
+        { id: "hand", x: 548, y: 1474, w: 508, h: 286, cut: 16, optional: true, toggle: "cam" }
       ],
       panels: [
         { type: "queue", variant: "compact", x: 24, y: 1474, w: 500, h: 290 },
@@ -720,23 +725,45 @@
       tags: []
     }
   };
-  // landscape with the overlay column on one side: game 1536x1024 (3:2), column 384 wide
+  // landscape with the overlay column on one side: game 1536x1024 (3:2) flush with the top, column 384 wide.
+  // The column is a stack (facecam, handcam, Mabar VIP, W/L, banner): anything switched off in the App
+  // lets the rest move up, so there is never an empty gap. LIVE bar under everything, drawn 2x.
   function landSide(side) {
     const colX = side === "kiri" ? 0 : 1536, gx = side === "kiri" ? 384 : 0, px = colX + 12;
     return {
       name: "Landscape " + side, w: 1920, h: 1080, banner: "minimal",
-      band: 1048, bandX: 0, bandW: 1920,
-      bannerY: 954, bannerX: px, bannerScale: 360 / 1080,
+      band: 1024, bandX: 0, bandW: 1920, bandScale: 2,
+      bannerY: 948, bannerX: px, bannerScale: 360 / 1080,
       slots: [
-        { id: "game", x: gx, y: 14, w: 1536, h: 1024, frame: false },
-        { id: "face", x: px, y: 14, w: 360, h: 252, cut: 16, corners: true, optional: true }
+        { id: "game", x: gx, y: 0, w: 1536, h: 1024, frame: false },
+        { id: "face", x: px, y: 12, w: 360, h: 203, cut: 16, corners: true, optional: true, toggle: "cam" },
+        { id: "hand", x: px, y: 225, w: 360, h: 203, cut: 16, corners: true, optional: true, toggle: "hand" }
       ],
       panels: [
-        { type: "queue", variant: "compact tall", x: px, y: 282, w: 360, h: 560, max: 8 },
-        { type: "score", x: px, y: 858, w: 360, h: 77 }
+        { type: "queue", variant: "compact tall", x: px, y: 438, w: 360, h: 413, max: 6 },
+        { type: "score", x: px, y: 861, w: 360, h: 77 }
       ],
+      stack: { x: px, w: 360, y0: 12, y1: 1012, gap: 10, items: [
+        { slot: "face", h: 203 }, { slot: "hand", h: 203 }, { panel: "queue", flex: true }, { panel: "score", h: 77 }, { banner: true, h: 64 }
+      ] },
       tags: []
     };
+  }
+  // positions of the stacked column for the current switches (also used by the App to show OBS positions)
+  function stackLayout(L, hid, showBanner) {
+    const S = L.stack; if (!S) return null;
+    const has = it => it.slot ? L.slots.some(x => x.id === it.slot) && !hid[(L.slots.find(x => x.id === it.slot) || {}).toggle]
+      : it.panel === "queue" ? !hid.mabar : it.panel === "score" ? !hid.score : it.banner ? showBanner !== false && !hid.banner : true;
+    const items = S.items.filter(has);
+    const fixed = items.reduce((a, it) => a + (it.flex ? 0 : it.h), 0) + S.gap * Math.max(0, items.length - 1);
+    const flexH = Math.max(120, S.y1 - S.y0 - fixed);
+    const out = { slots: {}, panels: {}, bannerY: null }; let y = S.y0;
+    for (const it of items) {
+      const h = it.flex ? flexH : it.h, r = { x: S.x, y, w: S.w, h };
+      if (it.slot) out.slots[it.slot] = r; else if (it.panel) out.panels[it.panel] = r; else out.bannerY = y;
+      y += h + S.gap;
+    }
+    return out;
   }
   const THEMES = {
     red: { a: "#ff2346", hi: "#ff7088", glow: "255,35,70", deep: "150,0,24", ember: "255,190,170", bg: ["#0d0507", "#1c070d", "#080305"] },
@@ -996,20 +1023,26 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
     }
     // background + camera frames; rebuilt when the camera is switched off / on in the App
     const layerMark = document.createComment("layers"); stage.appendChild(layerMark);
-    let layerEls = [], camOff = null;
-    function buildLayers(off) {
-      if (camOff === off) return; camOff = off;
+    let layerEls = [], layerKey = null;
+    // camera holes that are switched on, at their current place (the landscape column moves them)
+    function visibleSlots(hid, st) {
+      const sk = stackLayout(L, hid, st.showBanner);
+      return L.slots.filter(sl => !(sl.toggle && hid[sl.toggle])).map(sl => sk && sk.slots[sl.id] ? Object.assign({}, sl, sk.slots[sl.id]) : sl);
+    }
+    function buildLayers(slots) {
+      const key = JSON.stringify(slots.map(x => [x.id, x.x, x.y, x.w, x.h]));
+      if (key === layerKey) return; layerKey = key;
       layerEls.forEach(x => { if (x._tick) { const i = tickers.indexOf(x._tick); if (i >= 0) tickers.splice(i, 1); } x.remove(); });
-      const Lc = off ? Object.assign({}, L, { slots: L.slots.filter(sl => !sl.optional) }) : L;
+      const Lc = Object.assign({}, L, { slots });
       const tmp = document.createElement("div");
       tmp.innerHTML = bgSVG(Lc); const bg = tmp.firstElementChild;
       tmp.innerHTML = frameSVG(Lc); const fr = tmp.firstElementChild;
       layerEls = [bg, opts.bgfx !== false ? bgFx(Lc) : null, fr].filter(Boolean);
       layerEls.forEach(x => stage.insertBefore(x, layerMark));
-      stage.querySelectorAll(".ov-demo").forEach(d => { const sl = L.slots.find(x => x.id === d.dataset.slot); d.style.display = off && sl && sl.optional ? "none" : ""; });
+      stage.querySelectorAll(".ov-demo").forEach(d => { const sl = slots.find(x => x.id === d.dataset.slot); d.style.display = sl ? "" : "none"; if (sl) pos(d, sl); });
     }
     const orient = land ? "l" : "p", hideOf = st => ((st.hide || {})[orient]) || {};
-    buildLayers(!!hideOf(Store.state).cam);
+    buildLayers(visibleSlots(hideOf(Store.state), Store.state));
 
     // band between facecam and gameplay
     // band under the facecam: LIVE · stream timer · clock · YouTube viewers
@@ -1018,7 +1051,8 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
 <span class="itm np" hidden><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="currentColor" stroke-width="2.6"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="17" cy="16" r="3" fill="currentColor"/></svg><span class="npw"><b class="npt"></b></span></span>
 <span class="itm clock"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg><b>--:--</b><small></small></span>
 <span class="itm yt" hidden><svg viewBox="0 0 24 24"><rect x="1" y="5" width="22" height="14" rx="4" fill="#ff0000"/><path d="M10 9l5 3-5 3z" fill="#fff"/></svg><b></b></span>`);
-    band.style.top = L.band + "px"; if (L.bandX != null) { band.style.left = L.bandX + "px"; band.style.width = L.bandW + "px"; }
+    band.style.top = L.band + "px"; if (L.bandX != null) { band.style.left = L.bandX + "px"; band.style.width = (L.bandW / (L.bandScale || 1)) + "px"; }
+    if (L.bandScale) Object.assign(band.style, { transformOrigin: "0 0", transform: `scale(${L.bandScale})` });
     if (L.band != null) stage.appendChild(band);
     const clockB = band.querySelector(".clock b"), clockAp = band.querySelector(".clock small"), timerEl = band.querySelector(".timer"), timerTxt = timerEl;
     const ytEl = band.querySelector(".yt"), ytTxt = ytEl.querySelector("b");
@@ -1040,7 +1074,7 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
       const s = L.slots.find(x => x.id === t.slot);
       const cap = el("div", "ov-caption", `<i></i><span>DEVICE: <b>${esc(CFG.device)}</b></span><i></i>`);
       Object.assign(cap.style, { left: s.x + "px", top: (s.y + s.h + 6) + "px", width: s.w + "px" });
-      cap.dataset.opt = s.optional ? "1" : ""; stage.appendChild(cap);
+      cap.dataset.tog = s.toggle || ""; stage.appendChild(cap);
     }
 
     const panels = L.panels.map(p => {
@@ -1053,6 +1087,8 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
       if (api.banner) api.banner.destroy();
       api.banner = st === "none" ? null : mountBanner(stage, { style: st, accent: acc || opts.accent, y: L.bannerY, inStage: true });
       if (api.banner && L.bannerScale) Object.assign(api.banner.el.style, { left: (L.bannerX || 0) + "px", transformOrigin: "0 0", transform: `scale(${L.bannerScale})` });
+      const sk0 = api.banner && stackLayout(L, hideOf(Store.state), Store.state.showBanner);
+      if (sk0 && sk0.bannerY != null) api.banner.el.style.top = sk0.bannerY + "px";
       if (api.banner) api.banner.el.style.display = Store.state.showBanner && !hideOf(Store.state).banner ? "" : "none";
     };
     api.setBanner(opts.banner || L.banner || "pro");
@@ -1061,8 +1097,14 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
     function render(s, prev) {
       const prevIds = prev ? new Set(prev.playing.concat(prev.queue).map(p => p.id)) : null;
       const hid = hideOf(s);
-      buildLayers(!!hid.cam);
-      stage.querySelectorAll(".ov-caption").forEach(c => { c.style.display = hid.cam && c.dataset.opt ? "none" : ""; });
+      // landscape column: move panels / banner up when something above is switched off
+      const sk = stackLayout(L, hid, s.showBanner);
+      if (sk) {
+        for (const { def, e } of panels) { const r = sk.panels[def.type]; if (r) { Object.assign(def, r); pos(e, def); if (def.type === "queue") def.max = Math.max(2, Math.min(12, Math.floor((r.h - 312) / 29))); } }
+        if (api.banner && sk.bannerY != null) api.banner.el.style.top = sk.bannerY + "px";
+      }
+      buildLayers(visibleSlots(hid, s));
+      stage.querySelectorAll(".ov-caption").forEach(c => { c.style.display = c.dataset.tog && hid[c.dataset.tog] ? "none" : ""; });
       if (L.band != null) band.style.display = hid.band ? "none" : "";
       for (const { def, e } of panels) {
         const v = def.variant ? " " + def.variant : "";
@@ -1181,5 +1223,5 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
 
   requestAnimationFrame(loop);
   const util = { el, esc, clamp, seg, eOut, eBack, frac, rnd, TAU, fill, priceHL, uid, tickers, now };
-  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util, keyOf, liveElapsed, fmtTime, parseOrder, NP, MEDIA, ifxNow, songText, ACTIONS, ROLES: ["EXP", "JUNGLE", "MID", "GOLD", "ROAM"], roleTag };
+  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util, keyOf, liveElapsed, fmtTime, parseOrder, NP, MEDIA, ifxNow, songText, stackLayout, layoutOf: n => LAYOUTS[n], ACTIONS, ROLES: ["EXP", "JUNGLE", "MID", "GOLD", "ROAM"], roleTag };
 })();

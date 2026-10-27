@@ -51,7 +51,7 @@ ${embedded ? "" : `<header class="app-top">
     </div>
     <div class="ovparts">
       <b class="ctest-h">Tunjuk di overlay</b>
-      ${[["p", "Portrait"], ["l", "Landscape"]].map(([o, t]) => `<div class="ovp-col"><span class="ovp-t">${t}</span>${[["cam", "Kamera"], ["score", "WIN / LOSE"], ["mabar", "Mabar VIP"], ["banner", "Banner"], ["band", "Bar LIVE"]].map(([k, n]) => `<label class="tog"><input type="checkbox" class="ovp" data-o="${o}" data-k="${k}" checked><span>${n}</span></label>`).join("")}</div>`).join("")}
+      ${[["p", "Portrait", [["cam", "Handcam"]]], ["l", "Landscape", [["cam", "Facecam"], ["hand", "Handcam"]]]].map(([o, t, cams]) => `<div class="ovp-col"><span class="ovp-t">${t}</span>${cams.concat([["score", "WIN / LOSE"], ["mabar", "Mabar VIP"], ["banner", "Banner"], ["band", "Bar LIVE"]]).map(([k, n]) => `<label class="tog"><input type="checkbox" class="ovp" data-o="${o}" data-k="${k}" checked><span>${n}</span></label>`).join("")}${o === "l" ? `<p class="muted ovp-obs" id="ap-ovpobs"></p>` : ""}</div>`).join("")}
     </div>
     <div class="songbox">
       <div class="np-now"><span>♪ Sedang main</span><b id="ap-npauto">—</b></div>
@@ -541,6 +541,9 @@ ${embedded ? "" : `<header class="app-top">
       tabc("order", newOrd ? `${newOrd} baru` : "");
       $("ap-streak").textContent = s.streak >= 2 ? `Win streak ${s.streak}` : s.streak <= -2 ? `Lose streak ${-s.streak}` : "";
       root.querySelectorAll(".ovp").forEach(i => { i.checked = !(((s.hide || {})[i.dataset.o] || {})[i.dataset.k]); });
+      // where the cameras sit in the landscape column right now (they move up when one is off)
+      const lk = O.layoutOf && O.layoutOf("kiri"), sk = lk && O.stackLayout(lk, (s.hide || {}).l || {}, s.showBanner);
+      if (sk && $("ap-ovpobs")) { const f = (n, r) => r ? `${n} ${r.x}, ${r.y} · ${r.w}×${r.h}` : ""; $("ap-ovpobs").textContent = ["OBS landscape: Game 384, 0 · 1536×1024", f("Facecam", sk.slots.face), f("Handcam", sk.slots.hand)].filter(Boolean).join(" · "); }
       $("ap-showq").checked = !!s.showQueue; $("ap-open").setAttribute("aria-pressed", String(!s.mabarClosed)); $("ap-close").setAttribute("aria-pressed", String(!!s.mabarClosed)); $("ap-showb").checked = !!s.showBanner; $("ap-shows").checked = !s.song || s.song.on !== false;
       if (document.activeElement !== $("ap-song")) $("ap-song").value = (s.song && s.song.manual) || "";
       $("ap-pc").textContent = `${s.playing.length}/${max}`; $("ap-qc").textContent = s.queue.length;

@@ -8,16 +8,23 @@
   b { color: #eee; }
 </style></head>
 <body>
-  <label for="tap">Tekan sekejap</label>
+  <label for="tap" id="tapl">Tekan sekejap</label>
   <select id="tap"></select>
   <label for="server">Alamat overlay (biar kosong)</label>
   <input id="server" placeholder="kosong = http://127.0.0.1:8787">
-  <p><b>Tahan 0.6 saat</b>: tolak 1.<br><b>Tahan 2 saat</b>: reset butang ni sahaja (Win jadi 0, atau Lose jadi 0).<br>Butang tunjuk bilangan sekarang (nombor besar). Biar ruang <b>Title</b> Stream Deck kosong.</p>
+  <p id="help"><b>Tahan 0.6 saat</b>: tolak 1.<br><b>Tahan 2 saat</b>: reset butang ni sahaja (Win jadi 0, atau Lose jadi 0).<br>Butang tunjuk bilangan sekarang (nombor besar). Biar ruang <b>Title</b> Stream Deck kosong.</p>
 <script>
 "use strict";
-let ws, uuid, settings = {}, isWin = true;
+let ws, uuid, settings = {}, isWin = true, isToggle = false;
 const $ = id => document.getElementById(id);
 function fill() {
+  if (isToggle) {
+    $("tapl").textContent = "Butang ni on / off";
+    $("tap").innerHTML = '<option value="facecam">Facecam (landscape)</option><option value="handcam">Handcam (portrait &amp; landscape)</option><option value="mabar">Mabar VIP OPEN / CLOSED</option>';
+    $("tap").value = settings.tap || "facecam"; $("server").value = settings.server || "";
+    $("help").innerHTML = "Tekan = tukar ON / OFF. Butang tunjuk keadaan sekarang. Suis dalam App (Live › Tunjuk di overlay) ikut sama. Biar ruang <b>Title</b> Stream Deck kosong.";
+    return;
+  }
   $("tap").innerHTML = isWin
     ? '<option value="end-win">Menang: W +1 &amp; tolak baki</option><option value="win">W +1 sahaja</option>'
     : '<option value="end-lose">Kalah: L +1 &amp; tolak baki</option><option value="lose">L +1 sahaja</option>';
@@ -30,7 +37,7 @@ function save() {
 }
 function connectElgatoStreamDeckSocket(inPort, inUUID, inRegisterEvent, inInfo, inActionInfo) {
   uuid = inUUID;
-  try { const a = JSON.parse(inActionInfo); settings = (a.payload && a.payload.settings) || {}; isWin = !/\.lose$/.test(a.action); } catch (e) {}
+  try { const a = JSON.parse(inActionInfo); settings = (a.payload && a.payload.settings) || {}; isWin = !/\.lose$/.test(a.action); isToggle = /\.toggle$/.test(a.action); } catch (e) {}
   fill();
   ws = new WebSocket("ws://127.0.0.1:" + inPort);
   ws.onopen = () => ws.send(JSON.stringify({ event: inRegisterEvent, uuid: inUUID }));

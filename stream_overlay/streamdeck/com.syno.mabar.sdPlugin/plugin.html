@@ -9,12 +9,34 @@
    Butang tunjuk bilangan W / L sekarang. Perlu START_OVERLAY.bat jalan di PC ni. */
 "use strict";
 const BASE_DEF = "http://127.0.0.1:8787", HOLD_MS = 600, LONG_MS = 2000;
-let ws = null, last = { w: null, l: null };
+let ws = null, last = { w: null, l: null, faceOff: null, handOff: null, closed: null };
 const keys = {}; // context -> { action, settings, down, stage, t1, t2 }
 const send = o => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
 const setTitle = (ctx, t) => send({ event: "setTitle", context: ctx, payload: { title: t, target: 0 } });
 // draw the key: label on top, big number in the middle (Stream Deck shows the image; title stays empty)
 const COL = { win: "#ffcf4a", lose: "#ff2346" };
+// On / Off key: name on top, ON (green) / OFF (red) big
+function toggleImage(name, on, words) {
+  const c = document.createElement("canvas"); c.width = c.height = 144;
+  const g = c.getContext("2d"), acc = on == null ? "#777" : on ? "#6dffb0" : "#ff2346";
+  g.fillStyle = "#0e0609"; g.fillRect(0, 0, 144, 144);
+  g.strokeStyle = acc; g.lineWidth = 6; g.strokeRect(5, 5, 134, 134);
+  g.fillStyle = acc; g.fillRect(5, 5, 134, 30);
+  g.fillStyle = "#0b0507"; g.font = "bold 20px 'Segoe UI', Arial, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+  g.fillText(name, 72, 21);
+  const w = words || ["ON", "OFF"], txt = on == null ? "-" : on ? w[0] : w[1];
+  g.font = `900 ${txt.length > 4 ? 30 : 46}px 'Arial Black', 'Segoe UI', Arial, sans-serif`; g.fillStyle = "#fff"; g.shadowColor = acc; g.shadowBlur = 14;
+  g.fillText(txt, 72, 90);
+  return c.toDataURL("image/png");
+}
+const TOG = { facecam: ["FACECAM", d => d.faceOff == null ? null : !d.faceOff], handcam: ["HANDCAM", d => d.handOff == null ? null : !d.handOff], mabar: ["MABAR VIP", d => d.closed == null ? null : !d.closed] };
+const togOf = k => TOG[(k.settings && k.settings.tap) || "facecam"] ? (k.settings && k.settings.tap) || "facecam" : "facecam";
+function showToggle(ctx, k) {
+  const t = TOG[togOf(k)], on = t[1](last), key = "t|" + t[0] + "|" + on;
+  if (k.shown === key) return; k.shown = key;
+  send({ event: "setImage", context: ctx, payload: { image: toggleImage(t[0], on, t[0] === "MABAR VIP" ? ["OPEN", "CLOSED"] : null), target: 0 } });
+  setTitle(ctx, "");
+}
 function keyImage(kd, big, small) {
   const c = document.createElement("canvas"); c.width = c.height = 144;
   const g = c.getContext("2d"), acc = COL[kd];
@@ -37,13 +59,14 @@ function show(ctx, k, big, small) {
   send({ event: "setImage", context: ctx, payload: { image: keyImage(kind(k.action), big, small), target: 0 } });
   setTitle(ctx, "");
 }
-const kind = a => /\.lose$/.test(a) ? "lose" : "win";
+const kind = a => /\.lose$/.test(a) ? "lose" : /\.toggle$/.test(a) ? "toggle" : "win";
 const base = k => String((k && k.settings && k.settings.server) || BASE_DEF).trim().replace(/\/+$/, "");
 const label = k => kind(k.action) === "win" ? "WIN" : "LOSE";
 function paint(force) {
   for (const [ctx, k] of Object.entries(keys)) {
     if (k.down && !force) continue;
     if (force) k.shown = "";
+    if (kind(k.action) === "toggle") { showToggle(ctx, k); continue; }
     const v = kind(k.action) === "win" ? last.w : last.l;
     show(ctx, k, v == null ? "-" : v, v == null ? "OFFLINE" : label(k));
   }
@@ -51,8 +74,8 @@ function paint(force) {
 function refresh() {
   const any = Object.values(keys)[0]; if (!any) return;
   fetch(base(any) + "/api/wl", { cache: "no-store" }).then(r => r.json())
-    .then(d => { last = { w: d.w, l: d.l }; paint(); })
-    .catch(() => { last = { w: null, l: null }; paint(); });
+    .then(d => { last = { w: d.w, l: d.l, faceOff: d.faceOff == null ? null : !!d.faceOff, handOff: d.handOff == null ? null : !!d.handOff, closed: d.closed == null ? null : !!d.closed }; paint(); })
+    .catch(() => { last = { w: null, l: null, faceOff: null, handOff: null, closed: null }; paint(); });
 }
 function run(ctx, k, name) {
   fetch(base(k) + "/api/do/" + name, { mode: "no-cors", cache: "no-store" })
@@ -61,12 +84,19 @@ function run(ctx, k, name) {
     .finally(() => setTimeout(refresh, 1200));
 }
 function keyDown(ctx, k) {
+  if (kind(k.action) === "toggle") return;
   k.down = Date.now(); k.stage = 0;
   show(ctx, k, "+1", label(k));
   k.t1 = setTimeout(() => { k.stage = 1; show(ctx, k, "-1", "TAHAN"); }, HOLD_MS);
   k.t2 = setTimeout(() => { k.stage = 2; show(ctx, k, "0", "RESET " + label(k)); }, LONG_MS);
 }
 function keyUp(ctx, k) {
+  if (kind(k.action) === "toggle") {
+    // flip right away on the key, then confirm from the overlay
+    const t = togOf(k), f = t === "facecam" ? "faceOff" : t === "handcam" ? "handOff" : "closed";
+    if (last[f] != null) last[f] = !last[f];
+    paint(true); run(ctx, k, t + "-toggle"); return;
+  }
   clearTimeout(k.t1); clearTimeout(k.t2);
   const w = kind(k.action) === "win", st = k.stage; k.down = 0;
   const tap = (k.settings && k.settings.tap) || (w ? "end-win" : "end-lose");

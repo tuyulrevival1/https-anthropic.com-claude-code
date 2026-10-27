@@ -26,5 +26,6 @@ if exist "%ProgramFiles%\Elgato\StreamDeck\StreamDeck.exe" (
 echo.
 echo   SIAP! Dalam Stream Deck, cari kategori "SYNO Mabar" di sebelah kanan.
 echo   Seret "Win (tekan / tahan)" dan "Lose (tekan / tahan)" ke butang.
+echo   "On / Off (kamera, Mabar)": pilih Facecam, Handcam atau Mabar VIP dalam tetapan butang.
 echo.
 pause
