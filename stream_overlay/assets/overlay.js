@@ -726,7 +726,7 @@
     }
   };
   // landscape with the overlay column on one side: game 1536x1024 (3:2) flush with the top, column 384 wide.
-  // The column is a stack (facecam, handcam, Mabar VIP, W/L, banner): anything switched off in the App
+  // The column is a stack (facecam, Mabar VIP, W/L, banner, handcam): anything switched off in the App
   // lets the rest move up, so there is never an empty gap. LIVE bar under everything, drawn 2x.
   function landSide(side) {
     const colX = side === "kiri" ? 0 : 1536, gx = side === "kiri" ? 384 : 0, px = colX + 12;
@@ -736,15 +736,16 @@
       bannerY: 948, bannerX: px, bannerScale: 360 / 1080,
       slots: [
         { id: "game", x: gx, y: 0, w: 1536, h: 1024, frame: false },
-        { id: "face", x: px, y: 12, w: 360, h: 203, cut: 16, corners: true, optional: true, toggle: "cam" },
-        { id: "hand", x: px, y: 225, w: 360, h: 203, cut: 16, corners: true, optional: true, toggle: "hand" }
+        { id: "face", x: px, y: 12, w: 360, h: 252, cut: 16, corners: true, optional: true, toggle: "cam" },
+        { id: "hand", x: px, y: 809, w: 360, h: 203, cut: 16, corners: true, optional: true, toggle: "hand" }
       ],
       panels: [
-        { type: "queue", variant: "compact tall", x: px, y: 438, w: 360, h: 413, max: 6 },
-        { type: "score", x: px, y: 861, w: 360, h: 77 }
+        { type: "queue", variant: "compact tall", x: px, y: 272, w: 360, h: 372, max: 3 },
+        { type: "score", x: px, y: 652, w: 360, h: 77 }
       ],
-      stack: { x: px, w: 360, y0: 12, y1: 1012, gap: 10, items: [
-        { slot: "face", h: 203 }, { slot: "hand", h: 203 }, { panel: "queue", flex: true }, { panel: "score", h: 77 }, { banner: true, h: 64 }
+      // facecam always at the top, handcam always at the bottom (fixed OBS positions); Mabar VIP grows into any free space
+      stack: { x: px, w: 360, y0: 12, y1: 1012, gap: 8, items: [
+        { slot: "face", h: 252 }, { panel: "queue", flex: true }, { panel: "score", h: 77 }, { banner: true, h: 64 }, { slot: "hand", h: 203 }
       ] },
       tags: []
     };
@@ -1100,7 +1101,7 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
       // landscape column: move panels / banner up when something above is switched off
       const sk = stackLayout(L, hid, s.showBanner);
       if (sk) {
-        for (const { def, e } of panels) { const r = sk.panels[def.type]; if (r) { Object.assign(def, r); pos(e, def); if (def.type === "queue") def.max = Math.max(2, Math.min(12, Math.floor((r.h - 312) / 29))); } }
+        for (const { def, e } of panels) { const r = sk.panels[def.type]; if (r) { Object.assign(def, r); pos(e, def); if (def.type === "queue") def.max = Math.max(2, Math.min(12, Math.floor((r.h - 280) / 29))); } }
         if (api.banner && sk.bannerY != null) api.banner.el.style.top = sk.bannerY + "px";
       }
       buildLayers(visibleSlots(hid, s));

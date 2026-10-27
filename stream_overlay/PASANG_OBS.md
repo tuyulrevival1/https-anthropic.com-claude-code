@@ -68,12 +68,12 @@ Data sama dengan portrait (queue, W/L, timer, lagu, OPEN/CLOSED). **KEMASKINI.ba
 
 | Layout | URL | Gameplay (X, Y, W, H) | Kamera (X, Y, W, H) |
 |---|---|---|---|
-| Overlay kiri (utama) | `http://127.0.0.1:8787/landscape.html` | 384, 0, 1536, 1024 | Facecam 12, 12, 360, 203 · Handcam 12, 225, 360, 203 |
-| Overlay kanan | `http://127.0.0.1:8787/overlay.html?layout=kanan` | 0, 0, 1536, 1024 | Facecam 1548, 12, 360, 203 · Handcam 1548, 225, 360, 203 |
+| Overlay kiri (utama) | `http://127.0.0.1:8787/landscape.html` | 384, 0, 1536, 1024 | Facecam 12, 12, 360, 252 · Handcam 12, 809, 360, 203 |
+| Overlay kanan | `http://127.0.0.1:8787/overlay.html?layout=kanan` | 0, 0, 1536, 1024 | Facecam 1548, 12, 360, 252 · Handcam 1548, 809, 360, 203 |
 | Hitam kiri & kanan | `http://127.0.0.1:8787/overlay.html?layout=tengah` | 288, 14, 1344, 896 | 1644, 14, 264, 198 |
 
 3. Letak source gameplay & kamera di **bawah** overlay, ikut kotak dalam jadual (klik kanan › Transform › Edit Transform).
-- Kolum kiri bersusun: facecam, handcam, Mabar VIP, WIN / LOSE, banner. Matikan apa-apa (App › Live › Tunjuk di overlay › Landscape, atau Stream Deck) dan yang lain naik ke atas, tiada ruang kosong. Kedudukan kamera untuk OBS ditunjuk terus di bawah suis tu (handcam naik ke atas bila facecam off).
+- Kolum kiri: facecam (atas), Mabar VIP, WIN / LOSE, banner, handcam (bawah). Kedudukan kamera tetap. Matikan apa-apa (App › Live › Tunjuk di overlay › Landscape, atau Stream Deck) dan kad Mabar VIP membesar isi ruang tu, tiada ruang kosong.
 4. Landscape guna **banner minimal** (portrait kekal banner power). Tukar: `?banner=power`. PC lag: `?bgfx=0`. Kamera / WIN-LOSE / dll boleh on-off dari App › Live › Tunjuk di overlay › Landscape.
 
 ## 6. App Kawalan SYNO

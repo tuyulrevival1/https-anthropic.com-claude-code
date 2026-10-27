@@ -393,3 +393,7 @@
 .ov-prices.tall .pt-svc { flex-direction: column; gap: 6px; }
 .ov-prices.tall .q-tt { flex-direction: column-reverse; align-items: flex-start; gap: 4px; }
 .ov-prices.tall .q-tt .ov-h { white-space: nowrap; }
+/* landscape column: price chips on one line so more queue rows fit */
+.ov-queue.tall:not(.narrow) .q-prices { flex-wrap: nowrap; gap: 4px; }
+.ov-queue.tall:not(.narrow) .ov-chip { font-size: 11px; padding: 3px 6px 2px; white-space: nowrap; }
+.ov-queue.tall:not(.narrow) .ov-chip b { font-size: 15px; }
