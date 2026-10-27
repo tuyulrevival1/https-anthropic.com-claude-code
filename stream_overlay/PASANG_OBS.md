@@ -73,7 +73,7 @@ Banner minimal: `http://127.0.0.1:8787/overlay.html?banner=minimal` · tanpa han
 | **Peraturan** | Edit peraturan (baris `#` = tajuk) › **Simpan**. Penonton nampak terus. |
 | **Order masuk** | Semua order: SOCIABUZZ (automatik), MANUAL, TEST. |
 | **YouTube** | Penonton live YouTube pada bar LIVE (perlu API key, bahagian 9). |
-| **Lagu** | Song request dari IndoFinity (bahagian 12). **Tanda dah main**, buang, **Jeda / Sambung Spotify**. |
+| **Lagu** | Spotify dijeda sendiri bila IndoFinity main lagu request (bahagian 12). **Jeda / Sambung Spotify**. |
 | **Link** | Link kekal penonton & admin, Sociabuzz Webhook URL, link pantas. |
 
 **Undo / Redo**: butang **↶ / ↷** di tajuk setiap kad (Live, Win/Lose, Game habis, Queue, Hutang Mabar, MVP, Slot Akaun, Peraturan). Setiap kad undo perubahannya sendiri sahaja (contoh undo MVP tak sentuh baki). Tuding pada butang untuk lihat apa yang akan diundo. Papan kekunci: **Ctrl+Z** / **Ctrl+Y**. Sejarah disimpan selagi App tu terbuka.
@@ -248,37 +248,17 @@ Setiap tekan keluar dalam tetingkap hitam ("Stream Deck: end-win") dan App tunju
 
 ---
 
-## 12. Song request IndoFinity (TikTok) ke App & overlay
+## 12. Lagu request IndoFinity: Spotify dijeda sendiri
 
-### Cara utama: kesan app IndoFinity (tak perlu webhook / API)
-
-Server di PC dengar app yang sedang berbunyi di Windows. Bila app **IndoFinity** main lagu request: Spotify dijeda, tajuk lagu keluar di overlay (panel SONG REQUEST + bar LIVE) dan dalam App › Lagu. Bila lagu habis: Spotify main semula.
+Server di PC dengar bunyi app **IndoFinity**. Bila IndoFinity main lagu request: Spotify dijeda (lebih kurang 2 saat). Bila lagu tu pause / habis: Spotify sambung terus.
 
 1. Jalankan **KEMASKINI.bat**, tutup dan buka semula **START_OVERLAY.bat**.
-2. Buka IndoFinity dan main satu lagu request (atau uji `!play` di Simulator).
-3. App › tab **Lagu** › **Kesan lagu dari app IndoFinity**: senarai app yang berbunyi keluar. Tekan **Guna ni** pada IndoFinity (nama asal: `indofinity`).
-4. Status hijau **▶ indofinity sedang main** = jadi. Spotify dijeda sendiri.
+2. Buka app IndoFinity di PC yang sama.
+3. App › tab **Lagu**: baris **🔊 IndoFinity** tunjuk meter bunyi. Main satu lagu request: keluar **▶ Lagu request sedang main · Spotify dijeda**.
 
-- Spotify cuma dijeda bila app tu berbunyi **6 saat tanpa henti**. Alert / TTS pendek tak kacau Spotify.
-- Tajuk lagu keluar kalau IndoFinity beritahu Windows (macam tajuk yang keluar bila tekan butang volume). Kalau tak, Spotify tetap dijeda tapi tajuk tak keluar.
-
-### Cara tambahan: webhook IndoFinity (nama peminta)
-
-1. App › tab **Lagu** › buka **Sambung IndoFinity (webhook)** › salin **Link kekal** (`https://synostore.xxxx.ts.net/api/song-hook/KUNCI`). Link `http://127.0.0.1:8787/...` cuma untuk cuba kalau link kekal tak jalan.
-2. IndoFinity › **Pusat Interaksi** › **Interaksi** › buat baru › aksi **Trigger Webhook** › tampal link tadi. Hidupkan suis **Webhook**. IndoFinity hantar data cara POST (FormData), App terima terus.
-3. **Aktivitas** › buat baru › pemicu **Komentar** / perintah `!play` › pilih interaksi tadi. Buat juga untuk `!req`, `!skip`, `!revoke` kalau mahu.
-4. Uji: **Simulator** › Komentar › `!play Hindia Evaluasi`. Lagu keluar dalam App › Lagu dan di overlay. Kotak **Data terakhir dari IndoFinity** tunjuk apa yang IndoFinity hantar.
-5. Kotak tu tulis **Tajuk lagu tak jumpa**? Tambah `?user={username}&comment={comment}` pada hujung link (guna nama variabel IndoFinity), atau hantar gambar kotak tu.
-
-**Arahan**: `!play` / `!req` / `!sr` = tambah lagu. `!skip` = lagu paling lama ditanda dah main. `!revoke` = buang request terakhir orang tu.
-
-**Spotify**:
-- **Jeda Spotify bila ada request** (hidup) = Spotify berhenti bila lagu baru masuk.
-- **Sambung Spotify lepas (minit / request)** = Spotify main semula sendiri. Setiap request tambah masa (asal 4 minit). Bila semua lagu ditanda dah main, Spotify sambung terus.
+- Tutup suis **Jeda Spotify bila IndoFinity main lagu** kalau tak mahu.
 - Butang **Jeda Spotify** / **Sambung Spotify** untuk kawal sendiri.
-- **Tunjuk di overlay** = panel SONG REQUEST (3 lagu menunggu, yang pertama warna emas). Tutup kalau tak nak.
-
-Lagu tak masuk? App › Order › **Status webhook**: baris `lagu` dengan **KUNCI SALAH** = link tak lengkap; tiada baris = IndoFinity tak hantar. Hantar screenshot setting webhook IndoFinity kalau masih tak jadi.
+- Tajuk lagu dan nama peminta tak dapat dikesan: IndoFinity tak beritahu Windows (tetingkap cuma tulis "Youtube Music Player").
 
 ## Masalah biasa
 

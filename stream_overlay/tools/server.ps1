@@ -410,7 +410,7 @@ while ($true) {
         $type = 'application/json'
         if (-not $okPin) { $status = '401 Unauthorized'; $body = ToBytes '{}' }
         else {
-          if (((Get-Date) - $mediaAt).TotalSeconds -ge 1) { $mediaJson = Get-MediaJson; $mediaAt = Get-Date }
+          if (((Get-Date) - $mediaAt).TotalSeconds -ge 0.7) { $mediaJson = Get-MediaJson; $mediaAt = Get-Date }
           $body = ToBytes $mediaJson
         }
       } elseif ($path -eq 'api/hooklog') {

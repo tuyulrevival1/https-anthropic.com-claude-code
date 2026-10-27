@@ -568,31 +568,31 @@
       const hit = x => String(x || "").toLowerCase().includes(want);
       const sm = (j.smtc || []).find(x => hit(x.app) && x.playing);
       const loud = (j.audio || []).some(x => hit(x.name) && x.peak > 0.015);
-      if (loud) { if (now - MEDIA.loudAt > 3000) MEDIA.loudSince = now; MEDIA.loudAt = now; }
-      // a song = title reported by Windows, or sound for 6 s non-stop (short alerts / TTS don't count)
-      const active = !!sm || (MEDIA.loudAt > 0 && now - MEDIA.loudAt < 4000 && now - MEDIA.loudSince >= 6000);
+      if (loud) { if (now - MEDIA.loudAt > 2500) MEDIA.loudSince = now; MEDIA.loudAt = now; }
+      // a song = title reported by Windows, or sound from the player app for 2 s;
+      // paused / finished = quiet for ~2 s -> Spotify comes back right away
+      const active = !!sm || (MEDIA.loudAt > 0 && now - MEDIA.loudAt < 1900 && now - MEDIA.loudSince >= 2000);
       const title = songTitleOf(sm, (j.audio || []).find(x => hit(x.name)), want);
       const s0 = Store.state, curT = s0.songNow ? s0.songNow.title || "" : "";
       if (active && (!s0.songNow || (title !== curT && (title || /indofinity/i.test(curT))))) {
         Store.set(s => {
           s.songNow = { title, at: now };
-          (s.songs || []).forEach(x => { if (x.src === "app" && !x.done) { x.done = true; x.doneAt = now; } });
+          s.songs = (s.songs || []).filter(x => x.src !== "app");
           if (title) { s.songs = s.songs || []; s.songs.unshift({ id: uid("s"), user: "", title, at: now, done: false, src: "app" }); s.songs = s.songs.slice(0, 60); }
         }, { noHist: true });
       } else if (!active && s0.songNow) {
-        Store.set(s => { s.songNow = null; (s.songs || []).forEach(x => { if (x.src === "app" && !x.done) { x.done = true; x.doneAt = now; } }); Q._songIdle(s); }, { noHist: true });
+        Store.set(s => { s.songNow = null; s.songs = (s.songs || []).filter(x => x.src !== "app"); }, { noHist: true });
       }
-      if (cfg.autopause === false) return;
       const spot = (j.smtc || []).find(x => /spotify/i.test(x.app));
       if (active && !Store.state.spotAuto && (!spot || spot.playing)) { Store.set(s => { s.spotAuto = true; }, { noHist: true }); spotify("pause"); }
       else if (!active && Store.state.spotAuto) { Store.set(s => { s.spotAuto = false; }, { noHist: true }); spotify("play"); }
     }).catch(() => {}).finally(() => { MEDIA.busy = false; });
   }
-  setInterval(mediaTick, 1500);
+  setInterval(mediaTick, 1000);
   // song title only: never the app's own name ("IndoFinity"), a web address or "YouTube"
   function songTitleOf(sm, au, want) {
     const clean = t => String(t || "").replace(/\s*[-|–—:•·]\s*(indofinity|youtube music|youtube|google chrome|microsoft edge)\b.*$/i, "").replace(/^(indofinity|youtube music|youtube)\s*[-|–—:•·]\s*/i, "").trim();
-    const bad = t => !t || t.length < 2 || /indofinity|^https?:|\.(com|net|io|id)\b|^(youtube( music)?|widget|player|song request|now playing)$/i.test(t) || (want && t.toLowerCase().includes(want));
+    const bad = t => !t || t.length < 2 || /indofinity|^https?:|\.(com|net|io|id)\b|^(youtube( music)?( player)?|music player|widget|player|song request|now playing)$|\bv?\d+\.\d+\.\d+\b/i.test(t) || (want && t.toLowerCase().includes(want));
     const tidy = t => t.replace(/\s*[(\[](official|lirik|lyrics?|lyric video|audio|music video|mv|video klip|visualizer|hd|4k)[^)\]]*[)\]]/gi, "").replace(/\s{2,}/g, " ").trim();
     let ti = tidy(clean(sm && sm.title)), ar = clean(sm && sm.artist).replace(/vevo$/i, "").trim();
     if (bad(ar) || ar.toLowerCase().endsWith(" - topic") && (ar = ar.slice(0, -8).trim()) && bad(ar)) ar = "";
