@@ -152,7 +152,7 @@
       return e;
     }
   };
-  const HIST_SKIP = new Set(["rev", "updated", "orders", "seenOrders", "orderSeq", "yt", "docImported"]); // album / akaun changes stay undoable
+  const HIST_SKIP = new Set(["rev", "updated", "seenOrders", "orderSeq", "yt", "docImported"]); // album / akaun changes stay undoable
 
   /* ---------- queue, VIP balance, W/L, timer ---------- */
   const inLine = (s, k) => s.playing.some(p => p.key === k) || s.queue.some(p => p.key === k);
@@ -371,6 +371,7 @@
     try { text = new TextDecoder().decode(Uint8Array.from(atob(entry.b || ""), c => c.charCodeAt(0))); } catch (e) {}
     let b = {};
     try { b = JSON.parse(text); } catch (e) { try { b = Object.fromEntries(new URLSearchParams(text)); } catch (e2) {} }
+    if (!b || typeof b !== "object" || Array.isArray(b)) b = { message: text };
     if (b && typeof b.data === "object" && b.data) b = Object.assign({}, b, b.data);
     const name = String(pick(b, ["supporter", "buyer_name", "supporter_name", "name", "nama"]) || "Anonim").trim().slice(0, 24);
     const msg = String(pick(b, ["message", "note", "notes", "buyer_note", "supporter_message", "pesan"]) || "");
@@ -425,7 +426,13 @@
         for (const e of list) {
           if (e.n != null && e.n <= from) continue;             // another page already did it
           if (first && e.t && Date.now() - e.t > 864e5) continue;
-          const o = parseOrder(e);
+          let o;
+          try { o = parseOrder(e); }
+          catch (err) {
+            let raw = ""; try { raw = atob(e.b || "").slice(0, 500); } catch (x) {}
+            Q._log(s, { key: "", name: "Order tak dapat dibaca", mlid: "", games: 0, at: e.t || Date.now(), src: "sociabuzz", warn: "Semak Data asal", raw });
+            continue;
+          }
           // Sociabuzz sends the same id on every Test Notification: never drop a test as a duplicate
           const info = { amount: o.amount, cur: o.cur, note: o.msg, vip: !!o.vip, raw: o.raw, svc: o.svc };
           if (!o.test && s.seenOrders.includes(o.id)) { Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz", warn: "Order sama dengan sebelum ni, diabaikan" }, info)); continue; }

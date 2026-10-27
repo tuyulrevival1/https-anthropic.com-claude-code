@@ -164,6 +164,7 @@ ${embedded ? "" : `<header class="app-top">
 
     /* ---------- layout: drag cards to reorder, drag the corner to resize (saved on this device) ---------- */
     const LAY_KEY = "syno.layout.v1";
+    let layApplyTabs = () => {};
     let LAY = {}; try { LAY = JSON.parse(lsGet(LAY_KEY, "{}")) || {}; } catch (e) { LAY = {}; }
     const LAY_DEF = { queue: 3, vip: 3, mvp: 3 }; // default widths (columns) before anything is saved
     LAY.span = LAY.span || Object.assign({}, LAY_DEF); LAY.h = LAY.h || {};
@@ -195,7 +196,7 @@ ${embedded ? "" : `<header class="app-top">
     const HIST_FIELDS = {
       live: ["live", "song", "showQueue", "showBanner"], wl: ["wins", "losses", "streak"],
       end: ["wins", "losses", "streak", "playing", "queue", "members"], queue: ["playing", "queue", "members"],
-      vip: ["members", "playing", "queue"], mvp: ["mvp", "mvpRules"], akaun: ["akaun"], album: ["album"], rules: ["rules"]
+      vip: ["members", "playing", "queue"], mvp: ["mvp", "mvpRules"], akaun: ["akaun"], album: ["album"], rules: ["rules"], orders: ["orders"]
     };
     layCards().forEach(c => {
       const f = HIST_FIELDS[c.dataset.card], h = c.querySelector("h3"); if (!f || !h) return;
@@ -239,12 +240,12 @@ ${embedded ? "" : `<header class="app-top">
     if (layBtn) layBtn.addEventListener("click", () => {
       const on = !root.classList.contains("editing");
       root.classList.toggle("editing", on); layBtn.textContent = on ? "✓ Siap" : "⠿ Susun layout"; layBtn.classList.toggle("gold", on); layReset.hidden = !on;
-      if (!on) toast("Layout disimpan");
+      if (on) toast("Tarik kad atau tab untuk susun", 3000); else toast("Layout disimpan");
     });
     if (layReset) layReset.addEventListener("click", () => {
       LAY = { span: Object.assign({}, LAY_DEF), h: {} }; laySave();
       const def = ["live", "wl", "end", "queue", "vip", "mvp", "akaun", "rules", "orders", "yt", "links"];
-      LAY.order = def; layApply(); delete LAY.order; laySave(); toast("Layout asal");
+      LAY.order = def; layApply(); delete LAY.order; laySave(); layApplyTabs(); toast("Layout asal");
     });
     layGrid.addEventListener("click", e => {
       const w = e.target.closest("[data-lw]"), hb = e.target.closest(".lay-h");
@@ -308,9 +309,32 @@ ${embedded ? "" : `<header class="app-top">
       lsSet("syno.app.tab", t.id);
     }
     if (tabNav) {
-      tabNav.innerHTML = TABS.map(t => `<button type="button" role="tab" data-tab="${t.id}"><span>${t.label}</span><i data-tabc="${t.id}"></i></button>`).join("");
+      const tabOrder = () => { const ids = (LAY.tabs || []).filter(id => TABS.some(t => t.id === id)); TABS.forEach(t => { if (!ids.includes(t.id)) ids.push(t.id); }); return ids; };
+      tabNav.innerHTML = tabOrder().map(id => { const t = TABS.find(x => x.id === id); return `<button type="button" role="tab" data-tab="${t.id}"><span>${t.label}</span><i data-tabc="${t.id}"></i></button>`; }).join("");
+      layApplyTabs = () => { const byId = {}; tabNav.querySelectorAll("[data-tab]").forEach(b => { byId[b.dataset.tab] = b; }); tabOrder().forEach(id => byId[id] && tabNav.appendChild(byId[id])); };
+      // Susun layout: drag a tab to a new place (mouse or finger)
+      let tdrag = null, tmoved = false;
+      tabNav.addEventListener("pointerdown", e => {
+        if (!root.classList.contains("editing")) return;
+        const b = e.target.closest("[data-tab]"); if (!b) return;
+        tdrag = b; tmoved = false; b.classList.add("dragging"); b.setPointerCapture(e.pointerId); e.preventDefault();
+      });
+      tabNav.addEventListener("pointermove", e => {
+        if (!tdrag) return;
+        const t = document.elementFromPoint(e.clientX, e.clientY), over = t && t.closest("#ap-tabs [data-tab]");
+        if (!over || over === tdrag) return;
+        const r = over.getBoundingClientRect();
+        tabNav.insertBefore(tdrag, e.clientX < r.left + r.width / 2 ? over : over.nextSibling); tmoved = true;
+      });
+      const tend = () => {
+        if (!tdrag) return;
+        tdrag.classList.remove("dragging"); tdrag = null;
+        if (tmoved) { LAY.tabs = [...tabNav.querySelectorAll("[data-tab]")].map(b => b.dataset.tab); laySave(); toast("Susunan tab disimpan"); }
+      };
+      tabNav.addEventListener("pointerup", tend); tabNav.addEventListener("pointercancel", tend);
       tabNav.addEventListener("click", e => {
         const b = e.target.closest("[data-tab]"); if (!b) return;
+        if (tmoved) { tmoved = false; return; }
         showTab(b.dataset.tab);
         try { history.replaceState(null, "", location.pathname + location.search + "#" + b.dataset.tab); } catch (err) {}
         window.scrollTo({ top: 0 });
@@ -407,6 +431,12 @@ ${embedded ? "" : `<header class="app-top">
         if (r) toast(`${r.name}: MVP ${r.cur}${r.cur === 5 || r.cur === 15 ? ` · cukup ${r.cur}, boleh claim!` : ""}${r.free ? " · VVIP free 1 game" : ""}`, 3500);
       }
       else if (a === "import") doImport();
+      else if (a === "orddel") {
+        if (!b.dataset.armed) { b.dataset.armed = "1"; b.textContent = "Pasti?"; setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = "✕"; } }, 2500); return; }
+        const rx = +b.dataset.rx;
+        Store.set(s => { const i = (s.orders || []).findIndex(o => o.rx === rx); if (i >= 0) s.orders.splice(i, 1); });
+        toast("Order dibuang dari senarai (baki tak berubah)", 3000);
+      }
       else if (a === "altog") Q.albumToggle(id);
       else if (a === "aldel") {
         if (b.dataset.armed) Q.albumDel(id);
@@ -461,7 +491,7 @@ ${embedded ? "" : `<header class="app-top">
       $("ap-oc").textContent = ords.length ? `${ords.length}` : "";
       const SVL = { album: "KOMEN ALBUM", akaun: "MAIN AKAUN" };
       const srcTag = o => o.svc && o.src !== "test" ? `<span class="tag sb">${SVL[o.svc] || o.svc}</span>` : o.src === "sociabuzz" ? `<span class="tag sb">SOCIABUZZ</span>` : o.src === "test" ? `<span class="tag test">TEST</span>` : o.src === "sim" ? `<span class="tag test">ALERT</span>` : `<span class="tag man">MANUAL</span>`;
-      $("ap-orders").innerHTML = ords.length ? ords.map(o => `<li class="${o.warn ? "warn" : ""}">${srcTag(o)}<span class="who"><span class="nm">${esc(o.name)}</span><span class="sub">${o.mlid ? `ID ${esc(o.mlid)} · ` : "tiada ID · "}${fmtDate(o.at)}${o.amount ? ` · ${esc(o.cur || "")} ${o.amount}` : ""}${o.warn ? ` · ${esc(o.warn)}` : ""}</span></span><span class="bal">${o.games ? `+${o.games} game${o.vip ? " VVIP" : ""}` : o.svc && o.src !== "test" ? "✓" : "—"}</span>${o.raw ? `<details class="raw"><summary>Data asal</summary><code>${esc(o.raw)}</code></details>` : ""}</li>`).join("")
+      $("ap-orders").innerHTML = ords.length ? ords.map(o => `<li class="${o.warn ? "warn" : ""}">${srcTag(o)}<span class="who"><span class="nm">${esc(o.name)}</span><span class="sub">${o.mlid ? `ID ${esc(o.mlid)} · ` : "tiada ID · "}${fmtDate(o.at)}${o.amount ? ` · ${esc(o.cur || "")} ${o.amount}` : ""}${o.warn ? ` · ${esc(o.warn)}` : ""}</span></span><span class="bal">${o.games ? `+${o.games} game${o.vip ? " VVIP" : ""}` : o.svc && o.src !== "test" ? "✓" : "—"}</span><button class="btn sq ghost" type="button" data-a="orddel" data-rx="${o.rx}" aria-label="Buang order ${esc(o.name)}">✕</button>${o.raw ? `<details class="raw"><summary>Data asal</summary><code>${esc(o.raw)}</code></details>` : ""}</li>`).join("")
         : `<li class="empty">Belum ada order.</li>`;
       // text areas: never overwrite while being edited
       if (document.activeElement !== $("ap-rules") && !$("ap-rules").dataset.dirty) $("ap-rules").value = s.rules || "";

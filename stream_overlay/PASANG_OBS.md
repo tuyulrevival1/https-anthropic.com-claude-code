@@ -78,7 +78,7 @@ Banner minimal: `http://127.0.0.1:8787/overlay.html?banner=minimal` · tanpa han
 **Undo / Redo**: butang **↶ / ↷** di tajuk setiap kad (Live, Win/Lose, Game habis, Queue, Hutang Mabar, MVP, Slot Akaun, Peraturan). Setiap kad undo perubahannya sendiri sahaja (contoh undo MVP tak sentuh baki). Tuding pada butang untuk lihat apa yang akan diundo. Papan kekunci: **Ctrl+Z** / **Ctrl+Y**. Sejarah disimpan selagi App tu terbuka.
 
 **Tab** di atas App: Live · Hutang Mabar · MVP · Slot Akaun · Peraturan · Order · Tetapan · Semua (link terus: `control.html#mvp`).
-**Susun layout**: tekan **⠿ Susun layout** › tarik **⠿ Tarik** untuk pindah kad, tarik bucu kanan bawah untuk ubah saiz, atau tekan 1 / 2 / 3 untuk lebar › **✓ Siap**. Disimpan dalam peranti tu (PC dan phone boleh lain). **Reset** = susunan asal.
+**Susun layout**: tekan **⠿ Susun layout** › tarik **tab di atas** untuk tukar urutan tab, tarik **⠿ Tarik** untuk pindah kad, tarik bucu kanan bawah untuk ubah saiz, atau tekan 1 / 2 / 3 untuk lebar › **✓ Siap**. Disimpan dalam peranti tu (PC dan phone boleh lain). **Reset** = susunan asal.
 
 Nak app dalam OBS juga: **Docks › Custom Browser Docks** › URL `http://127.0.0.1:8787/control.html`.
 
@@ -172,7 +172,7 @@ Bila orang bayar:
 
   Mesej "3 game" dalam order menang atas kiraan jumlah. Ubah harga dalam `assets\config.js` › `sociabuzz` (packs, services).
 - Butang **Test Alert** di halaman Alert Sociabuzz dan **Test Notification** di halaman Webhook dua-dua keluar sebagai **TEST** dalam tab Order.
-- Setiap order dalam tab Order ada **Data asal** (apa Sociabuzz hantar), untuk semak kalau ada yang pelik.
+- Setiap order dalam tab Order ada **Data asal** (apa Sociabuzz hantar), untuk semak kalau ada yang pelik, dan **✕** untuk buang baris tu (baki tak berubah; ↶ untuk batal). **Buang baris TEST** buang semua test sekali gus.
 - Order masa PC off tak dihantar semula oleh Sociabuzz: semak dashboard Sociabuzz dan tambah manual.
 - Semua order mentah disimpan dalam `data\orders_log.txt`.
 

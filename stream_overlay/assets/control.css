@@ -240,3 +240,7 @@
 .app .list li:has(details.raw) { flex-wrap: wrap; }
 .app details.raw summary { cursor: pointer; font-size: 12px; letter-spacing: .12em; color: var(--c-mut); text-transform: uppercase; }
 .app details.raw code { display: block; margin-top: 4px; padding: 6px 8px; background: #0a0405; font: 12px/1.4 ui-monospace, Consolas, monospace; color: #ffb3bf; overflow-wrap: anywhere; white-space: pre-wrap; }
+
+/* ---- tabs while arranging ---- */
+.app.editing .app-tabs button { cursor: grab; touch-action: none; outline: 1px dashed rgba(255, 207, 74, .45); outline-offset: -3px; }
+.app.editing .app-tabs button.dragging { opacity: .55; outline: 2px solid var(--c-gold); cursor: grabbing; }
