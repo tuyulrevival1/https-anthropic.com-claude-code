@@ -5,7 +5,7 @@
 /* SYNO Mabar Stream Deck plugin.
    Tekan sekejap  = Menang / Kalah (atau W/L +1 sahaja, ikut tetapan butang)
    Tahan 0.6 saat = W / L tolak 1
-   Tahan 2 saat   = reset W/L (dua-dua jadi 0)
+   Tahan 2 saat   = reset butang ni sahaja (WIN jadi 0, atau LOSE jadi 0)
    Butang tunjuk bilangan W / L sekarang. Perlu START_OVERLAY.bat jalan di PC ni. */
 "use strict";
 const BASE_DEF = "http://127.0.0.1:8787", HOLD_MS = 600, LONG_MS = 2000;
@@ -64,15 +64,15 @@ function keyDown(ctx, k) {
   k.down = Date.now(); k.stage = 0;
   show(ctx, k, "+1", label(k));
   k.t1 = setTimeout(() => { k.stage = 1; show(ctx, k, "-1", "TAHAN"); }, HOLD_MS);
-  k.t2 = setTimeout(() => { k.stage = 2; show(ctx, k, "0", "RESET W/L"); }, LONG_MS);
+  k.t2 = setTimeout(() => { k.stage = 2; show(ctx, k, "0", "RESET " + label(k)); }, LONG_MS);
 }
 function keyUp(ctx, k) {
   clearTimeout(k.t1); clearTimeout(k.t2);
   const w = kind(k.action) === "win", st = k.stage; k.down = 0;
   const tap = (k.settings && k.settings.tap) || (w ? "end-win" : "end-lose");
-  const name = st === 2 ? "wl-reset" : st === 1 ? (w ? "win-1" : "lose-1") : tap;
+  const name = st === 2 ? (w ? "win-reset" : "lose-reset") : st === 1 ? (w ? "win-1" : "lose-1") : tap;
   if (last.w != null) {
-    if (st === 2) last = { w: 0, l: 0 };
+    if (st === 2) { if (w) last.w = 0; else last.l = 0; }
     else if (w) last.w = Math.max(0, last.w + (st === 1 ? -1 : 1));
     else last.l = Math.max(0, last.l + (st === 1 ? -1 : 1));
   }

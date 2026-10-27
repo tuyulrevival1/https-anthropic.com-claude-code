@@ -1,9 +1,9 @@
 {
   "Name": "SYNO Mabar",
   "Author": "SYNOSTORE",
-  "Version": "1.1.0",
+  "Version": "1.2.0",
   "SDKVersion": 2,
-  "Description": "Win / Lose untuk overlay SYNO. Tekan = tambah, tahan = tolak 1, tahan lama = reset W/L.",
+  "Description": "Win / Lose untuk overlay SYNO. Tekan = tambah, tahan = tolak 1, tahan 2 saat = reset butang tu sahaja.",
   "Category": "SYNO Mabar",
   "CategoryIcon": "img/cat",
   "Icon": "img/plugin",
@@ -27,7 +27,7 @@
       "UUID": "com.syno.mabar.win",
       "Name": "Win (tekan / tahan)",
       "Icon": "img/win_list",
-      "Tooltip": "Tekan: Menang. Tahan 0.6 s: Win -1. Tahan 2 s: reset W/L.",
+      "Tooltip": "Tekan: Menang. Tahan 0.6 s: Win -1. Tahan 2 s: Win jadi 0.",
       "States": [
         {
           "Image": "img/win_key",
@@ -42,7 +42,7 @@
       "UUID": "com.syno.mabar.lose",
       "Name": "Lose (tekan / tahan)",
       "Icon": "img/lose_list",
-      "Tooltip": "Tekan: Kalah. Tahan 0.6 s: Lose -1. Tahan 2 s: reset W/L.",
+      "Tooltip": "Tekan: Kalah. Tahan 0.6 s: Lose -1. Tahan 2 s: Lose jadi 0.",
       "States": [
         {
           "Image": "img/lose_key",

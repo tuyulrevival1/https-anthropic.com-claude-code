@@ -300,7 +300,8 @@
     "timer-start": () => Q.timer("start"), "timer-pause": () => Q.timer("pause"), "timer-reset": () => Q.timer("reset"),
     "queue-on": () => Q.patch({ showQueue: true }), "queue-off": () => Q.patch({ showQueue: false }),
     "banner-on": () => Q.patch({ showBanner: true }), "banner-off": () => Q.patch({ showBanner: false }),
-    "wl-reset": () => Q.patch({ wins: 0, losses: 0, streak: 0 })
+    "wl-reset": () => Q.patch({ wins: 0, losses: 0, streak: 0 }),
+    "win-reset": () => Q.patch({ wins: 0, streak: 0 }), "lose-reset": () => Q.patch({ losses: 0, streak: 0 })
   };
   // Stream Deck presses wait on the PC server; whichever open overlay / app asks first runs them once
   let cmdBusy = false;
