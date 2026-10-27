@@ -477,7 +477,7 @@ ${embedded ? "" : `<header class="app-top">
     const fmtDate = ms => { if (!ms) return ""; const d = new Date(ms), h = d.getHours(); return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)} ${h % 12 || 12}:${pad2(d.getMinutes())} ${h < 12 ? "AM" : "PM"}`; };
     const toInput = ms => ms ? toLocalInput(new Date(ms)) : "";
     const busyIn = box => box.contains(document.activeElement) && /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName);
-    let pending = {};
+    let pending = {}, qDrag = null;
     function render(s, force) {
       const max = CFG.mabar.maxPlaying, rot = CFG.mabar.rotateEvery || 0, T = O.Q.tot;
       const mem = p => s.members[p.key] || { name: p.key, bal: 0, vbal: 0 };
@@ -499,12 +499,14 @@ ${embedded ? "" : `<header class="app-top">
       $("ap-showq").checked = !!s.showQueue; $("ap-showb").checked = !!s.showBanner; $("ap-shows").checked = !s.song || s.song.on !== false;
       if (document.activeElement !== $("ap-song")) $("ap-song").value = (s.song && s.song.manual) || "";
       $("ap-pc").textContent = `${s.playing.length}/${max}`; $("ap-qc").textContent = s.queue.length;
-      $("ap-play").innerHTML = s.playing.length ? s.playing.map(p => `<li class="qrow"><div class="qtop">${who(p, (p.n ? ` · dah ${p.n} game` : "") + (rot && (p.n || 0) >= rot ? " · boleh rotate" : "") + mvpOf(p))}<span class="bal">${balTxt(mem(p))}</span></div>
+      if (qDrag) { pending.queue = true; } else {
+      $("ap-play").innerHTML = s.playing.length ? s.playing.map(p => `<li class="qrow" data-qid="${p.id}" data-zone="play"><div class="qtop"><span class="qgrip" data-qid="${p.id}" title="Tarik">⠿</span>${who(p, (p.n ? ` · dah ${p.n} game` : "") + (rot && (p.n || 0) >= rot ? " · boleh rotate" : "") + mvpOf(p))}<span class="bal">${balTxt(mem(p))}</span></div>
 <div class="qctl"><button class="btn sq" data-a="b-" data-k="${esc(p.key)}" aria-label="Tolak baki">−</button><button class="btn sq" data-a="b+" data-k="${esc(p.key)}" aria-label="Tambah baki">+</button><button class="btn small gold" data-a="mvpp" data-k="${esc(p.key)}" title="Pemain ni MVP: +1 dalam senarai MVP">★ MVP</button><button class="btn small ghost" data-a="noshow" data-id="${p.id}">Tak muncul</button><button class="btn sq" data-a="rm" data-id="${p.id}" aria-label="Keluarkan">✕</button></div>${roleRow(p)}</li>`).join("")
         : `<li class="empty">Belum ada. Tambah dalam Hutang Mabar di bawah.</li>`;
-      $("ap-queue").innerHTML = s.queue.length ? s.queue.map((p, i) => `<li class="qrow"><div class="qtop"><span class="no">${i + 1}</span>${who(p)}<span class="bal">${balTxt(mem(p))}</span></div>
+      $("ap-queue").innerHTML = s.queue.length ? s.queue.map((p, i) => `<li class="qrow" data-qid="${p.id}" data-zone="queue"><div class="qtop"><span class="qgrip" data-qid="${p.id}" title="Tarik ke Sedang main untuk ganti, atau ke atas / bawah untuk susun">⠿</span><span class="no">${i + 1}</span>${who(p)}<span class="bal">${balTxt(mem(p))}</span></div>
 <div class="qctl"><button class="btn sq" data-a="up" data-id="${p.id}" aria-label="Naik">↑</button><button class="btn sq" data-a="bottom" data-id="${p.id}" aria-label="Ke bawah queue">⤓</button>${s.playing.length < max ? `<button class="btn sq" data-a="now" data-id="${p.id}" aria-label="Main sekarang">▶</button>` : ""}<button class="btn small ghost" data-a="noshow" data-id="${p.id}">Tak muncul</button><button class="btn sq" data-a="rm" data-id="${p.id}" aria-label="Buang dari queue">✕</button></div>${roleRow(p)}</li>`).join("")
         : `<li class="empty">Queue kosong.</li>`;
+      }
       const ords = (s.orders || []).slice(0, 40);
       $("ap-oc").textContent = ords.length ? `${ords.length}` : "";
       const SVL = { album: "KOMEN ALBUM", akaun: "MAIN AKAUN", joki: "JOKI MINIGAME" };
@@ -567,6 +569,51 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
         pending.akaun = false;
         akBox.innerHTML = (s.akaun || []).map((r, i) => `<li class="akrow"><input class="akin" data-i="${i}" data-f="day" value="${esc(r.day)}" placeholder="Hari" aria-label="Hari"><input class="akin" data-i="${i}" data-f="name" value="${esc(r.name)}" placeholder="Nama" aria-label="Nama"><input class="akin akdate" type="date" data-i="${i}" data-f="date" value="${/^\d{4}-\d{2}-\d{2}$/.test(r.date || "") ? esc(r.date) : ""}" aria-label="Tarikh"><button class="btn sq ghost" data-a="akdel" data-i="${i}" aria-label="Buang baris">✕</button></li>`).join("");
       }
+    }
+    /* ---------- drag a player: queue -> playing slot = replace (the replaced player keeps the balance), queue -> queue = reorder ---------- */
+    const qcard = root.querySelector("section.queue");
+    if (qcard) {
+      let ghost = null, over = null;
+      qcard.addEventListener("pointerdown", e => {
+        const g = e.target.closest(".qgrip"); if (!g || root.classList.contains("editing")) return;
+        const row = g.closest("li.qrow"); qDrag = { id: row.dataset.qid, zone: row.dataset.zone, row };
+        ghost = row.cloneNode(true); ghost.classList.add("qghost"); ghost.style.width = row.offsetWidth + "px"; document.body.appendChild(ghost);
+        ghost.style.left = (e.clientX - 20) + "px"; ghost.style.top = (e.clientY - 20) + "px";
+        row.classList.add("qdragging"); g.setPointerCapture(e.pointerId); e.preventDefault();
+      });
+      qcard.addEventListener("pointermove", e => {
+        if (!qDrag) return;
+        ghost.style.left = (e.clientX - 20) + "px"; ghost.style.top = (e.clientY - 20) + "px";
+        ghost.hidden = true; const el = document.elementFromPoint(e.clientX, e.clientY); ghost.hidden = false;
+        const t = el && el.closest("li.qrow"), list = el && el.closest("#ap-queue");
+        if (over) over.classList.remove("qover", "qover-up", "qover-down");
+        over = t && t !== qDrag.row ? t : (list && !t ? list : null);
+        if (over && over.classList.contains("qrow")) {
+          if (over.dataset.zone === "play" && qDrag.zone === "queue") over.classList.add("qover");
+          else if (over.dataset.zone === "queue" && qDrag.zone === "queue") { const r = over.getBoundingClientRect(); over.classList.add(e.clientY < r.top + r.height / 2 ? "qover-up" : "qover-down"); }
+          else over = null;
+        }
+      });
+      const qEnd = e => {
+        if (!qDrag) return;
+        const d = qDrag; qDrag = null;
+        if (ghost) { ghost.remove(); ghost = null; }
+        d.row.classList.remove("qdragging");
+        const t = over; if (over) over.classList.remove("qover", "qover-up", "qover-down"); over = null;
+        if (t && t.classList.contains("qrow")) {
+          if (t.dataset.zone === "play" && d.zone === "queue") {
+            Store.nextLabel = "Queue · ganti pemain";
+            const r = Q.replaceIn(d.id, t.dataset.qid);
+            if (r) toast(`${r.inName} masuk main, ganti ${r.outName} (baki ${r.outName} kekal dalam Hutang Mabar)`, 4000);
+          } else if (t.dataset.zone === "queue" && d.zone === "queue") {
+            const ids = Store.state.queue.map(p => p.id), from = ids.indexOf(d.id); let to = ids.indexOf(t.dataset.qid);
+            const r = t.getBoundingClientRect(); if (e && e.clientY >= r.top + r.height / 2) to += 1; if (from < to) to -= 1;
+            Store.nextLabel = "Queue · susun"; Q.moveQueue(d.id, to);
+          }
+        }
+        if (pending.queue) { pending.queue = false; render(Store.state, true); }
+      };
+      qcard.addEventListener("pointerup", qEnd); qcard.addEventListener("pointercancel", () => qEnd(null));
     }
     root.addEventListener("focusout", () => setTimeout(() => { if (Object.values(pending).some(Boolean) && !busyIn(root)) render(Store.state); }, 50));
     render(Store.state); Store.on(render);

@@ -268,3 +268,13 @@
 .app .mvnote { width: 100%; margin-top: 4px; padding: 6px 8px; font-size: 13px; }
 .app .akrow .akdate { min-width: 0; padding: 6px 6px; font-size: 13px; }
 .app .ak-head, .app .akrow { grid-template-columns: .9fr 1.3fr 1.2fr 36px; }
+
+/* ---- drag players between queue and playing ---- */
+.app .qgrip { flex: none; cursor: grab; touch-action: none; user-select: none; color: var(--c-mut); font-size: 18px; line-height: 1; padding: 6px 4px; margin-left: -4px; }
+.app .qgrip:hover { color: var(--c-gold); }
+.app .list li.qrow.qdragging { opacity: .35; }
+.app .list li.qrow.qover { outline: 2px solid var(--c-gold); outline-offset: -2px; background: rgba(255, 207, 74, .1); }
+.app .list li.qrow.qover-up { box-shadow: inset 0 3px 0 var(--c-gold); }
+.app .list li.qrow.qover-down { box-shadow: inset 0 -3px 0 var(--c-gold); }
+.qghost { position: fixed; z-index: 50; pointer-events: none; opacity: .9; list-style: none; background: #2a1118; border: 1px solid #ffcf4a; padding: 6px 10px; box-shadow: 0 10px 30px rgba(0,0,0,.6); color: #f6eff0; font: 600 15px/1.3 "OV Raj", Rajdhani, sans-serif; }
+.qghost .qctl, .qghost .roles { display: none; }

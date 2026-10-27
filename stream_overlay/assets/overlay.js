@@ -328,6 +328,19 @@
     },
     wl(k, d) { Store.set(s => { s[k] = Math.max(0, (s[k] || 0) + d); if (d > 0) s.streak = k === "wins" ? (s.streak > 0 ? s.streak + 1 : 1) : (s.streak < 0 ? s.streak - 1 : -1); }); },
     remove(id) { Store.set(s => { s.playing = s.playing.filter(p => p.id !== id); s.queue = s.queue.filter(p => p.id !== id); Q.fillSlots(s); }); },
+    // drag & drop in the app: a queue player takes a playing slot; the one replaced leaves the line (balance kept)
+    replaceIn(qId, pId) {
+      let out = null;
+      Store.set(s => {
+        const qi = s.queue.findIndex(p => p.id === qId), pi = s.playing.findIndex(p => p.id === pId);
+        if (qi < 0 || pi < 0) return;
+        const inc = s.queue.splice(qi, 1)[0], old = s.playing[pi];
+        inc.n = 0; s.playing[pi] = inc;
+        out = { inName: (s.members[inc.key] || {}).name || inc.key, outName: (s.members[old.key] || {}).name || old.key };
+      });
+      return out;
+    },
+    moveQueue(id, to) { Store.set(s => { const i = s.queue.findIndex(p => p.id === id); if (i < 0) return; const [x] = s.queue.splice(i, 1); s.queue.splice(Math.max(0, Math.min(s.queue.length, to)), 0, x); }); },
     toBottom(id) { Store.set(s => { const i = s.queue.findIndex(p => p.id === id); if (i >= 0) { const [x] = s.queue.splice(i, 1); s.queue.push(x); } }); },
     up(id) { Store.set(s => { const i = s.queue.findIndex(p => p.id === id); if (i > 0) { const [x] = s.queue.splice(i, 1); s.queue.splice(i - 1, 0, x); } }); },
     playNow(id) { Store.set(s => { const i = s.queue.findIndex(p => p.id === id); if (i >= 0 && s.playing.length < CFG.mabar.maxPlaying) { const e = s.queue.splice(i, 1)[0]; e.n = 0; s.playing.push(e); } }); },
