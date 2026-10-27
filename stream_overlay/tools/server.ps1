@@ -12,7 +12,7 @@ $port = 8787
 $dataDir = Join-Path $root 'data'
 if (-not (Test-Path -LiteralPath $dataDir)) { New-Item -ItemType Directory -Path $dataDir | Out-Null }
 $stateFile = Join-Path $dataDir 'state.txt'
-$pendingFile = Join-Path $dataDir 'orders_pending.txt'
+$pendingFile = Join-Path $dataDir 'orders_pending.txt'   # jurnal order: setiap baris ada nombor urutan "n", tak dipadam bila dibaca
 $orderLog = Join-Path $dataDir 'orders_log.txt'
 $pinFile = Join-Path $dataDir 'admin_pin.txt'
 $keyFile = Join-Path $dataDir 'webhook_key.txt'
@@ -100,6 +100,16 @@ $appUrl = "http://127.0.0.1:$port/control.html"
 try { Start-Process 'msedge.exe' -ArgumentList "--app=$appUrl" } catch { try { Start-Process $appUrl } catch { } }
 
 $fails = 0; $lockUntil = [DateTime]::MinValue
+# nombor urutan order. Baris lama (tanpa "n") diberi nombor sekali semasa server mula.
+$orderSeq = 0
+if (Test-Path -LiteralPath $pendingFile) {
+  $old = @([System.IO.File]::ReadAllLines($pendingFile) | Where-Object { $_.Trim() })
+  $fixed = foreach ($ln in $old) {
+    if ($ln -match '^\{"n":(\d+),') { $orderSeq = [Math]::Max($orderSeq, [int]$matches[1]); $ln }
+    else { $orderSeq++; '{"n":' + $orderSeq + ',' + $ln.TrimStart().Substring(1) }
+  }
+  [System.IO.File]::WriteAllLines($pendingFile, [string[]]@($fixed))
+}
 
 # ---------- lagu sedang dimainkan (Spotify / IndoFinity guna Spotify) ----------
 # 1) Windows media session (tunjuk lagu walaupun Spotify diminimize), 2) tajuk tetingkap Spotify "Artis - Lagu"
@@ -235,11 +245,12 @@ while ($true) {
         else {
           $b64 = [Convert]::ToBase64String($bodyBytes)
           $ct = [string]$hdr['content-type']
-          $entry = '{"t":' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() + ',"ct":' + (JsonStr $ct) + ',"b":"' + $b64 + '"}'
+          $orderSeq++
+          $entry = '{"n":' + $orderSeq + ',"t":' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() + ',"ct":' + (JsonStr $ct) + ',"b":"' + $b64 + '"}'
           [System.IO.File]::AppendAllText($pendingFile, $entry + "`n")
           $hlist = ($hdr.GetEnumerator() | Where-Object { $_.Key -ne 'x-pin' } | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join '; '
           [System.IO.File]::AppendAllText($orderLog, (Get-Date -Format 's') + "`r`n  HEADERS: " + $hlist + "`r`n  BODY: " + [System.Text.Encoding]::UTF8.GetString($bodyBytes) + "`r`n")
-          Write-Host ("  Order baru diterima ({0})" -f (Get-Date -Format 'h:mm tt')) -ForegroundColor Green
+          Write-Host ("  Order baru diterima #{0} ({1})" -f $orderSeq, (Get-Date -Format 'h:mm tt')) -ForegroundColor Green
           $body = ToBytes 'OK'   # isi 'Webhook HTTP Test Response' di Sociabuzz dengan: OK
         }
       } elseif ($path -like 'api/do/*') {
@@ -286,12 +297,15 @@ while ($true) {
         $type = 'application/json'
         if (-not $okPin) { $status = '401 Unauthorized'; $body = ToBytes '[]' }
         else {
+          # pulangkan order dengan nombor > after. Tak dipadam: App / overlay ingat nombor terakhir (orderSeq dalam state)
+          $after = 0; foreach ($pair in $query -split '&') { if ($pair -like 'after=*') { [void][int]::TryParse($pair.Substring(6), [ref]$after) } }
           $items = @()
           if (Test-Path -LiteralPath $pendingFile) {
-            $items = @([System.IO.File]::ReadAllLines($pendingFile) | Where-Object { $_.Trim() })
-            Remove-Item -LiteralPath $pendingFile -Force
+            $all = @([System.IO.File]::ReadAllLines($pendingFile) | Where-Object { $_.Trim() })
+            if ($all.Count -gt 400) { $all = @($all[($all.Count - 300)..($all.Count - 1)]); [System.IO.File]::WriteAllLines($pendingFile, [string[]]$all) }
+            $items = @($all | Where-Object { $_ -match '^\{"n":(\d+),' -and [int]$matches[1] -gt $after })
           }
-          $body = ToBytes ('[' + ($items -join ',') + ']')
+          $body = ToBytes ('{"last":' + $orderSeq + ',"items":[' + ($items -join ',') + ']}')
         }
       } elseif ($path -eq 'api/rank-upload') {
         # rank_tool.html simpan logo rank yang dipotong (PNG) ke assets\ranks\

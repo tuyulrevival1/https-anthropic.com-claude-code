@@ -151,7 +151,7 @@
       return e;
     }
   };
-  const HIST_SKIP = new Set(["rev", "updated", "orders", "seenOrders", "yt", "docImported"]);
+  const HIST_SKIP = new Set(["rev", "updated", "orders", "seenOrders", "orderSeq", "yt", "docImported"]);
 
   /* ---------- queue, VIP balance, W/L, timer ---------- */
   const inLine = (s, k) => s.playing.some(p => p.key === k) || s.queue.some(p => p.key === k);
@@ -381,15 +381,24 @@
     return { id, name, mlid, games, at, amount, cur, msg: msg.slice(0, 120), test, vip };
   }
   let ordersBusy = false;
+  // Orders stay in the server journal with a number; the shared state remembers the last number
+  // handled (orderSeq), so a page that fails or a lost write never drops an order.
   function pullOrders() {
     if (ordersBusy || !Store.remote || !Store.canWrite) return; ordersBusy = true;
-    const pin = Store.pin();
-    fetch("api/orders", { cache: "no-store", headers: pin ? { "X-Pin": pin } : {} }).then(r => r.ok ? r.json() : []).then(list => {
-      if (!list || !list.length) return;
-      const orders = list.map(parseOrder);
+    const pin = Store.pin(), after = +Store.state.orderSeq || 0;
+    fetch("api/orders?after=" + after, { cache: "no-store", headers: pin ? { "X-Pin": pin } : {} }).then(r => r.ok ? r.json() : null).then(res => {
+      if (!res) return;
+      const legacy = Array.isArray(res);                       // older server: list, already removed on its side
+      const list = (legacy ? res : res.items || []).filter(e => e && (e.n == null || e.n > after));
+      const first = !legacy && Store.state.orderSeq == null;   // first run: skip journal entries older than a day
+      if (!list.length) { if (first && res.last) Store.set(s => { s.orderSeq = res.last; }, { noHist: true }); return; }
       Store.set(s => {
+        const from = +s.orderSeq || 0;
         s.seenOrders = s.seenOrders || [];
-        for (const o of orders) {
+        for (const e of list) {
+          if (e.n != null && e.n <= from) continue;             // another page already did it
+          if (first && e.t && Date.now() - e.t > 864e5) continue;
+          const o = parseOrder(e);
           // Sociabuzz sends the same id on every Test Notification: never drop a test as a duplicate
           if (!o.test && s.seenOrders.includes(o.id)) continue;
           if (!o.test) s.seenOrders.unshift(o.id);
@@ -400,7 +409,9 @@
           else Q._log(s, Object.assign({ key: k, name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz", warn: "Jumlah tak cukup untuk 1 game" }, info));
         }
         s.seenOrders = s.seenOrders.slice(0, 300);
-      });
+        const top = Math.max(from, res.last || 0, ...list.map(e => +e.n || 0));
+        if (!legacy) s.orderSeq = top;
+      }, { noHist: true });
     }).catch(() => {}).finally(() => { ordersBusy = false; });
   }
 
@@ -742,11 +753,11 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
       if (api.banner) api.banner.el.style.display = s.showBanner ? "" : "none";
       // thank-you pop when a Sociabuzz order lands
       const o = (s.orders || [])[0], po = prev && (prev.orders || [])[0];
-      const pop = o && ((o.src === "sociabuzz" && o.games > 0) || o.src === "sim" || o.src === "test");
+      const pop = o && (o.src === "sociabuzz" || o.src === "sim" || o.src === "test");
       if (prev && pop && (!po || o.rx !== po.rx)) {
         const qc = panels.find(p => p.def.type === "queue");
         if (qc) {
-          const al = el("div", "q-alert", `<b>TERIMA KASIH</b><span>${esc(o.name)}</span><i>${o.src === "test" ? "TEST ✓" : `+${o.games} GAME`}</i>`);
+          const al = el("div", "q-alert", `<b>TERIMA KASIH</b><span>${esc(o.name)}</span><i>${o.src === "test" ? "TEST ✓" : o.games > 0 ? `+${o.games} GAME` : "SOCIABUZZ"}</i>`);
           qc.e.parentNode.appendChild(al);
           Object.assign(al.style, { left: qc.def.x + "px", top: (qc.def.y - 26) + "px", width: qc.def.w + "px" });
           setTimeout(() => al.remove(), 6000);
