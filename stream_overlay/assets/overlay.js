@@ -642,7 +642,16 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
     const clockB = band.querySelector(".clock b"), clockAp = band.querySelector(".clock small"), timerEl = band.querySelector(".timer"), timerTxt = timerEl;
     const ytEl = band.querySelector(".yt"), ytTxt = ytEl.querySelector("b");
     const npEl = band.querySelector(".np"), npW = band.querySelector(".npw"), npT = band.querySelector(".npt");
-    let lastClock = "", lastTimer = "", lastYt = "", lastNp = null;
+    let lastClock = "", lastTimer = "", lastYt = "", lastNp = null, npW_ = 0, npTick = 0;
+    const NP_SPEED = 40; // px per second, right to left
+    // song ticker driven here (not by CSS), so it keeps moving even when Windows / OBS asks for reduced motion
+    tickers.push(t => {
+      if (!lastNp || !npT.firstChild) return;
+      if (!npW_ || ++npTick % 120 === 0) npW_ = npT.firstChild.offsetWidth || 0; // re-measure now and then (fonts load late)
+      if (!npW_) return;
+      const x = (t * NP_SPEED) % npW_;
+      npT.style.transform = `translate3d(${(-x).toFixed(1)}px,0,0)`;
+    });
     NP.start();
 
     // caption under the handcam border
@@ -726,7 +735,7 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
         // ticker: two copies scroll right to left without a break, short titles too
         lastNp = np; npEl.hidden = !np;
         npT.innerHTML = np ? `<span class="nps">${esc(np)}</span><span class="nps" aria-hidden="true">${esc(np)}</span>` : "";
-        if (np) requestAnimationFrame(() => { const w = npT.firstChild.offsetWidth || 400; npEl.style.setProperty("--np-dur", Math.max(5, w / 60).toFixed(2) + "s"); });
+        npW_ = 0; // re-measure the copy width on the next frame
       }
     });
 

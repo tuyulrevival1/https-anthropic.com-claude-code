@@ -313,10 +313,8 @@
 .ov-band .np svg { color: var(--flame); flex: none; width: 15px; height: 15px; margin-top: -1px; }
 .ov-band .np .npw { width: 360px; overflow: hidden; white-space: nowrap;
   -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent); mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent); }
-.ov-band .np .npt { display: inline-flex; padding-top: 2px; animation: np-marq var(--np-dur, 8s) linear infinite; will-change: transform; }
+.ov-band .np .npt { display: inline-flex; padding-top: 2px; will-change: transform; }
 .ov-band .np .nps { display: inline-block; min-width: 360px; padding-right: 64px; font-weight: 700; }
-@keyframes np-marq { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-@media (prefers-reduced-motion: reduce) { .ov-band .np .npt { animation-duration: 0s; } }
 .ov-band .live .timer.paused { opacity: .55; }
 /* VVIP star in the overlay queue */
 .ov-card .bal .vv, .vv { color: #ffd84f; font-style: normal; margin-right: 2px; }
