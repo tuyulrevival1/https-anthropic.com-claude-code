@@ -11,14 +11,15 @@
 </style>
 </head>
 <body>
-<!-- Browser source: 1080 x 192.  ?style=flame | slash | moon -->
+<!-- Browser source: 1080 x 192.  ?style=pro | pro-crimson | flame | slash | moon -->
 <div id="root"><div id="stage"></div></div>
 <script src="assets/config.js"></script>
 <script src="assets/overlay.js"></script>
+<script src="assets/banner-pro.js"></script>
 <script>
   const p = new URLSearchParams(location.search);
   const stage = document.getElementById("stage");
-  ChouOverlay.mountBanner(stage, { style: p.get("style") || "flame" });
+  ChouOverlay.mountBanner(stage, { style: p.get("style") || "pro" });
   ChouOverlay.fitStage(stage, document.getElementById("root"), 1080, 192);
 </script>
 </body>

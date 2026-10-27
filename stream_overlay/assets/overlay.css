@@ -303,3 +303,62 @@
 @media (prefers-reduced-motion: reduce) {
   .ov-laser, .ov-band .sweep, .ov-card::after { animation-duration: 0s; animation-iteration-count: 1; }
 }
+
+/* ================= PREMIUM BANNER (bn-pro) ================= */
+.bn-pro { --pp-c1: #ff2350; --pp-c2: #6a1fe0; --pp-b1: #b98aff; --pp-b2: #ff2350;
+  --pp-plate: linear-gradient(160deg, #241040 0%, #120821 60%, #0b0614 100%);
+  --pp-text: #ffffff; --pp-outline: #07050c; --pp-extrude: #ff2350;
+  --pp-kick-bg: #ff2350; --pp-kick-fg: #fff; --pp-tag-bg: #f3eee8; --pp-tag-fg: #07050c; --pp-price: #ff2350;
+  --pp-ring-fill: #150a24; --pp-ring-a: #b98aff; --pp-ring-b: #ff2350; }
+.bn-pro .bn-bg { background:
+  radial-gradient(40% 140% at 82% 50%, rgba(123,44,255,.32), transparent 70%),
+  repeating-linear-gradient(-55deg, rgba(185,138,255,.05) 0 2px, transparent 2px 16px),
+  linear-gradient(180deg, #160a26, #07040d); }
+.bn-pro .pp-chev { left: 0; top: 0; width: 300px; height: 192px; }
+.bn-pro .pp-plate { left: 268px; top: 20px; width: 590px; height: 152px; transform: skewX(-12deg); overflow: hidden;
+  background: linear-gradient(110deg, var(--pp-b1), rgba(185,138,255,.25) 45%, var(--pp-b2)); box-shadow: 0 10px 24px rgba(0,0,0,.45); }
+.bn-pro .pp-plate-in { position: absolute; inset: 3px; background:
+  repeating-linear-gradient(-55deg, rgba(255,255,255,.035) 0 2px, transparent 2px 12px), var(--pp-plate); }
+.bn-pro .pp-plate-in::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: rgba(255,255,255,.35); }
+.bn-pro .pp-glint { position: absolute; top: -30px; bottom: -30px; left: 0; width: 80px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.16) 45%, rgba(255,255,255,.3) 50%, rgba(255,255,255,.16) 55%, transparent); }
+.bn-pro .pp-ring { left: 888px; top: 16px; width: 160px; height: 160px; }
+.bn-pro .pp-ring svg { width: 100%; height: 100%; overflow: visible; }
+.bn-pro .ring-fill { fill: var(--pp-ring-fill); }
+.bn-pro .ring-a { stroke: var(--pp-ring-a); transform: rotate(-90deg); transform-origin: 80px 80px; }
+.bn-pro .ring-b { stroke: var(--pp-ring-b); }
+.bn-pro .pp-art { left: 834px; top: 0; width: 268px; height: 192px; transform-origin: 134px 100px; visibility: hidden; }
+.bn-pro .pp-art svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.bn-pro .pp-mascot { left: 22px; top: -8px; width: 186px; height: 186px; }
+.bn-pro .pp-mascot svg { width: 100%; height: 100%; overflow: visible; }
+.bn-pro .pp-word { left: 4px; top: 148px; width: 168px; height: 48px; transform-origin: 50% 50%; }
+.bn-pro .pp-word svg { width: 100%; height: 100%; overflow: visible; }
+.bn-pro .pp-msg { left: 300px; top: 20px; width: 530px; height: 152px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; visibility: hidden; }
+.bn-pro .pp-kick { display: flex; }
+.bn-pro .pp-kick span { background: var(--pp-kick-bg); color: var(--pp-kick-fg); font: 700 16px/1 var(--f-hud); letter-spacing: .3em; padding: 6px 14px 5px 18px;
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); text-transform: uppercase; }
+.bn-pro .pp-main { white-space: nowrap; font: italic 900 60px/1.08 var(--f-shout); color: var(--pp-text); text-transform: uppercase; letter-spacing: -.005em;
+  --o: var(--pp-outline);
+  text-shadow: -3px -3px 0 var(--o), 3px -3px 0 var(--o), -3px 3px 0 var(--o), 3px 3px 0 var(--o), 0 -3.5px 0 var(--o), 0 3.5px 0 var(--o), -3.5px 0 0 var(--o), 3.5px 0 0 var(--o),
+    2px 6px 0 var(--pp-extrude), 4px 8px 0 var(--pp-extrude), 5px 10px 0 var(--o), 0 14px 18px rgba(0,0,0,.55); }
+.bn-pro .pp-main .ch { display: inline-block; transform-origin: 50% 80%; }
+.bn-pro .pp-main .sp { display: inline-block; width: .26em; }
+.bn-pro .pp-tags { display: flex; gap: 10px; }
+.bn-pro .pp-tag { display: inline-flex; background: var(--pp-tag-bg); color: var(--pp-tag-fg); padding: 6px 16px 3px; font: 400 25px/1 var(--f-disp); letter-spacing: .03em;
+  transform: skewX(-12deg); white-space: nowrap; box-shadow: 3px 3px 0 var(--pp-outline); }
+.bn-pro .pp-tag > span { display: inline-block; transform: skewX(12deg); }
+.bn-pro .pp-tag b { font-weight: 400; color: var(--pp-price); }
+.bn-pro .bn-blade { width: 60px; }
+.bn-pro .pp-dots { left: 760px; top: 150px; display: flex; gap: 7px; }
+.bn-pro .pp-dots i { width: 9px; height: 9px; transform: rotate(45deg); background: rgba(243,238,232,.25); transition: background .2s; }
+.bn-pro .pp-dots i.on { background: var(--pp-extrude); box-shadow: 0 0 8px var(--pp-extrude); }
+
+.bn-pro.bn--pro-crimson { --pp-c1: #8a3dff; --pp-c2: #2a0a55; --pp-b1: #f3eee8; --pp-b2: #ffcf4a;
+  --pp-plate: linear-gradient(160deg, #ff3560 0%, #d4002f 60%, #9b0022 100%);
+  --pp-extrude: #4a0014; --pp-kick-bg: #07050c; --pp-kick-fg: #f3eee8; --pp-tag-bg: #07050c; --pp-tag-fg: #f3eee8; --pp-price: #ffcf4a;
+  --pp-ring-fill: #07050c; --pp-ring-a: #ffcf4a; --pp-ring-b: #f3eee8; --bn-blade: #07050c; --bn-edge: #ff2350; }
+.bn-pro.bn--pro-crimson .bn-bg { background:
+  radial-gradient(40% 140% at 82% 50%, rgba(255,35,80,.3), transparent 70%),
+  radial-gradient(circle at 1px 1px, rgba(255,255,255,.06) 1.2px, transparent 1.6px) 0 0 / 9px 9px,
+  linear-gradient(180deg, #1a0710, #07040d); }
+.bn-pro.bn--pro-crimson .pp-dots i.on { background: #ffcf4a; box-shadow: 0 0 8px #ffcf4a; }

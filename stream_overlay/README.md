@@ -20,14 +20,20 @@ Semua dalam HTML, jadi teks, harga dan queue boleh ubah tanpa edit video.
 2. **Mabar** – facecam + handcam sebelah-menyebelah di atas, queue besar di bawah. Untuk sesi mabar VIP.
 3. **Solo Push** – game lebih besar, stats W/L besar, tiada queue. Untuk bila skrin dah penuh.
 
-**Banner** (`&banner=...`): `flame` (Yagami Flame), `slash` (Crimson Slash), `moon` (Moonlight), `none`.
+**Banner** (`&banner=...`):
+- `pro` – **Premium Ungu** (default): maskot sticker awak main tablet, teks bergerak huruf demi huruf, ikon kanan beranimasi.
+- `pro-crimson` – Premium Merah: susunan sama, plat merah.
+- `flame`, `slash`, `moon` – gaya lama yang lebih ringkas. `none` untuk tutup banner.
 
-Contoh: `overlay.html?layout=2&banner=slash`
+Ikon kanan ikut mesej: diamond berkilat (topup), lencana rank laju EPIC → LEGEND → MYTHIC → GLORY → IMMORTAL (joki), lencana VIP (mabar), link (bio).
+Nama di bawah maskot diambil dari `storeName` (contoh SYNOSTORE → "SYNO" + "STORE").
+
+Contoh: `overlay.html?layout=2&banner=pro-crimson`
 
 ## Pasang dalam OBS / TikTok Live Studio
 
 1. Klik dua kali `START_OVERLAY.bat` (perlu Python). Biar tetingkap hitam tu terbuka masa live.
-2. Tambah **Browser source**: URL `http://localhost:8787/overlay.html?layout=1&banner=flame`, lebar 1080, tinggi 1920.
+2. Tambah **Browser source**: URL `http://localhost:8787/overlay.html?layout=1&banner=pro`, lebar 1080, tinggi 1920.
 3. Letak source overlay **paling atas**. Kamera & game letak di bawah, ikut kotak ni:
 
 | Layout | Facecam (x, y, w, h) | Game | Handcam |
@@ -50,9 +56,9 @@ Buat satu scene untuk setiap layout (contoh "Mabar", "Solo Push") dan tukar scen
 - **Tunjuk queue** off: kad queue bertukar jadi senarai harga (Mabar + Komen album + Main akaun). Guna bila skrin dah sesak.
 - Maksimum orang main sekali: `mabar.maxPlaying` dalam config (default 4).
 
-## Watak Chou KOF dalam banner
+## Watak Chou KOF dalam banner gaya lama
 
-Letak PNG Chou KOF (latar telus) sebagai `assets/chou.png`. Watak keluar di kiri banner dengan rim merah, aura ungu dan gerakan kecil.
+(Banner premium guna maskot kartun.) Untuk gaya `flame`/`slash`/`moon`, letak PNG Chou KOF (latar telus) sebagai `assets/chou.png`. Watak keluar di kiri banner dengan rim merah, aura ungu dan gerakan kecil.
 Laraskan dalam `config.js` → `banner.character` (`scale`, `x`, `y`). Kalau tiada fail, logo bulan sabit + "CHOU" dipakai.
 
 Lepas tambah watak, render semula video banner:
@@ -60,6 +66,7 @@ Lepas tambah watak, render semula video banner:
 ```bash
 npm i playwright && npx playwright install chromium
 node tools/render_banner.js          # semua gaya -> exports/banner_*.mp4
+node tools/render_banner.js pro      # satu gaya sahaja
 ```
 
 ## Ubah teks

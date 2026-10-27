@@ -33,7 +33,7 @@ window.OVERLAY_CONFIG = {
     character: { src: "assets/chou.png", scale: 1.15, x: 0, y: 8 },
     messages: [
       { kicker: "SERVIS TOPUP", main: "TOPUP DIAMOND MURAH", tags: ["LINK DI BIO"], art: "diamond" },
-      { kicker: "SERVIS JOKI", main: "JOKI RANK MURAH", tags: ["& TERPERCAYA"], art: "rank" },
+      { kicker: "EPIC SAMPAI IMMORTAL", main: "JOKI RANK MURAH", tags: ["& TERPERCAYA"], art: "rank" },
       { kicker: "MAIN DENGAN SAYA", main: "MABAR VIP", tags: ["RM4 / GAME", "3 GAME RM10"], art: "mabar" },
       { kicker: "SEMUA DI {store}", main: "TEKAN LINK DI BIO", tags: ["{store}"], art: "link" }
     ]

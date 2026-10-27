@@ -15,16 +15,17 @@
   ?layout=1  Klasik      (facecam atas, game tengah, queue + handcam bawah)
   ?layout=2  Mabar       (facecam + handcam atas, queue besar bawah)
   ?layout=3  Solo Push   (game besar, stats besar, tiada queue)
-  &banner=flame | slash | moon | none
+  &banner=pro | pro-crimson | flame | slash | moon | none
   &demo      tunjuk gambar contoh dalam lubang kamera (untuk preview sahaja)
 -->
 <div id="root"></div>
 <script src="assets/config.js"></script>
 <script src="assets/overlay.js"></script>
+<script src="assets/banner-pro.js"></script>
 <script>
   const p = new URLSearchParams(location.search);
   const root = document.getElementById("root");
-  const o = ChouOverlay.mount(root, { layout: +p.get("layout") || 1, banner: p.get("banner") || "flame", demo: p.has("demo") });
+  const o = ChouOverlay.mount(root, { layout: +p.get("layout") || 1, banner: p.get("banner") || "pro", demo: p.has("demo") });
   ChouOverlay.fitStage(o.stage, root);
 </script>
 </body>

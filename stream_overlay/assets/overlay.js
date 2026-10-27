@@ -272,8 +272,13 @@
       return { def: p, e };
     });
 
-    let banner = null;
-    if (opts.banner !== "none") { banner = mountBanner(stage, { style: opts.banner || "flame", y: BY, inStage: true }); }
+    const api = { stage, layout: L, banner: null };
+    api.setBanner = st => {
+      if (api.banner) api.banner.destroy();
+      api.banner = st === "none" ? null : mountBanner(stage, { style: st, y: BY, inStage: true });
+      if (api.banner) api.banner.el.style.display = Store.state.showBanner ? "" : "none";
+    };
+    api.setBanner(opts.banner || "pro");
 
     function render(s, prev) {
       const prevIds = prev ? new Set(prev.playing.concat(prev.queue).map(p => p.id)) : null;
@@ -290,7 +295,7 @@
           e.className = "ov-card ov-strip"; e.innerHTML = stripHTML();
         }
       }
-      if (banner) banner.el.style.display = s.showBanner ? "" : "none";
+      if (api.banner) api.banner.el.style.display = s.showBanner ? "" : "none";
     }
     render(Store.state, null);
     Store.on(render);
@@ -302,7 +307,7 @@
     });
 
     root.appendChild(stage);
-    return { stage, layout: L, banner };
+    return api;
   }
 
   /* ---------- banner art ---------- */
@@ -459,7 +464,8 @@ ${crescent(u + "m", 118, 86, 70, `url(#${u}g)`, 'class="moon"')}
   /* ---------- banner ---------- */
   function mountBanner(root, opts = {}) {
     Store.init();
-    let style = opts.style || "flame";
+    let style = opts.style || "pro";
+    if (/^pro/.test(style) && window.ChouOverlay.mountProBanner) return window.ChouOverlay.mountProBanner(root, opts);
     const B = CFG.banner, msgs = B.messages, N = msgs.length, D = B.secondsPerMessage, LOOP = N * D;
     const ch = B.character || {};
     const bn = el("div", "bn bn--" + style);
@@ -541,7 +547,8 @@ ${msgs.map(m => `<div class="bn-art">${artSVG(m.art)}</div>`).join("")}
     tickers.push(frame);
     frame(now());
     const setStyle = st => { style = st; bn.className = "bn bn--" + st; };
-    return { el: bn, frame, LOOP, setStyle };
+    const destroy = () => { const i = tickers.indexOf(frame); if (i >= 0) tickers.splice(i, 1); bn.remove(); };
+    return { el: bn, frame, LOOP, setStyle, destroy };
   }
 
   /* ---------- fit a 1080-wide stage to its box ---------- */
@@ -561,5 +568,6 @@ ${msgs.map(m => `<div class="bn-art">${artSVG(m.art)}</div>`).join("")}
   }
 
   requestAnimationFrame(loop);
-  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG };
+  const util = { el, esc, clamp, seg, eOut, eBack, frac, rnd, TAU, fill, priceHL, uid, tickers, now, drawFx, artSVG, animArt, crescent };
+  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util };
 })();

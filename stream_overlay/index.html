@@ -27,7 +27,7 @@
   .lead { margin: 6px 0 0; color: var(--g-mut); max-width: 60ch; }
   h2 { font: 400 30px/1 var(--g-disp); letter-spacing: .02em; margin: 44px 0 6px; text-wrap: balance; }
   h2 + p { margin: 0 0 16px; color: var(--g-mut); max-width: 68ch; }
-  .seg { display: inline-flex; border: 1px solid var(--g-line); background: var(--g-panel); }
+  .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--g-line); background: var(--g-panel); }
   .seg button { font: 700 14px/1 var(--g-hud); letter-spacing: .14em; text-transform: uppercase; color: var(--g-mut); background: none; border: 0; padding: 12px 14px; cursor: pointer; }
   .seg button[aria-pressed="true"] { background: var(--g-red); color: #fff; }
   .seg button:focus-visible { outline: 2px solid var(--g-acc); outline-offset: -2px; }
@@ -64,12 +64,14 @@
   <header>
     <div>
       <h1><small>OVERLAY LIVE · PORTRAIT 1080×1920</small>CHOU KOF OVERLAY</h1>
-      <p class="lead">Tiga susunan layout, tiga gaya banner bawah, dan queue Mabar VIP yang dikawal dari panel. Tukar gaya banner di sini, semua preview ikut.</p>
+      <p class="lead">Tiga susunan layout, lima gaya banner bawah (dua premium, tiga ringkas), dan queue Mabar VIP yang dikawal dari panel. Tukar gaya banner di sini, semua preview ikut.</p>
     </div>
     <div class="seg" role="group" aria-label="Gaya banner">
-      <button type="button" data-style="flame" aria-pressed="true">Yagami Flame</button>
-      <button type="button" data-style="slash" aria-pressed="false">Crimson Slash</button>
-      <button type="button" data-style="moon" aria-pressed="false">Moonlight</button>
+      <button type="button" data-style="pro" aria-pressed="true">Premium Ungu</button>
+      <button type="button" data-style="pro-crimson" aria-pressed="false">Premium Merah</button>
+      <button type="button" data-style="flame" aria-pressed="false">Flame</button>
+      <button type="button" data-style="slash" aria-pressed="false">Slash</button>
+      <button type="button" data-style="moon" aria-pressed="false">Moon</button>
     </div>
   </header>
 
@@ -89,11 +91,13 @@
   </section>
 
   <h2>Banner bawah</h2>
-  <p>Kekal dalam jalur 1080×192 sahaja, tak masuk kawasan atas. Empat mesej bertukar setiap 6 saat dengan sapuan pedang merah. Letak PNG Chou KOF di <code>assets/chou.png</code> untuk ganti logo bulan sabit.</p>
+  <p>Kekal dalam jalur 1080×192 sahaja, tak masuk kawasan atas. Banner premium: maskot sticker main tablet di kiri, teks bergerak huruf demi huruf, ikon kanan ikut mesej (diamond berkilat, rank Epic sampai Immortal, VIP, link). Empat mesej bertukar setiap 6 saat.</p>
   <div class="banners">
-    <div class="bitem"><b>Yagami Flame</b><div class="bshot"><div class="bn-host" data-banner="flame"></div></div></div>
-    <div class="bitem"><b>Crimson Slash</b><div class="bshot"><div class="bn-host" data-banner="slash"></div></div></div>
-    <div class="bitem"><b>Moonlight</b><div class="bshot"><div class="bn-host" data-banner="moon"></div></div></div>
+    <div class="bitem"><b>Premium Ungu</b><div class="bshot"><div class="bn-host" data-banner="pro"></div></div></div>
+    <div class="bitem"><b>Premium Merah</b><div class="bshot"><div class="bn-host" data-banner="pro-crimson"></div></div></div>
+    <div class="bitem"><b>Gaya lama · Flame</b><div class="bshot"><div class="bn-host" data-banner="flame"></div></div></div>
+    <div class="bitem"><b>Gaya lama · Slash</b><div class="bshot"><div class="bn-host" data-banner="slash"></div></div></div>
+    <div class="bitem"><b>Gaya lama · Moon</b><div class="bshot"><div class="bn-host" data-banner="moon"></div></div></div>
   </div>
 
   <h2>Cuba queue Mabar VIP</h2>
@@ -110,7 +114,7 @@
     <div class="step"><h4>1 · Jalankan</h4>
       <ul><li>Windows: klik dua kali <code>START_OVERLAY.bat</code></li>
       <li>Atau: <code>python -m http.server 8787</code> dalam folder <code>stream_overlay</code></li>
-      <li>Browser source 1080×1920: <code>http://localhost:8787/overlay.html?layout=1&amp;banner=flame</code></li>
+      <li>Browser source 1080×1920: <code>http://localhost:8787/overlay.html?layout=1&amp;banner=pro</code></li>
       <li>Panel: OBS › Docks › Custom Browser Docks › <code>http://localhost:8787/control.html</code></li></ul></div>
     <div class="step"><h4>2 · Kedudukan kamera (x, y, w, h)</h4>
       <div class="tbl"><table>
@@ -127,6 +131,7 @@
 <script>window.OVERLAY_STORE_KEY = "chouOverlay.preview";</script>
 <script src="assets/config.js"></script>
 <script src="assets/overlay.js"></script>
+<script src="assets/banner-pro.js"></script>
 <script src="assets/control.js"></script>
 <script>
 (function () {
@@ -145,7 +150,7 @@
   if (!O.Store.read()) seed();
 
   const overlays = [...document.querySelectorAll(".shot")].map(box => {
-    const o = O.mount(box, { layout: +box.dataset.layout, banner: "flame", demo: true });
+    const o = O.mount(box, { layout: +box.dataset.layout, banner: "pro", demo: true });
     O.fitStage(o.stage, box);
     return o;
   });
@@ -155,7 +160,7 @@
   });
   document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => {
     document.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
-    overlays.forEach(o => o.banner && o.banner.setStyle(b.dataset.style));
+    overlays.forEach(o => o.setBanner(b.dataset.style));
   }));
   O.mountControl(document.getElementById("cp"));
   document.getElementById("g-sample").addEventListener("click", seed);
