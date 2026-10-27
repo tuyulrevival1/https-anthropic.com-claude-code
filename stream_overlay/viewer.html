@@ -37,6 +37,8 @@
   .wl small { font-size: 12px; letter-spacing: .3em; color: var(--mut); }
   .wl b { font: 600 32px/1 var(--num); }
   .wl .w b { color: var(--gold); } .wl .l b { color: var(--red); }
+  .streak { margin: 0; align-self: flex-start; font: 700 12px/1 var(--hud); letter-spacing: .2em; padding: 7px 10px; }
+  .streak.w { background: var(--gold); color: #160a00; } .streak.l { background: var(--red); color: #fff; }
   .tabs { position: sticky; top: 0; z-index: 3; display: grid; grid-template-columns: 1.15fr 1fr .8fr .95fr 1.35fr; gap: 4px; padding: 6px 0; background: var(--bg); }
   .tabs button { min-width: 0; font: 700 12px/1 var(--hud); letter-spacing: .04em; text-transform: uppercase; color: var(--mut); background: #1a0b10; border: 1px solid var(--line); padding: 12px 2px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tabs button[aria-selected="true"] { color: #fff; background: var(--red); border-color: var(--red); }
@@ -86,6 +88,7 @@
     <form class="look" id="v-form" autocomplete="off"><input class="q" id="v-name" placeholder="Taip nickname atau ID ML" aria-label="Nickname atau ID ML"></form>
     <div class="res" id="v-res" hidden></div>
     <div class="wl"><div class="w"><small>WIN</small><b id="v-w">0</b></div><div class="l"><small>LOSE</small><b id="v-l">0</b></div></div>
+    <p class="streak" id="v-streak" hidden></p>
   </section>
 
   <nav class="tabs" role="tablist" aria-label="Senarai">
@@ -211,6 +214,8 @@
     $("v-rules").innerHTML = out + (open ? "</ul>" : "");
     // W/L + lookup
     $("v-w").textContent = S.wins || 0; $("v-l").textContent = S.losses || 0;
+    const st = S.streak || 0, sk = $("v-streak");
+    sk.hidden = Math.abs(st) < 2; sk.className = "streak " + (st > 0 ? "w" : "l"); sk.textContent = st >= 2 ? `WIN STREAK ${st}` : st <= -2 ? `LOSE STREAK ${-st}` : "";
     const res = $("v-res");
     if (raw) {
       const m = members[k], pos = que.findIndex(p => p.key === k), playing = play.some(p => p.key === k);

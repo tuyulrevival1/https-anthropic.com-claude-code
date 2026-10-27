@@ -582,7 +582,9 @@
 <text x="${x}" y="88" text-anchor="${anchor}" style="font-family:var(--f-disp);font-size:${fs(v)}px;paint-order:stroke" stroke="#07050c" stroke-width="6" stroke-linejoin="round" fill="url(#${u}${grad})">${v}</text>
 <clipPath id="${u}c${k}"><text x="${x}" y="88" text-anchor="${anchor}" style="font-family:var(--f-disp);font-size:${fs(v)}px">${v}</text></clipPath>
 <rect class="sb-sheen" x="-140" y="10" width="34" height="100" fill="#fff" opacity=".6" transform="skewX(-20)" clip-path="url(#${u}c${k})"/></g>`;
-    const streak = s.streak >= 2 ? `<g transform="translate(40 12)"><polygon points="0,-10 104,-10 98,10 -6,10" fill="#ffcf4a"/><text x="49" y="5" text-anchor="middle" style="font-family:var(--f-hud);font-weight:700;font-size:13px;letter-spacing:2px" fill="#07050c">WIN STREAK ${s.streak}</text></g>` : "";
+    // streak badge: WIN STREAK over the win box (gold), LOSE STREAK over the lose box (red)
+    const streak = s.streak >= 2 ? `<g transform="translate(40 12)"><polygon points="0,-10 104,-10 98,10 -6,10" fill="#ffcf4a"/><text x="49" y="5" text-anchor="middle" style="font-family:var(--f-hud);font-weight:700;font-size:13px;letter-spacing:2px" fill="#07050c">WIN STREAK ${s.streak}</text></g>`
+      : s.streak <= -2 ? `<g transform="translate(294 12)"><polygon points="0,-10 112,-10 106,10 -6,10" fill="#ff2346"/><text x="53" y="5" text-anchor="middle" style="font-family:var(--f-hud);font-weight:700;font-size:13px;letter-spacing:2px" fill="#ffffff">LOSE STREAK ${-s.streak}</text></g>` : "";
     return `<svg viewBox="0 0 508 108" aria-hidden="true"><defs>
 <linearGradient id="${u}p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a0b12"/><stop offset="1" stop-color="#0b0507"/></linearGradient>
 <linearGradient id="${u}w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#ffe7a6"/><stop offset="1" stop-color="#ffb800"/></linearGradient>

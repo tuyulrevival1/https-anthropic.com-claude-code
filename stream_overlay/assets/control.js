@@ -427,7 +427,7 @@ ${embedded ? "" : `<header class="app-top">
       tabc("mvp", (s.mvp || []).length || "");
       const newOrd = (s.orders || []).filter(o => o.rx > appOpen && o.src !== "manual").length;
       tabc("order", newOrd ? `${newOrd} baru` : "");
-      $("ap-streak").textContent = s.streak >= 2 ? `Win streak ${s.streak}` : s.streak <= -2 ? `Lose ${-s.streak} berturut` : "";
+      $("ap-streak").textContent = s.streak >= 2 ? `Win streak ${s.streak}` : s.streak <= -2 ? `Lose streak ${-s.streak}` : "";
       $("ap-showq").checked = !!s.showQueue; $("ap-showb").checked = !!s.showBanner; $("ap-shows").checked = !s.song || s.song.on !== false;
       if (document.activeElement !== $("ap-song")) $("ap-song").value = (s.song && s.song.manual) || "";
       $("ap-pc").textContent = `${s.playing.length}/${max}`; $("ap-qc").textContent = s.queue.length;
