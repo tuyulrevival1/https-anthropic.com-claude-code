@@ -52,6 +52,9 @@
   .tip li b { color: var(--g-fg); font-weight: 700; }
   .seg button:focus-visible { outline: 2px solid var(--g-acc); outline-offset: -2px; }
   .layouts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 18px; }
+  .layouts.one { grid-template-columns: minmax(0, 420px) minmax(0, 1fr); align-items: start; }
+  @media (max-width: 720px) { .layouts.one { grid-template-columns: 1fr; } }
+  .lay.info { gap: 12px; }
   .lay { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
   .shot { position: relative; width: 100%; aspect-ratio: 9 / 16; overflow: hidden; background: #000; border: 1px solid var(--g-line); }
   .shot .ov-stage, .bshot .bn-host { position: absolute; left: 0; top: 0; }
@@ -84,7 +87,7 @@
   <header>
     <div>
       <h1><small>OVERLAY LIVE · PORTRAIT 1080×1920</small>SYNO STREAM OVERLAY</h1>
-      <p class="lead">Empat susunan layout, banner merah beranimasi di bawah gameplay, dan app kawalan untuk timer, W/L, queue Mabar dan baki VIP. Tukar gaya banner di sini, semua preview ikut.</p>
+      <p class="lead">Satu layout portrait, banner merah beranimasi di bawah gameplay, dan app kawalan untuk timer, W/L, queue Mabar dan baki VIP. Tukar gaya banner di sini, semua preview ikut.</p>
     </div>
     <div class="ctl">
     <div class="seg" role="group" aria-label="Gaya banner">
@@ -96,23 +99,19 @@
     </div>
   </header>
 
-  <section class="layouts">
-    <div class="lay"><div class="shot" data-layout="4"></div>
-      <h3>Arena <span>LAYOUT 4 · UTAMA</span></h3>
-      <p>Bar LIVE dengan timer stream di bawah facecam, banner terus di bawah gameplay, queue Mabar + baki VIP di kiri dengan bingkai lagu, handcam kanan dengan device, W/L kecil.</p>
-      <code>overlay.html?layout=4</code></div>
-    <div class="lay"><div class="shot" data-layout="1"></div>
-      <h3>Klasik <span>LAYOUT 1</span></h3>
-      <p>Susunan macam sekarang. Queue Mabar di kiri bawah, handcam kanan. Bila queue ditutup, kad tu jadi senarai harga.</p>
-      <code>overlay.html?layout=1</code></div>
-    <div class="lay"><div class="shot" data-layout="2"></div>
-      <h3>Mabar <span>LAYOUT 2</span></h3>
-      <p>Untuk sesi mabar. Facecam dan handcam di atas, queue besar di bawah supaya penonton nampak giliran.</p>
-      <code>overlay.html?layout=2</code></div>
-    <div class="lay"><div class="shot" data-layout="3"></div>
-      <h3>Solo Push <span>LAYOUT 3</span></h3>
-      <p>Bila skrin dah penuh. Tiada queue, game lebih besar, W/L dan MMR jelas. Harga mabar tinggal satu jalur kecil.</p>
-      <code>overlay.html?layout=3</code></div>
+  <section class="layouts one">
+    <div class="lay"><div class="shot" data-layout="1"></div></div>
+    <div class="lay info">
+      <h3>Layout 1 <span>SATU-SATUNYA LAYOUT</span></h3>
+      <p>Facecam di atas dengan bar LIVE (timer stream, jam, penonton YouTube). Gameplay 1080×720 ikut skrin tablet. Banner terus di bawah gameplay. Queue Mabar + baki VIP dan bingkai lagu di kiri; handcam dengan DEVICE dan W/L kecil di kanan.</p>
+      <div class="tbl"><table><thead><tr><th>Source OBS</th><th>x, y</th><th>w × h</th></tr></thead><tbody>
+        <tr><td>Facecam</td><td>0, 0</td><td>1080 × 522</td></tr>
+        <tr><td>Gameplay</td><td>0, 550</td><td>1080 × 720</td></tr>
+        <tr><td>Handcam</td><td>548, 1474</td><td>508 × 286</td></tr>
+        <tr><td>Widget lagu</td><td>36, 1806</td><td>476 × 88</td></tr>
+        <tr><td>Overlay</td><td>0, 0</td><td>1080 × 1920</td></tr></tbody></table></div>
+      <code>http://127.0.0.1:8787/overlay.html</code>
+    </div>
   </section>
 
   <h2>Banner bawah</h2>
@@ -129,9 +128,9 @@
   <h2>Logo</h2>
   <p>Maskot 3D awak dalam tiga gaya (bertukar sendiri dalam banner) dan wordmark SYNO STORE. PNG latar telus ada dalam folder <code>logos/</code> untuk gambar profil, thumbnail dan watermark.</p>
   <div class="logos">
-    <div class="logo"><div class="lbox" data-logo="game"></div><b>Maskot · main</b><small>Awak main tablet, beranimasi.</small></div>
+    <div class="logo"><div class="lbox" data-logo="game"></div><b>Maskot · main</b><small>Main tablet, ibu jari tekan skrin.</small></div>
     <div class="logo"><div class="lbox" data-logo="win"></div><b>Maskot · GG</b><small>Gaya menang.</small></div>
-    <div class="logo"><div class="lbox" data-logo="wink"></div><b>Maskot · wink</b><small>Gaya thumbs-up.</small></div>
+    <div class="logo"><div class="lbox" data-logo="cheer"></div><b>Maskot · sorak</b><small>Angkat dua tangan.</small></div>
     <div class="logo"><div class="lbox wide" data-logo="word"></div><b>Wordmark</b><small>SYNO STORE 3D dengan kilauan &amp; glitch.</small></div>
   </div>
 
@@ -175,13 +174,13 @@
       <li>Tetingkap hitam tunjuk link &amp; <b>PIN admin</b>. App Kawalan terbuka sendiri.</li></ul></div>
     <div class="step"><h4>2 · OBS (1080×1920)</h4>
       <div class="tbl"><table><thead><tr><th>Source</th><th>x, y</th><th>w × h</th></tr></thead><tbody>
-        <tr><td>Facecam</td><td>0, 0</td><td>1080 × 584</td></tr>
-        <tr><td>Gameplay</td><td>0, 612</td><td>1080 × 608</td></tr>
-        <tr><td>Handcam</td><td>548, 1430</td><td>508 × 286</td></tr>
-        <tr><td>Widget lagu</td><td>36, 1762</td><td>476 × 88</td></tr></tbody></table></div>
+        <tr><td>Facecam</td><td>0, 0</td><td>1080 × 522</td></tr>
+        <tr><td>Gameplay</td><td>0, 550</td><td>1080 × 720</td></tr>
+        <tr><td>Handcam</td><td>548, 1474</td><td>508 × 286</td></tr>
+        <tr><td>Widget lagu</td><td>36, 1806</td><td>476 × 88</td></tr></tbody></table></div>
       <p>Edit Transform (Ctrl+E): Scale to outer bounds + Crop to Bounding Box.</p></div>
     <div class="step"><h4>3 · Overlay</h4><ul>
-      <li>Browser source, URL <code>http://127.0.0.1:8787/overlay.html?layout=4&amp;banner=power</code>, 1080×1920.</li>
+      <li>Browser source, URL <code>http://127.0.0.1:8787/overlay.html</code>, 1080×1920.</li>
       <li>Page permissions: <b>Read access to OBS status information</b> (timer mula sendiri bila Start Streaming).</li>
       <li>Move to Top. Widget lagu letak atas overlay.</li></ul></div>
     <div class="step"><h4>4 · Admin, phone &amp; penonton</h4><ul>

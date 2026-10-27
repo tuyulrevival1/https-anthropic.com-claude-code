@@ -28,9 +28,19 @@
 .bn-power .pw-sep { top: -4px; width: 7px; height: 200px; background: linear-gradient(180deg, #fff, #f6efe9 60%, rgba(246,239,233,.4)); transform: skewX(-14deg); box-shadow: 0 0 12px rgba(255,255,255,.4); }
 .bn-power .pw-sep.l { left: 270px; } .bn-power .pw-sep.r { left: 884px; }
 .bn-power .pw-sep.l2 { left: 258px; width: 3px; opacity: .55; } .bn-power .pw-sep.r2 { left: 898px; width: 3px; opacity: .55; }
-.bn-power .pw-mascot { left: 4px; top: 0; width: 192px; height: 192px; }
+.bn-power .pw-panel { left: 0; top: 0; width: 300px; height: 192px; overflow: hidden; clip-path: polygon(0 0, 274px 0, 226px 100%, 0 100%); }
+.bn-power .pw-rays { position: absolute; left: -150px; top: -170px; width: 520px; height: 520px; border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(255,198,92,.30) 0deg 9deg, rgba(255,31,61,.05) 9deg 30deg);
+  -webkit-mask-image: radial-gradient(circle, #000 0%, rgba(0,0,0,.85) 22%, transparent 62%); mask-image: radial-gradient(circle, #000 0%, rgba(0,0,0,.85) 22%, transparent 62%); }
+.bn-power .pw-pglow { position: absolute; inset: 0; background:
+  radial-gradient(46% 70% at 40% 46%, rgba(255,64,92,.75) 0%, rgba(200,0,30,.35) 45%, rgba(40,0,8,0) 75%),
+  linear-gradient(90deg, rgba(10,2,5,0) 60%, rgba(10,2,5,.55) 100%); }
+.bn-power .pw-pring { position: absolute; left: 110px; top: 92px; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; border: 3px solid #ffd34d; box-shadow: 0 0 14px #ffd34d; opacity: 0; }
+.bn-power .pw-mascot { left: -6px; top: -4px; width: 210px; height: 210px; }
+.bn-power .pw-mascot .pw-ml { position: absolute; inset: 0; transform-origin: 50% 92%; }
+.bn-power .pw-mascot .pw-ml svg { filter: drop-shadow(0 0 8px rgba(255,31,61,.45)); }
 .bn-power .pw-mascot svg, .bn-power .pw-word svg, .bn-power .pw-art svg { width: 100%; height: 100%; overflow: visible; display: block; }
-.bn-power .pw-word { left: 168px; top: 40px; width: 150px; height: 108px; transform-origin: 50% 60%; }
+.bn-power .pw-word { left: 150px; top: 82px; width: 148px; height: 107px; transform-origin: 50% 60%; }
 .bn-power .pw-msg { left: 320px; top: 0; width: 500px; height: 192px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; visibility: hidden; }
 .bn-power .pw-kick { display: inline-flex; align-items: center; gap: 9px; background: var(--pw-ink); color: var(--pw-bone); padding: 6px 14px 5px; transform: skewX(-12deg);
   font: 700 15px/1 var(--f-hud); letter-spacing: .32em; text-transform: uppercase; box-shadow: 0 3px 8px rgba(0,0,0,.35); }
@@ -221,7 +231,8 @@ ${msgs.map(m => `<div class="pw-hook"><span>${esc(fill(m.hook || ""))}</span></d
 <div class="pw-med"><div class="pw-glow"></div><div class="pw-ring"></div>
  <div class="pw-medin"><div class="pw-glass"></div>${msgs.map(m => `<div class="pw-art">${m.art === "rank" ? O.ranks.html() : iconSVG(m.art)}</div>`).join("")}</div>
  <div class="pw-ring2"></div><div class="pw-flare"></div></div>
-<div class="pw-mascot">${O.mascot3d.svg()}</div>
+<div class="pw-panel"><div class="pw-rays"></div><div class="pw-pglow"></div><div class="pw-pring"></div></div>
+<div class="pw-mascot"><div class="pw-ml a">${O.mascot3d.svg()}</div><div class="pw-ml b">${O.mascot3d.svg()}</div></div>
 <div class="pw-word">${wordSVG()}</div>
 <div class="pw-blade"></div><div class="pw-flash"></div>
 <div class="pw-edge top"><i></i></div><div class="pw-edge bot"></div>
@@ -230,7 +241,18 @@ ${msgs.map(m => `<div class="pw-hook"><span>${esc(fill(m.hook || ""))}</span></d
 
     const q = c => bn.querySelector(c);
     const ctx = q(".pw-fx").getContext("2d");
-    const mascot = q(".pw-mascot svg"), word = q(".pw-word svg");
+    const word = q(".pw-word svg");
+    const ML = [...bn.querySelectorAll(".pw-ml")], MS = ML.map(l => l.querySelector("svg"));
+    const rays = q(".pw-rays"), pring = q(".pw-pring");
+    // smooth pose carousel (24 s): tablet tapping with short hype poses, cross-faded
+    const PSCHED = [[0, "game"], [4.8, "cheer"], [7.2, "game"], [12, "wink"], [14.4, "game"], [19.2, "win"], [21.6, "game"]];
+    const XF = .24;
+    function poseState(tl) {
+      let i = 0; for (let k = 0; k < PSCHED.length; k++) if (tl >= PSCHED[k][0]) i = k;
+      let best = 1e9, bi = 0;
+      for (let k = 0; k <= PSCHED.length; k++) { const b = k === PSCHED.length ? 24 : PSCHED[k][0], d = tl - b; if (Math.abs(d) < Math.abs(best)) { best = d; bi = k % PSCHED.length; } }
+      return { cur: PSCHED[i][1], d: best, prev: PSCHED[(bi + PSCHED.length - 1) % PSCHED.length][1], next: PSCHED[bi][1] };
+    }
     const M = [...bn.querySelectorAll(".pw-msg")].map((m, i) => ({
       m, k: m.querySelector(".pw-kick"), main: m.querySelector(".pw-main"), ch: [...m.querySelectorAll(".pw-main .ch")],
       tagRow: m.querySelector(".pw-tags"), tags: [...m.querySelectorAll(".pw-tag")], hook: bn.querySelectorAll(".pw-hook")[i],
@@ -278,7 +300,24 @@ ${msgs.map(m => `<div class="pw-hook"><span>${esc(fill(m.hook || ""))}</span></d
       if (bn.style.display === "none") return;
       const tl = ((t % LOOP) + LOOP) % LOOP, idx = Math.floor(tl / D), u = tl - idx * D;
       fx(t);
-      O.mascot3d.anim(mascot, t);
+      {
+        const P = poseState(((t % 24) + 24) % 24);
+        if (Math.abs(P.d) < XF) {
+          const k = (P.d + XF) / (2 * XF), ko = seg(k, 0, .5), ki = seg(k, .38, 1);
+          O.mascot3d.anim(MS[0], t, { pose: P.prev }); O.mascot3d.anim(MS[1], t, { pose: P.next });
+          ML[0].style.opacity = (1 - ease2(ko)).toFixed(3); ML[0].style.transform = `scale(${(1 - .08 * ease2(ko)).toFixed(3)}, ${(1 + .04 * ease2(ko)).toFixed(3)})`;
+          ML[1].style.opacity = Math.min(1, ki * 2).toFixed(3); ML[1].style.transform = `translateY(${((1 - eOut(ki)) * 10).toFixed(1)}px) scale(${(.86 + .14 * eBack(ki)).toFixed(3)}, ${(.94 + .06 * eBack(ki)).toFixed(3)})`;
+          ML[1].style.display = "";
+        } else {
+          O.mascot3d.anim(MS[0], t, { pose: P.cur });
+          ML[0].style.opacity = "1"; ML[0].style.transform = "";
+          ML[1].style.display = "none";
+        }
+        const bk = P.d >= .05 && P.d < .6 ? (P.d - .05) / .55 : -1;
+        pring.style.opacity = bk >= 0 ? ((1 - bk) * .9).toFixed(3) : "0";
+        if (bk >= 0) { const r = 150 + eOut(bk) * 160; pring.style.width = pring.style.height = r + "px"; pring.style.margin = `${-r / 2}px 0 0 ${-r / 2}px`; }
+        rays.style.transform = `rotate(${(t * 15).toFixed(2)}deg) scale(${(1 + (bk >= 0 ? (1 - bk) * .12 : 0)).toFixed(3)})`;
+      }
       animWord(word, t);
       M.forEach((x, i) => {
         if (i !== idx) {

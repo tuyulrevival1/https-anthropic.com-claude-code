@@ -12,10 +12,7 @@
 <body>
 <!--
   Browser source OBS / TikTok Live Studio: 1080 x 1920
-  ?layout=1  Klasik      (facecam atas, game tengah, queue + handcam bawah)
-  ?layout=2  Mabar       (facecam + handcam atas, queue besar bawah)
-  ?layout=3  Solo Push   (game besar, stats besar, tiada queue)
-  ?layout=4  Arena       (garis tenaga pada gameplay, papan W/L besar, ruang chat & lagu) &hand=0 buang handcam
+  Satu layout sahaja (1080x1920). &hand=0 buang handcam, &bgfx=0 matikan asap latar.
   &banner=power | slash | pro-crimson | scene-grunge | scene-mascot | none
   &demo      tunjuk gambar contoh dalam lubang kamera (untuk preview sahaja)
 -->
@@ -29,12 +26,12 @@
 <script src="assets/mascot.js"></script>
 <script src="assets/banner-power.js"></script>
 <script>
-  // Tetapan dari URL (?layout=4&banner=pro), atau dari fail preset (obs-*.html)
+  // Tetapan dari URL (?banner=power&hand=0), atau dari fail preset (obs-overlay.html)
   const P = Object.assign({}, window.OVERLAY_PRESET || {});
   new URLSearchParams(location.search).forEach((v, k) => { P[k] = v; });
   const root = document.getElementById("root");
   const o = ChouOverlay.mount(root, {
-    layout: +P.layout || 4, banner: P.banner || "power", accent: P.accent || undefined,
+    layout: 1, banner: P.banner || "power", accent: P.accent || undefined,
     bgfx: String(P.bgfx) !== "0", hand: String(P.hand) !== "0", demo: "demo" in P
   });
   ChouOverlay.fitStage(o.stage, root);

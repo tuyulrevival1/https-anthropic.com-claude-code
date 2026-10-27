@@ -47,7 +47,7 @@ Write-Host "  =====================================================" -Foreground
 Write-Host "   SYNO OVERLAY JALAN  -  jangan tutup tetingkap ni" -ForegroundColor Green
 Write-Host "  =====================================================" -ForegroundColor Red
 Write-Host ""
-Write-Host "  OBS overlay   : http://127.0.0.1:$port/overlay.html?layout=4"
+Write-Host "  OBS overlay   : http://127.0.0.1:$port/overlay.html"
 Write-Host "  App kawalan   : http://127.0.0.1:$port/control.html"
 Write-Host "  Penonton      : http://127.0.0.1:$port/viewer.html"
 foreach ($ip in $ips) {

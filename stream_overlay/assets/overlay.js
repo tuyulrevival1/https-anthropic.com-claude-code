@@ -169,66 +169,27 @@
   /* ---------- layouts (1080x1920) ----------
      slots = holes where OBS sources show through. Put your camera / game
      sources at exactly these x, y, w, h (see README). */
+  /* ---------- layout (1080x1920) ----------
+     slots = holes where OBS sources show through. Put your camera / game sources at
+     exactly these x, y, w, h (see PASANG_OBS.md). Gameplay is 1080x720 (tablet 3:2). */
   const LAYOUTS = {
     1: {
-      name: "Klasik",
-      band: 560,
+      name: "Utama",
+      band: 522,
+      bannerY: 1270,                 // banner terus di bawah gameplay
+      energy: [550, 1270],
       slots: [
-        { id: "face", x: 0, y: 0, w: 1080, h: 560 },
-        { id: "game", x: 0, y: 588, w: 1080, h: 608 },
-        { id: "hand", x: 540, y: 1216, w: 504, h: 284, cut: 22 }
+        { id: "face", x: 0, y: 0, w: 1080, h: 522, frame: false },
+        { id: "game", x: 0, y: 550, w: 1080, h: 720, frame: false },
+        { id: "hand", x: 548, y: 1474, w: 508, h: 286, cut: 16, optional: true }
       ],
       panels: [
-        { type: "queue", x: 36, y: 1216, w: 484, h: 492 },
-        { type: "stats", x: 540, y: 1540, w: 504, h: 168 }
+        { type: "queue", variant: "compact", x: 24, y: 1474, w: 500, h: 290 },
+        { type: "music", x: 24, y: 1786, w: 500, h: 116 },
+        { type: "score", x: 548, y: 1798, w: 508, h: 108 }
       ],
-      tags: [{ slot: "hand", corner: "bl" }]
-    },
-    2: {
-      name: "Mabar",
-      band: 470,
-      slots: [
-        { id: "face", x: 0, y: 0, w: 652, h: 470 },
-        { id: "hand", x: 666, y: 14, w: 400, h: 225, cut: 18 },
-        { id: "game", x: 0, y: 498, w: 1080, h: 608 }
-      ],
-      panels: [
-        { type: "stats", variant: "mini", x: 666, y: 272, w: 400, h: 184 },
-        { type: "queue", variant: "wide", x: 36, y: 1124, w: 1008, h: 584 }
-      ],
-      tags: [{ slot: "hand", corner: "bl" }]
-    },
-    3: {
-      name: "Solo Push",
-      band: 520,
-      slots: [
-        { id: "face", x: 0, y: 0, w: 1080, h: 520 },
-        { id: "game", x: 0, y: 548, w: 1080, h: 760 },
-        { id: "hand", x: 540, y: 1326, w: 504, h: 284, cut: 22 }
-      ],
-      panels: [
-        { type: "stats", variant: "tall", x: 36, y: 1326, w: 484, h: 382 },
-        { type: "strip", x: 540, y: 1644, w: 504, h: 64 }
-      ],
-      tags: [{ slot: "hand", corner: "bl" }]
+      tags: [{ slot: "hand" }]
     }
-  };
-  LAYOUTS[4] = {
-    name: "Arena",
-    band: 584,
-    bannerY: 1220,                 // banner terus di bawah gameplay
-    energy: [612, 1220],
-    slots: [
-      { id: "face", x: 0, y: 0, w: 1080, h: 584, frame: false },
-      { id: "game", x: 0, y: 612, w: 1080, h: 608, frame: false },
-      { id: "hand", x: 548, y: 1430, w: 508, h: 286, cut: 16, optional: true }
-    ],
-    panels: [
-      { type: "queue", variant: "compact", x: 24, y: 1430, w: 500, h: 292 },
-      { type: "music", x: 24, y: 1742, w: 500, h: 116 },
-      { type: "score", x: 548, y: 1756, w: 508, h: 108 }
-    ],
-    tags: [{ slot: "hand" }]
   };
   const THEMES = {
     red: { a: "#ff2346", hi: "#ff7088", glow: "255,35,70", deep: "150,0,24", ember: "255,190,170", bg: ["#0d0507", "#1c070d", "#080305"] },
@@ -238,7 +199,7 @@
   const SLOT_NAMES = { face: "FACECAM", game: "GAMEPLAY", hand: "HANDCAM" };
   // copy a layout, dropping the optional handcam when ?hand=0
   function resolveLayout(n, opts) {
-    const L = JSON.parse(JSON.stringify(LAYOUTS[n] || LAYOUTS[1]));
+    const L = JSON.parse(JSON.stringify(LAYOUTS[1]));
     if (opts.hand === false) { L.slots = L.slots.filter(s => !s.optional); L.tags = L.tags.filter(t => L.slots.some(s => s.id === t.slot)); }
     return L;
   }
@@ -486,7 +447,7 @@ ${streak}
   function mount(root, opts = {}) {
     Store.init();
     const L = resolveLayout(opts.layout, opts);
-    const stage = el("div", `ov-stage ov-l${opts.layout || 1} theme-${CFG.theme || "violet"}`);
+    const stage = el("div", `ov-stage ov-l1 theme-${CFG.theme || "violet"}`);
 
     if (opts.demo) for (const s of L.slots) {
       const d = el("div", "ov-demo"); pos(d, s);

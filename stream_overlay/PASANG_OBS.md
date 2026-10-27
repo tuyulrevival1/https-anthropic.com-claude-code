@@ -25,27 +25,27 @@ Tak perlu install Python. Cuma perlu **OBS Studio** (versi 30 ke atas) dan Windo
 
 OBS › **Settings** › **Video**: Base dan Output **1080x1920**, FPS 30 (atau 60) › Apply.
 
-## 4. Scene "LIVE ARENA"
+## 4. Scene "LIVE"
 
 Tambah source ikut urutan (yang dulu duduk paling bawah):
 
 | # | Source | Position (x, y) | Saiz (w × h) |
 |---|---|---|---|
-| 1 | Facecam (Video Capture Device) | 0, 0 | 1080 × 584 |
-| 2 | Gameplay (capture card / scrcpy / Window Capture) | 0, 612 | 1080 × 608 |
-| 3 | Handcam (Video Capture Device) | 548, 1430 | 508 × 286 |
+| 1 | Facecam (Video Capture Device) | 0, 0 | 1080 × 522 |
+| 2 | Gameplay (capture card / scrcpy / Window Capture) | 0, 550 | 1080 × 720 |
+| 3 | Handcam (Video Capture Device) | 548, 1474 | 508 × 286 |
 | 4 | **Overlay** (Browser, langkah 5) | 0, 0 | 1080 × 1920 |
-| 5 | Widget lagu (letak **atas** overlay) | 36, 1762 | 476 × 88 |
+| 5 | Widget lagu (letak **atas** overlay) | 36, 1806 | 476 × 88 |
 
 Cara letak tepat: klik kanan source › Transform › **Edit Transform** (Ctrl+E):
 Position = x, y · Bounding Box Type = **Scale to outer bounds** · Bounding Box Size = w × h · tanda **Crop to Bounding Box**.
 
-Susunan skrin Arena (atas ke bawah): facecam › bar LIVE (timer + jam + penonton YouTube) › gameplay › banner › queue Mabar (kiri) + handcam & W/L (kanan) › bingkai lagu (kiri bawah).
+Susunan skrin (atas ke bawah): facecam › bar LIVE (timer + jam + penonton YouTube) › gameplay › banner › queue Mabar (kiri) + handcam & W/L (kanan) › bingkai lagu (kiri bawah).
 
 ## 5. Overlay (Browser source)
 
 1. **+** › **Browser** › nama `Overlay`.
-2. Local file: **jangan tanda**. URL: `http://127.0.0.1:8787/overlay.html?layout=4&banner=power`
+2. Local file: **jangan tanda**. URL: `http://127.0.0.1:8787/overlay.html`
 3. Width `1080`, Height `1920`, FPS `30`.
 4. **Page permissions**: pilih **Read access to OBS status information** (atau lebih tinggi). Ini buat timer live mula sendiri bila tekan **Start Streaming**.
 5. OK › klik kanan Overlay › Order › **Move to Top** (widget lagu kekal di atasnya).
@@ -88,15 +88,15 @@ Nak app dalam OBS juga: **Docks › Custom Browser Docks** › URL `http://127.0
 
 Bilangan penonton TikTok tak boleh diambil (TikTok tiada API untuk ni).
 
-## 9. Tukar layout / banner
+## 9. Tukar banner
 
-| Layout | URL |
+Hanya ada satu layout. Gameplay 1080×720 (skrin tablet 3:2): kalau capture awak 16:9, pilih **Scale to outer bounds** + **Crop to Bounding Box** supaya penuh tanpa jalur hitam.
+
+| Pilihan | URL |
 |---|---|
-| Arena (utama) | `http://127.0.0.1:8787/overlay.html?layout=4&banner=power` |
-| Arena tanpa handcam | `…?layout=4&hand=0&banner=power` |
-| Klasik / Mabar / Solo Push | `…?layout=1`, `…?layout=2`, `…?layout=3` |
-
-Banner: `power` (merah, utama), `slash`, `pro-crimson`, `scene-grunge`, `scene-mascot` (tambah `&accent=crimson`).
+| Biasa | `http://127.0.0.1:8787/overlay.html` |
+| Tanpa handcam | `…/overlay.html?hand=0` |
+| Banner lain | `…/overlay.html?banner=slash` (atau `pro-crimson`, `scene-mascot&accent=crimson`) |
 
 ## 10. Ikon rank asli (joki)
 
@@ -118,4 +118,4 @@ Letak PNG asli latar telus dalam `assets\ranks\`: `epic.png`, `legend.png`, `myt
 
 ## Cara B: tanpa server
 
-Browser source › tanda **Local file** › `obs-arena.html`. Tukar W/L: klik kanan source › **Interact**, tekan `W` / `L` (Shift = tolak). Queue, baki VIP, app & halaman penonton hanya jalan dengan START_OVERLAY.bat.
+Browser source › tanda **Local file** › `obs-overlay.html`. Tukar W/L: klik kanan source › **Interact**, tekan `W` / `L` (Shift = tolak). Queue, baki VIP, app & halaman penonton hanya jalan dengan START_OVERLAY.bat.

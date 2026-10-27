@@ -236,7 +236,7 @@ ${inLine(k) ? `<span class="tag">${s.playing.some(p => p.key === k) ? "MAIN" : "
       const base = location.origin.startsWith("http") ? location.origin : "http://127.0.0.1:8787";
       const lan = a && a.ips && a.ips.length ? `http://${a.ips[0]}:${a.port}` : null;
       const rows = [
-        ["Overlay OBS (Arena)", `http://127.0.0.1:8787/overlay.html?layout=4&banner=power`],
+        ["Overlay OBS", `http://127.0.0.1:8787/overlay.html`],
         ["Halaman penonton", `${base}/viewer.html`],
         ["App ni dari phone / admin (Wi-Fi sama)", lan ? `${lan}/control.html` : "Buka START_OVERLAY.bat untuk link Wi-Fi"],
         ["Penonton dari phone (Wi-Fi sama)", lan ? `${lan}/viewer.html` : "-"]

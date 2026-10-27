@@ -40,7 +40,7 @@
   else if (kind === "avatar") {
     box.innerHTML = `<div class="av"><div class="bg"></div><div class="m">${O.mascot3d.svg()}</div></div>`;
     svg = box.querySelector(".m svg"); anim = () => O.mascot3d.anim(svg, 1.1, { pose });
-  } else { box.innerHTML = O.mascot3d.svg(); svg = box.firstElementChild; anim = () => O.mascot3d.anim(svg, 1.1, { pose, gg: true }); }
+  } else { box.innerHTML = O.mascot3d.svg(); svg = box.firstElementChild; anim = (tt) => O.mascot3d.anim(svg, tt != null ? tt : 1.1, { pose, gg: true }); }
   window.__pose = anim;
   document.fonts.ready.then(() => window.__pose());
 </script>
