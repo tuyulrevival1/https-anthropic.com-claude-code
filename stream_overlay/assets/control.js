@@ -66,7 +66,6 @@ ${embedded ? "" : `<header class="app-top">
       <button class="btn win" type="button" data-end="W">Menang</button>
       <button class="btn lose" type="button" data-end="L">Kalah</button>
     </div>
-    <button class="btn ghost wide" type="button" data-end="X">Habis (tak kira W/L)</button>
     <p class="muted">Setiap tekan: tambah W/L, semua yang sedang main tolak 1 game (VVIP tolak baki VVIP dulu). Baki habis keluar. <b>Rotation:</b> lepas ${CFG.mabar.rotateEvery || 3} game, pemain keluar beri ruang kalau ada orang menunggu (queue tak ramai = boleh habiskan baki).</p>
   </section>
 
@@ -348,6 +347,10 @@ ${embedded ? "" : `<header class="app-top">
         else { b.dataset.armed = "1"; b.textContent = "Pasti?"; setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = "✕"; } }, 2500); }
       }
       else if (a === "akdel") Q.akaunDel(+b.dataset.i);
+      else if (a === "mvpp") {
+        const m = Store.state.members[k], r = m && Q.mvpFor(m.name);
+        if (r) toast(`${r.name}: MVP ${r.cur}${r.cur === 5 || r.cur === 15 ? ` · cukup ${r.cur}, boleh claim!` : ""}${r.free ? " · VVIP free 1 game" : ""}`, 3500);
+      }
       else if (a === "import") doImport();
       else if (a === "addn" || a === "setn") {
         const inp = b.closest("li").querySelector(".gin"), n = parseInt(inp.value, 10);
@@ -372,6 +375,7 @@ ${embedded ? "" : `<header class="app-top">
     function render(s, force) {
       const max = CFG.mabar.maxPlaying, rot = CFG.mabar.rotateEvery || 0, T = O.Q.tot;
       const mem = p => s.members[p.key] || { name: p.key, bal: 0, vbal: 0 };
+      const mvpOf = p => { const x = (s.mvp || []).find(v => O.keyOf(v.name) === p.key || O.keyOf(v.name) === O.keyOf(mem(p).name)); return x ? ` · MVP ${x.cur || 0}` : ""; };
       const balTxt = m => (m.vbal ? `${m.bal || 0} + ${m.vbal} VVIP` : `${m.bal || 0}`) + " game";
       const who = (p, extra = "") => `<span class="who"><span class="nm">${p.vip ? `<i class="vv">★</i> ` : ""}${esc(mem(p).name)}</span><span class="sub">${mem(p).mlid ? `ID ${esc(mem(p).mlid)}` : "tiada ID"}${mem(p).last ? ` · order ${fmtDate(mem(p).last)}` : ""}${extra}</span></span>`;
       $("ap-wins").textContent = s.wins; $("ap-losses").textContent = s.losses;
@@ -385,8 +389,8 @@ ${embedded ? "" : `<header class="app-top">
       $("ap-showq").checked = !!s.showQueue; $("ap-showb").checked = !!s.showBanner; $("ap-shows").checked = !s.song || s.song.on !== false;
       if (document.activeElement !== $("ap-song")) $("ap-song").value = (s.song && s.song.manual) || "";
       $("ap-pc").textContent = `${s.playing.length}/${max}`; $("ap-qc").textContent = s.queue.length;
-      $("ap-play").innerHTML = s.playing.length ? s.playing.map(p => `<li class="qrow"><div class="qtop">${who(p, (p.n ? ` · dah ${p.n} game` : "") + (rot && (p.n || 0) >= rot ? " · boleh rotate" : ""))}<span class="bal">${balTxt(mem(p))}</span></div>
-<div class="qctl"><button class="btn sq" data-a="b-" data-k="${esc(p.key)}" aria-label="Tolak baki">−</button><button class="btn sq" data-a="b+" data-k="${esc(p.key)}" aria-label="Tambah baki">+</button><button class="btn small ghost" data-a="noshow" data-id="${p.id}">Tak muncul</button><button class="btn sq" data-a="rm" data-id="${p.id}" aria-label="Keluarkan">✕</button></div></li>`).join("")
+      $("ap-play").innerHTML = s.playing.length ? s.playing.map(p => `<li class="qrow"><div class="qtop">${who(p, (p.n ? ` · dah ${p.n} game` : "") + (rot && (p.n || 0) >= rot ? " · boleh rotate" : "") + mvpOf(p))}<span class="bal">${balTxt(mem(p))}</span></div>
+<div class="qctl"><button class="btn sq" data-a="b-" data-k="${esc(p.key)}" aria-label="Tolak baki">−</button><button class="btn sq" data-a="b+" data-k="${esc(p.key)}" aria-label="Tambah baki">+</button><button class="btn small gold" data-a="mvpp" data-k="${esc(p.key)}" title="Pemain ni MVP: +1 dalam senarai MVP">★ MVP</button><button class="btn small ghost" data-a="noshow" data-id="${p.id}">Tak muncul</button><button class="btn sq" data-a="rm" data-id="${p.id}" aria-label="Keluarkan">✕</button></div></li>`).join("")
         : `<li class="empty">Belum ada. Tambah dalam Hutang Mabar di bawah.</li>`;
       $("ap-queue").innerHTML = s.queue.length ? s.queue.map((p, i) => `<li class="qrow"><div class="qtop"><span class="no">${i + 1}</span>${who(p)}<span class="bal">${balTxt(mem(p))}</span></div>
 <div class="qctl"><button class="btn sq" data-a="up" data-id="${p.id}" aria-label="Naik">↑</button><button class="btn sq" data-a="bottom" data-id="${p.id}" aria-label="Ke bawah queue">⤓</button>${s.playing.length < max ? `<button class="btn sq" data-a="now" data-id="${p.id}" aria-label="Main sekarang">▶</button>` : ""}<button class="btn small ghost" data-a="noshow" data-id="${p.id}">Tak muncul</button><button class="btn sq" data-a="rm" data-id="${p.id}" aria-label="Buang dari queue">✕</button></div></li>`).join("")

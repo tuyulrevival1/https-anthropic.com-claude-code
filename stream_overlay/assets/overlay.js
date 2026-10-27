@@ -225,6 +225,21 @@
       });
       return free;
     },
+    // MVP button on a player in the line: +1 in the MVP list (added to the list if new)
+    mvpFor(name) {
+      name = String(name || "").trim().slice(0, 24); if (!name) return null;
+      let out = null;
+      Store.set(s => {
+        let x = s.mvp.find(v => keyOf(v.name) === keyOf(name));
+        if (!x) { x = { id: uid("v"), name: name.toUpperCase(), cur: 0, hist: [] }; s.mvp.push(x); }
+        x.cur = (x.cur || 0) + 1;
+        const m = s.members[keyOf(name)];
+        let free = false;
+        if (CFG.mabar.vvipMvpFree && m && m.vvip) { m.vbal = (m.vbal || 0) + 1; free = true; }
+        out = { name: x.name, cur: x.cur, free };
+      });
+      return out;
+    },
     mvpSet(id, patch) { Store.set(s => { const x = s.mvp.find(v => v.id === id); if (x) Object.assign(x, patch); }); },
     // close a cycle (5 or 15 reached): the count goes into the history, counter restarts
     mvpClose(id, claimed) { Store.set(s => { const x = s.mvp.find(v => v.id === id); if (x && x.cur > 0) { x.hist.push({ n: x.cur, c: !!claimed }); x.cur = 0; } }); },
