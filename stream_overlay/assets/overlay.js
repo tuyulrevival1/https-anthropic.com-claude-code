@@ -346,8 +346,9 @@
       Store.set(s => {
         s.seenOrders = s.seenOrders || [];
         for (const o of orders) {
-          if (s.seenOrders.includes(o.id)) continue;
-          s.seenOrders.unshift(o.id);
+          // Sociabuzz sends the same id on every Test Notification: never drop a test as a duplicate
+          if (!o.test && s.seenOrders.includes(o.id)) continue;
+          if (!o.test) s.seenOrders.unshift(o.id);
           const info = { amount: o.amount, cur: o.cur, note: o.msg, vip: !!o.vip };
           if (o.test) { Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "test" }, info)); continue; }
           const k = keyOf(o.name);

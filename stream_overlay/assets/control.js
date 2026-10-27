@@ -13,13 +13,14 @@
 
   function mountControl(root, opts = {}) {
     Store.init();
+    const appOpen = Date.now(); // order tab badge counts orders that came in after the app opened
     const embedded = !!opts.embedded;
     root.classList.add("app");
     const pkgs = CFG.mabar.prices.map(p => ({ n: p.games || parseInt(p.qty, 10) || 1, label: `${p.qty} · ${p.price}` }));
     root.innerHTML = `
 ${embedded ? "" : `<header class="app-top">
   <div class="brand"><b>SYNO</b> CONTROL</div>
-  <div class="chips"><span class="chip" id="ap-conn">MENYAMBUNG…</span><span class="chip" id="ap-auth" hidden></span><span class="chip warn" id="ap-upd" hidden title="Tutup overlay, klik KEMASKINI.bat dalam folder stream_overlay">VERSI BARU · KLIK KEMASKINI.BAT</span>
+  <div class="chips"><span class="chip" id="ap-conn">MENYAMBUNG…</span><span class="chip" id="ap-auth" hidden></span><span class="chip ok" id="ap-hookchip" hidden></span><span class="chip warn" id="ap-upd" hidden title="Tutup overlay, klik KEMASKINI.bat dalam folder stream_overlay">VERSI BARU · KLIK KEMASKINI.BAT</span>
   <button class="btn small ghost" type="button" id="ap-lay">⠿ Susun layout</button><button class="btn small ghost" type="button" id="ap-layreset" hidden>Reset</button></div>
   <nav class="app-tabs" id="ap-tabs" role="tablist" aria-label="Bahagian"></nav>
 </header>
@@ -148,7 +149,7 @@ ${embedded ? "" : `<header class="app-top">
 <div class="toast" id="ap-toast" hidden></div>`;
 
     const $ = id => root.querySelector("#" + id);
-    const toast = msg => { const t = $("ap-toast"); t.textContent = msg; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => { t.hidden = true; }, 1800); };
+    const toast = (msg, ms) => { const t = $("ap-toast"); t.textContent = msg; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => { t.hidden = true; }, ms || 1800); };
 
     /* ---------- layout: drag cards to reorder, drag the corner to resize (saved on this device) ---------- */
     const LAY_KEY = "syno.layout.v1";
@@ -378,6 +379,8 @@ ${embedded ? "" : `<header class="app-top">
       tabc("live", `${s.playing.length}/${max}${s.queue.length ? ` · Q${s.queue.length}` : ""}`);
       tabc("hutang", Object.values(s.members).filter(m => T(m) > 0).length || "");
       tabc("mvp", (s.mvp || []).length || "");
+      const newOrd = (s.orders || []).filter(o => o.rx > appOpen && o.src !== "manual").length;
+      tabc("order", newOrd ? `${newOrd} baru` : "");
       $("ap-streak").textContent = s.streak >= 2 ? `Win streak ${s.streak}` : s.streak <= -2 ? `Lose ${-s.streak} berturut` : "";
       $("ap-showq").checked = !!s.showQueue; $("ap-showb").checked = !!s.showBanner; $("ap-shows").checked = !s.song || s.song.on !== false;
       if (document.activeElement !== $("ap-song")) $("ap-song").value = (s.song && s.song.manual) || "";
@@ -474,7 +477,7 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
     if (!/^https?:$/.test(location.protocol)) setTimeout(tryAutoImport, 800);
     Store.on((s, prev) => {
       const a = (s.orders || [])[0], b = prev && (prev.orders || [])[0];
-      if (a && (!b || a.rx !== b.rx) && a.src !== "manual" && a.src !== "sim") toast(a.src === "test" ? "Test Sociabuzz diterima ✓" : `Order Sociabuzz: ${a.name} +${a.games} game`);
+      if (a && (!b || a.rx !== b.rx) && a.src !== "manual" && a.src !== "sim") toast(a.src === "test" ? "Test Sociabuzz diterima ✓ (lihat tab Order)" : `Order Sociabuzz: ${a.name} +${a.games} game`, 5000);
     });
 
     /* ---------- YouTube viewers ---------- */
@@ -536,13 +539,14 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
     setInterval(checkUpdate, 31 * 60000);
 
     /* ---------- webhook test & status ---------- */
-    let lastAuth = null;
+    let lastAuth = null, lastHit = 0;
     const hookPath = () => { const m = String(lastAuth && lastAuth.hookUrl || "").match(/\/api\/order-hook\/[^/?#]+/); return m ? m[0].slice(1) : ""; };
     const tm = ms => new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" });
     const RES = { ok: ["OK ✓", "ok"], key: ["KUNCI SALAH: URL tak lengkap / salah salin", "bad"], get: ["dibuka dalam browser (GET) ✓", "ok"], empty: ["SAMPAI TAPI KOSONG", "bad"] };
     function hookTick() {
       if (!lastAuth || !lastAuth.ok) return;
       fetch("api/hooklog", { headers: { "X-Pin": lsGet(PIN_KEY, "") }, cache: "no-store" }).then(r => r.ok ? r.json() : null).then(list => {
+        if (Array.isArray(list) && !lastHit) lastHit = list.length ? list[0].t : 1;
         if (!Array.isArray(list)) { $("ap-hooklast").textContent = "Server lama: tutup tetingkap hitam & buka semula START_OVERLAY.bat"; return; }
         const pub = lastAuth.publicUrl;
         if (!list.length) {
@@ -550,6 +554,12 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
           $("ap-hookst").className = "hookst warn"; $("ap-hooklog").innerHTML = ""; return;
         }
         const r0 = RES[list[0].r] || [list[0].r, ""];
+        if (lastHit && list[0].t > lastHit) {
+          const ok = r0[1] === "ok", chip = $("ap-hookchip");
+          if (chip) { chip.textContent = `WEBHOOK ${ok ? "✓" : "✗"} ${tm(list[0].t)}`; chip.className = "chip " + (ok ? "ok" : "warn"); chip.hidden = false; clearTimeout(chip._h); chip._h = setTimeout(() => { chip.hidden = true; }, 120000); }
+          toast(`Webhook masuk (${list[0].via}): ${r0[0]}`, 5000);
+        }
+        lastHit = Math.max(lastHit || 0, list[0].t);
         $("ap-hooklast").textContent = `Terakhir ${tm(list[0].t)} · ${list[0].via} · ${r0[0]}`;
         $("ap-hookst").className = "hookst " + (r0[1] === "ok" ? "ok" : "warn");
         $("ap-hooklog").innerHTML = list.slice(0, 8).map(h => { const r = RES[h.r] || [h.r, ""]; return `<li class="${r[1]}"><span class="who"><span class="nm">${esc(tm(h.t))} · ${esc(h.via)}</span><span class="sub">${esc(r[0])} · ${h.n} bait${h.ua ? " · " + esc(h.ua) : ""}</span></span></li>`; }).join("");
