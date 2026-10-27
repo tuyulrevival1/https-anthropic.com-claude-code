@@ -64,13 +64,22 @@ Banner minimal: `http://127.0.0.1:8787/overlay.html?banner=minimal` · tanpa han
 | **Live** | Timer stream: Mula / Jeda / Reset. On/off queue, banner & lagu. Lagu ikut Spotify sendiri, atau taip tajuk › **Set** (**Auto** untuk ikut Spotify semula). |
 | **Win / Lose** | Tambah / tolak W/L manual, reset. |
 | **Game habis** | Menang / Kalah: tambah W/L **dan** tolak 1 game dari baki semua yang sedang main. Baki habis keluar, queue naik sendiri. |
-| **Sedang main / Queue** | Nama, **ID ML**, **tarikh order**. Naikkan, main sekarang, keluarkan. |
-| **VIP & baki** | Isi **Nama**, **ID ML**, **Bilangan game** (taip sendiri, contoh 7), **Tarikh order** › **Tambah VIP**. Butang "Isi cepat" hanya isikan nombor pakej. Setiap VIP ada kotak nombor: **Tambah** (tambah game; nombor negatif untuk tolak) atau **Set baki** (tukar baki terus). ID ML boleh diedit terus. Cari ikut nama atau ID. |
+| **Sedang main / Queue** | Nama, **ID ML**, **tarikh order**, ★ = VVIP. Naik ↑, ke bawah ⤓, main sekarang ▶, **Tak muncul** (keluar queue, baki kekal; hilang kali ke-2 tolak 1 game, kali ke-3 tolak 2 game), keluarkan ✕. |
+| **Hutang Mabar** | Semua orang + baki. Isi **Nama**, **ID ML**, **Bilangan game**, **Tarikh order**, tanda **VVIP** kalau fast track › **Tambah**. Setiap orang: edit ID, waktu order, tambah / set baki (pilih **Biasa** atau **VVIP**), tanda VVIP, reset kiraan hilang. |
+| **Senarai MVP** | Tambah nama, **+ / −** MVP Win (VVIP dapat free 1 game sendiri). Cukup 5 / 15: **Claim ✓** (hijau) atau **Simpan** (belum claim). Tekan nombor lama untuk tukar claim. Peraturan MVP boleh diedit. |
+| **Slot Mainkan Akaun** | Jadual Hari / Nama / Tarikh, edit terus. |
+| **Peraturan** | Edit peraturan (baris `#` = tajuk) › **Simpan**. Penonton nampak terus. |
 | **Order masuk** | Semua order: SOCIABUZZ (automatik), MANUAL, TEST. |
 | **YouTube** | Penonton live YouTube pada bar LIVE (perlu API key, bahagian 9). |
 | **Link** | Link kekal penonton & admin, Sociabuzz Webhook URL, link pantas. |
 
 Nak app dalam OBS juga: **Docks › Custom Browser Docks** › URL `http://127.0.0.1:8787/control.html`.
+
+### Sistem Mabar (ikut dokumen MABAR VIP SYNO)
+
+- **VVIP / Fast Track**: masuk terus ke depan queue. Game ditolak dari baki VVIP dulu.
+- **Rotation**: lepas 3 game, 2 orang keluar beri ruang kalau ada orang menunggu. Queue kosong = boleh habiskan baki. Nak masuk semula: tekan **Q** pada nama dalam Hutang Mabar.
+- **Data lama**: letak fail `seed_doc.js` (dihantar berasingan, tak ada dalam ZIP sebab ada ID pemain) dalam `assets\`. Kali pertama App dibuka di PC, semua Hutang Mabar (32 orang) dan senarai MVP (82 orang) dari dokumen dimasukkan sendiri. Nama sama digabung jadi satu baki. Atau: App › Peraturan › **Import data doc lama** › pilih fail `seed_doc.js`. Ubah dalam `assets\config.js` › `mabar` (rotateEvery, rotateCount, autoRequeue).
 
 ## 7. Link kekal (admin & penonton di luar Wi-Fi)
 
@@ -108,7 +117,8 @@ PIN salah 10 kali = akses admin luar dikunci 10 minit. Tukar PIN: ubah `data\adm
 ### D. Penonton
 
 - Letak `https://synostore.xxxx.ts.net/viewer.html` di **Linktree / bio**.
-- Penonton taip nama atau ID ML untuk semak **baki game**, lihat **sedang main**, **queue**, W/L dan harga. Mereka **tak boleh ubah apa-apa**.
+- Penonton nampak tab **Waiting list** (sedang main + QUE 1, 2, 3…), **Hutang mabar** (ID, Nickname, Waktu order, Baki game), **MVP**, **Slot akaun** dan **Peraturan**, serta semak baki ikut nama / ID. Mereka **tak boleh ubah apa-apa**.
+- Link terus ke satu tab: tambah `#hutang`, `#mvp`, `#akaun` atau `#rules` di hujung link, contoh `…/viewer.html#mvp`.
 
 Guna servis lain (ngrok / Cloudflare)? Tulis link awak dalam `data\public_url.txt`.
 

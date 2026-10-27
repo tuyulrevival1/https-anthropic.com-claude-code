@@ -98,3 +98,30 @@
 .app .np-now span { font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--c-mut); }
 .app .np-now b { font-size: 16px; overflow-wrap: anywhere; }
 .app .songbox .row input { flex: 1 1 160px; }
+/* queue rows with a control line */
+.app .list li.qrow { flex-direction: column; align-items: stretch; gap: 6px; padding: 7px 8px 7px 10px; }
+.app .qtop { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.app .qctl { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.app .btn.small { padding: 8px 10px; font-size: 12px; }
+.app .vv { color: var(--c-gold); font-style: normal; }
+.app .vvbtn { font: 700 10px/1 inherit; letter-spacing: .12em; padding: 3px 5px; margin-left: 4px; vertical-align: 2px; cursor: pointer;
+  color: var(--c-mut); background: transparent; border: 1px dashed var(--c-line); }
+.app .vvbtn.on { color: #160a00; background: var(--c-gold); border: 1px solid var(--c-gold); }
+.app .list li.mrow.zero { opacity: .55; }
+.app .mctl .dtin { flex: 1 1 170px; min-width: 0; padding: 7px 8px; font-size: 14px; }
+.app .mctl .gsel { font: inherit; font-size: 13px; color: var(--c-fg); background: #0a0405; border: 1px solid var(--c-line); padding: 7px 6px; }
+/* MVP */
+.app .list.mvplist { max-height: 620px; }
+.app .list li.mvrow { flex-direction: column; align-items: stretch; gap: 6px; padding: 8px 8px 8px 10px; }
+.app .hist { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.app .hc { font: 600 15px/1 "OV Teko", Teko, monospace; padding: 4px 7px 2px; min-width: 26px; cursor: pointer; color: var(--c-fg); background: #241016; border: 1px solid var(--c-line); }
+.app .hc.ok { background: #1f9d4c; border-color: #3bd977; color: #fff; }
+.app .mvcin { width: 64px; text-align: center; font: 600 24px/1 "OV Teko", Teko, monospace; padding: 4px 4px 2px; }
+.app .rules-in { width: 100%; font: 500 15px/1.45 "OV Raj", "Rajdhani", "Segoe UI", system-ui, sans-serif; color: var(--c-fg); background: #0a0405; border: 1px solid var(--c-line); padding: 9px 10px; resize: vertical; }
+.app .rules-in:focus-visible { outline: 2px solid var(--c-gold); }
+/* akaun */
+.app .ak-head, .app .akrow { display: grid; grid-template-columns: 1fr 1.4fr 1fr 36px; gap: 4px; }
+.app .ak-head span { font-size: 11px; letter-spacing: .2em; color: var(--c-mut); text-transform: uppercase; padding-left: 4px; }
+.app .list li.akrow { display: grid; padding: 3px; min-height: 0; background: transparent; }
+.app .akrow input { padding: 7px 8px; font-size: 14px; }
+.app .list.aklist { max-height: 560px; }

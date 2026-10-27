@@ -4,124 +4,221 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b0507">
-<title>SYNO · Queue & Baki VIP</title>
+<title>SYNO Mabar VIP</title>
 <link rel="icon" href="logos/profile_picture.png">
 <link rel="stylesheet" href="assets/overlay.css">
 <style>
-  /* Viewer page: read only. Layout: header, balance lookup, now playing, queue, prices. */
-  :root { --bg: #0b0507; --card: #170a0e; --line: rgba(255, 90, 110, .22); --fg: #f6eff0; --mut: rgba(246, 239, 240, .62); --red: #ff2346; --gold: #ffcf4a;
+  /* Viewer page (read only). Header + lookup, then tabs: Waiting list · Hutang Mabar · MVP · Slot akaun · Peraturan. */
+  :root { --bg: #0b0507; --card: #170a0e; --row: #10070a; --line: rgba(255, 90, 110, .22); --fg: #f6eff0; --mut: rgba(246, 239, 240, .62); --red: #ff2346; --gold: #ffcf4a; --green: #1f9d4c;
     --disp: "OV Anton", Anton, Impact, sans-serif; --hud: "OV Raj", Rajdhani, "Segoe UI", system-ui, sans-serif; --num: "OV Teko", Teko, monospace; color-scheme: dark; }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   body { margin: 0; background: radial-gradient(120% 60% at 50% 0%, #2a0810, var(--bg) 60%) fixed, var(--bg); color: var(--fg); font: 600 16px/1.45 var(--hud); }
-  .wrap { max-width: 640px; margin: 0 auto; padding-block: 20px 48px; padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); display: flex; flex-direction: column; gap: 14px; }
+  .wrap { max-width: 720px; margin: 0 auto; padding-block: 18px 48px; padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); display: flex; flex-direction: column; gap: 12px; }
   header { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
-  h1 { margin: 0; font: 400 40px/.95 var(--disp); transform: skewX(-8deg); letter-spacing: .01em; }
-  h1 small { display: block; font: 700 12px/1 var(--hud); letter-spacing: .34em; color: #ff8a9b; transform: none; margin-bottom: 8px; }
+  h1 { margin: 0; font: 400 38px/.95 var(--disp); transform: skewX(-8deg); }
+  h1 small { display: block; font: 700 12px/1 var(--hud); letter-spacing: .34em; color: #ff8a9b; margin-bottom: 8px; }
   h1 b { font-weight: 400; color: var(--red); }
   .live { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; background: var(--red); font: 700 14px/1 var(--hud); letter-spacing: .14em; }
   .live.off { background: #2a1118; color: var(--mut); }
   .live i { width: 8px; height: 8px; border-radius: 50%; background: #fff; }
   .live b { font: 600 20px/1 var(--num); letter-spacing: .04em; padding-top: 2px; }
-  .card { background: linear-gradient(170deg, #1f0d13, var(--card)); border: 1px solid var(--line); border-top: 3px solid var(--red); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
-  h2 { margin: 0; font: 700 13px/1 var(--hud); letter-spacing: .26em; text-transform: uppercase; color: #ff8a9b; display: flex; justify-content: space-between; }
-  h2 span { color: var(--fg); }
+  .card { background: linear-gradient(170deg, #1f0d13, var(--card)); border: 1px solid var(--line); border-top: 3px solid var(--red); padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  h2 { margin: 0; font: 700 13px/1 var(--hud); letter-spacing: .24em; text-transform: uppercase; color: #ff8a9b; display: flex; justify-content: space-between; gap: 8px; }
+  h2 span { color: var(--fg); letter-spacing: .08em; }
   .look { display: flex; gap: 8px; }
-  .look input { flex: 1; min-width: 0; font: inherit; color: var(--fg); background: #0a0405; border: 1px solid var(--line); padding: 12px; }
-  .look input:focus-visible { outline: 2px solid var(--gold); }
-  .res { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; background: #10070a; border-left: 3px solid var(--gold); }
+  input.q { flex: 1; min-width: 0; font: inherit; color: var(--fg); background: #0a0405; border: 1px solid var(--line); padding: 11px 12px; }
+  input.q:focus-visible, .tabs button:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+  .res { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; background: var(--row); border-left: 3px solid var(--gold); }
   .res b { font: 600 44px/1 var(--num); color: var(--gold); }
   .res small { color: var(--mut); }
-  ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-  li { display: flex; align-items: center; gap: 10px; background: #10070a; padding: 9px 12px; }
-  li .no { font: 600 22px/1 var(--num); color: #ff8a9b; width: 26px; padding-top: 2px; }
-  li .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 18px; }
-  li .bal { font-size: 13px; color: var(--gold); white-space: nowrap; }
-  li .who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  li .who small { color: var(--mut); font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  li.me { outline: 2px solid var(--gold); }
-  li.empty { color: var(--mut); font-weight: 500; }
-  .wl { display: flex; gap: 10px; }
-  .wl div { flex: 1; text-align: center; padding: 8px; background: #10070a; }
-  .wl small { display: block; font-size: 12px; letter-spacing: .3em; color: var(--mut); }
-  .wl b { font: 600 40px/1 var(--num); }
+  .wl { display: flex; gap: 8px; }
+  .wl div { flex: 1; display: flex; justify-content: center; align-items: baseline; gap: 10px; padding: 6px; background: var(--row); }
+  .wl small { font-size: 12px; letter-spacing: .3em; color: var(--mut); }
+  .wl b { font: 600 32px/1 var(--num); }
   .wl .w b { color: var(--gold); } .wl .l b { color: var(--red); }
+  .tabs { position: sticky; top: 0; z-index: 3; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding: 6px 0; background: var(--bg); }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button { flex: none; font: 700 13px/1 var(--hud); letter-spacing: .14em; text-transform: uppercase; color: var(--mut); background: #1a0b10; border: 1px solid var(--line); padding: 11px 12px; cursor: pointer; }
+  .tabs button[aria-selected="true"] { color: #fff; background: var(--red); border-color: var(--red); }
+  /* doc-style tables */
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 15px; }
+  th { font: 700 11px/1.2 var(--hud); letter-spacing: .14em; text-transform: uppercase; color: var(--mut); text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+  td { padding: 9px 6px; border-bottom: 1px solid rgba(255, 90, 110, .1); vertical-align: middle; overflow-wrap: anywhere; }
+  td.id { font: 500 14px/1.2 var(--num); letter-spacing: .02em; color: var(--mut); font-size: 17px; }
+  td.nm { font-weight: 700; }
+  td.dt { color: var(--mut); font-size: 13px; }
+  td.dt mark { background: var(--gold); color: #160a00; padding: 1px 4px; font-weight: 700; }
+  td.g { font: 600 22px/1 var(--num); color: var(--gold); text-align: right; white-space: nowrap; }
+  td.g small { display: block; font: 700 11px/1.2 var(--hud); color: #ffd84f; letter-spacing: .06em; }
+  th.g { text-align: right; }
+  col.c-id { width: 27%; } col.c-nm { width: 30%; } col.c-dt { width: 24%; } col.c-g { width: 19%; }
+  tr.me td { background: rgba(255, 207, 74, .12); }
+  .grp { display: flex; align-items: center; gap: 8px; margin-top: 4px; font: 700 13px/1 var(--hud); letter-spacing: .22em; padding: 8px 10px; }
+  .grp.play { background: var(--green); color: #fff; }
+  .grp.que { background: #e58f3a; color: #1a0a00; }
+  .grp i { margin-left: auto; font-style: normal; letter-spacing: .06em; font-size: 12px; opacity: .85; }
+  .vv { color: var(--gold); font-style: normal; }
+  td.empty, p.empty { color: var(--mut); font-weight: 500; text-align: center; }
+  .mvrules { margin: 0; padding: 10px 12px; background: rgba(255, 35, 70, .12); border-left: 3px solid var(--red); color: #ff8a9b; font-weight: 700; font-size: 14px; letter-spacing: .04em; white-space: pre-line; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .chips span { font: 600 17px/1 var(--num); padding: 4px 7px 2px; background: #241016; border: 1px solid var(--line); }
+  .chips span.ok { background: var(--green); border-color: #3bd977; color: #fff; }
+  .chips b { font: 600 24px/1 var(--num); color: var(--gold); margin-left: 4px; }
+  .rules h3 { margin: 6px 0 4px; font: 400 22px/1 var(--disp); color: var(--gold); letter-spacing: .02em; }
+  .rules ul { margin: 0 0 6px; padding-left: 18px; }
+  .rules li { margin: 3px 0; }
   .prices { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; }
-  .prices div { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 12px; background: #10070a; }
-  .prices b { font: 400 24px/1 var(--disp); color: var(--gold); font-weight: 400; white-space: nowrap; }
+  .prices div { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 10px; padding: 10px 12px; background: var(--row); }
+  .prices b { font: 400 22px/1 var(--disp); color: var(--gold); font-weight: 400; white-space: nowrap; }
   .foot { color: var(--mut); font-size: 13px; text-align: center; }
+  @media (max-width: 420px) { table { font-size: 14px; } td.id { font-size: 15px; } col.c-id { width: 26%; } col.c-dt { width: 22%; } col.c-g { width: 21%; } }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1><small>MABAR VIP · QUEUE</small><span id="v-store">SYNO</span><b>STORE</b></h1>
+    <h1><small>MABAR VIP · SENARAI</small><span id="v-store">SYNO</span><b>STORE</b></h1>
     <span class="live off" id="v-live"><i></i><span>OFFLINE</span><b></b></span>
   </header>
 
   <section class="card">
     <h2>Semak baki game anda</h2>
-    <form class="look" id="v-form" autocomplete="off"><input id="v-name" placeholder="Taip nama atau ID ML anda" aria-label="Nama atau ID ML"></form>
+    <form class="look" id="v-form" autocomplete="off"><input class="q" id="v-name" placeholder="Taip nickname atau ID ML" aria-label="Nickname atau ID ML"></form>
     <div class="res" id="v-res" hidden></div>
-  </section>
-
-  <section class="card">
-    <h2>Sedang main <span id="v-pc"></span></h2>
-    <ol id="v-play"></ol>
-  </section>
-
-  <section class="card">
-    <h2>Queue <span id="v-qc"></span></h2>
-    <ol id="v-queue"></ol>
-  </section>
-
-  <section class="card">
-    <h2>Win / Lose hari ni</h2>
     <div class="wl"><div class="w"><small>WIN</small><b id="v-w">0</b></div><div class="l"><small>LOSE</small><b id="v-l">0</b></div></div>
   </section>
 
-  <section class="card">
-    <h2>Harga Mabar VIP</h2>
+  <nav class="tabs" role="tablist" aria-label="Senarai">
+    <button role="tab" data-tab="wait">Waiting list</button>
+    <button role="tab" data-tab="hutang">Hutang mabar</button>
+    <button role="tab" data-tab="mvp">MVP</button>
+    <button role="tab" data-tab="akaun">Slot akaun</button>
+    <button role="tab" data-tab="rules">Peraturan</button>
+  </nav>
+
+  <section class="card" data-panel="wait">
+    <h2>Waiting list <span id="v-wc"></span></h2>
+    <div id="v-wait"></div>
+  </section>
+
+  <section class="card" data-panel="hutang">
+    <h2>Hutang mabar <span id="v-hc"></span></h2>
+    <input class="q" id="v-hq" placeholder="Cari nickname / ID…" aria-label="Cari dalam hutang mabar">
+    <table><colgroup><col class="c-id"><col class="c-nm"><col class="c-dt"><col class="c-g"></colgroup>
+    <thead><tr><th>ID</th><th>Nickname</th><th>Waktu order</th><th class="g">Baki game</th></tr></thead><tbody id="v-hutang"></tbody></table>
+  </section>
+
+  <section class="card" data-panel="mvp">
+    <h2>Senarai MVP <span id="v-mc"></span></h2>
+    <p class="mvrules" id="v-mvrules"></p>
+    <input class="q" id="v-mq" placeholder="Cari nama…" aria-label="Cari dalam senarai MVP">
+    <table><colgroup><col style="width:42%"><col></colgroup>
+    <thead><tr><th>Nama</th><th>MVP <span style="text-transform:none;letter-spacing:.04em">(hijau = dah claim)</span></th></tr></thead><tbody id="v-mvp"></tbody></table>
+  </section>
+
+  <section class="card" data-panel="akaun">
+    <h2>Slot mainkan akaun <span>15-20 GAMES</span></h2>
+    <table><colgroup><col style="width:30%"><col style="width:40%"><col></colgroup>
+    <thead><tr><th>Hari</th><th>Nama</th><th>Tarikh</th></tr></thead><tbody id="v-akaun"></tbody></table>
+  </section>
+
+  <section class="card" data-panel="rules">
+    <h2>Peraturan</h2>
+    <div class="rules" id="v-rules"></div>
+    <h2>Harga</h2>
     <div class="prices" id="v-prices"></div>
   </section>
-  <p class="foot">Halaman ni dikemas kini sendiri. Nak top up / masuk queue? Komen masa live.</p>
+  <p class="foot">Dikemas kini sendiri. Lihat sahaja: nak top up / masuk queue, komen masa live.</p>
 </div>
 <script src="assets/config.js"></script>
 <script>
 (function () {
   "use strict";
   const CFG = window.OVERLAY_CONFIG;
-  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const $ = id => document.getElementById(id);
+  const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
   const name = (CFG.brand && CFG.brand.name) || CFG.storeName.replace(/STORE$/i, "");
   $("v-store").textContent = name;
   $("v-prices").innerHTML = CFG.mabar.prices.map(p => `<div><span>${esc(p.qty)}</span><b>${esc(p.price)}${p.note ? `<small style="font:600 13px var(--hud);color:var(--mut)"> ${esc(p.note)}</small>` : ""}</b></div>`).join("");
-  let S = null, me = "";
-  try { me = localStorage.getItem("syno.viewer.me") || ""; } catch (e) {}
-  $("v-name").value = me;
+  const MON = ["JAN", "FEB", "MAC", "APR", "MEI", "JUN", "JUL", "OGO", "SEP", "OKT", "NOV", "DIS"];
   const pad = n => String(n).padStart(2, "0");
   const fmt = ms => { const x = Math.floor(ms / 1000); return `${pad(Math.floor(x / 3600))}:${pad(Math.floor(x / 60) % 60)}:${pad(x % 60)}`; };
+  const fd = ms => { if (!ms) return ""; const d = new Date(ms); return `${d.getDate()} ${MON[d.getMonth()]}`; };
+  const fdt = ms => { if (!ms) return ""; const d = new Date(ms), h = d.getHours(); return `${fd(ms)} ${h % 12 || 12}:${pad(d.getMinutes())} ${h < 12 ? "AM" : "PM"}`; };
+  const tot = m => m ? (m.bal || 0) + (m.vbal || 0) : 0;
+  const gameCell = m => `${tot(m)}${m && m.vbal ? `<small>${m.bal ? `${m.bal} + ` : ""}${m.vbal} VVIP</small>` : ""}`;
+  let S = null, me = ls.get("syno.viewer.me", "");
+  $("v-name").value = me;
 
+  // tabs (remembered, or #mvp / #hutang in the link)
+  const tabs = [...document.querySelectorAll(".tabs button")];
+  function showTab(t) {
+    if (!tabs.some(b => b.dataset.tab === t)) t = "wait";
+    tabs.forEach(b => b.setAttribute("aria-selected", b.dataset.tab === t ? "true" : "false"));
+    document.querySelectorAll("[data-panel]").forEach(p => { p.hidden = p.dataset.panel !== t; });
+    ls.set("syno.viewer.tab", t);
+  }
+  tabs.forEach(b => b.addEventListener("click", () => { showTab(b.dataset.tab); try { history.replaceState(null, "", "#" + b.dataset.tab); } catch (e) {} }));
+  showTab((location.hash || "").slice(1) || ls.get("syno.viewer.tab", "wait"));
+  window.addEventListener("hashchange", () => showTab((location.hash || "").slice(1)));
+
+  function findKey(members, raw) {
+    if (!raw) return "";
+    if (members[raw]) return raw;
+    const r = raw.replace(/\s+/g, "");
+    const hit = Object.entries(members).find(([k, m]) => (m.name || "").toLowerCase() === raw || (r.length >= 5 && String(m.mlid || "").replace(/\s+/g, "").includes(r)));
+    return hit ? hit[0] : "";
+  }
   function render() {
     if (!S) return;
-    const members = S.members || {}, mem = p => members[p.key] || { name: p.key, bal: 0 }, max = CFG.mabar.maxPlaying;
-    const raw = me.trim().toLowerCase();
-    const pad = n => String(n).padStart(2, "0");
-    const fd = ms => { if (!ms) return ""; const d = new Date(ms), h = d.getHours(); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${h % 12 || 12}:${pad(d.getMinutes())} ${h < 12 ? "AM" : "PM"}`; };
-    // find by name or by ML ID
-    let k = raw;
-    if (raw && !members[raw]) { const hit = Object.entries(members).find(([kk, m]) => String(m.mlid || "").toLowerCase().replace(/\s+/g, "").includes(raw.replace(/\s+/g, ""))); if (hit) k = hit[0]; }
-    const who = p => `<span class="who"><span class="nm">${esc(mem(p).name)}</span><small>${mem(p).mlid ? `ID ${esc(mem(p).mlid)}` : ""}${p.at ? `${mem(p).mlid ? " · " : ""}order ${fd(p.at)}` : ""}</small></span>`;
-    $("v-pc").textContent = `${(S.playing || []).length}/${max}`; $("v-qc").textContent = (S.queue || []).length;
-    $("v-play").innerHTML = (S.playing || []).length ? S.playing.map(p => `<li class="${p.key === k ? "me" : ""}">${who(p)}<span class="bal">baki ${mem(p).bal} game</span></li>`).join("") : `<li class="empty">Belum ada yang main.</li>`;
-    $("v-queue").innerHTML = (S.queue || []).length ? S.queue.map((p, i) => `<li class="${p.key === k ? "me" : ""}"><span class="no">${i + 1}</span>${who(p)}<span class="bal">baki ${mem(p).bal} game</span></li>`).join("") : `<li class="empty">Queue kosong.</li>`;
+    const members = S.members || {}, max = CFG.mabar.maxPlaying, raw = me.trim().toLowerCase(), k = findKey(members, raw);
+    const mem = p => members[p.key] || { name: p.key };
+    const row = (p, m, at) => `<tr class="${p && p.key === k ? "me" : ""}"><td class="id">${esc(m.mlid || "")}</td><td class="nm">${p && p.vip ? `<i class="vv">★</i> ` : ""}${esc(m.name)}</td><td class="dt">${at ? `<mark>${fd(at)}</mark>` : ""}</td><td class="g">${gameCell(m)}</td></tr>`;
+    const table = rows => `<table><colgroup><col class="c-id"><col class="c-nm"><col class="c-dt"><col class="c-g"></colgroup><thead><tr><th>ID</th><th>Nickname</th><th>Waktu order</th><th class="g">Baki game</th></tr></thead><tbody>${rows}</tbody></table>`;
+    // waiting list: playing (green) + QUE in groups of 4
+    const play = S.playing || [], que = S.queue || [];
+    let html = `<div class="grp play">SEDANG MAIN <i>${play.length}/${max}</i></div>` + table(play.length ? play.map(p => row(p, mem(p), p.at || mem(p).last)).join("") : `<tr><td colspan="4" class="empty">Belum ada yang main.</td></tr>`);
+    if (!que.length) html += `<div class="grp que">QUE</div><p class="empty">Queue kosong.</p>`;
+    for (let i = 0; i < que.length; i += max) {
+      const g = que.slice(i, i + max);
+      html += `<div class="grp que">QUE ${i / max + 1} <i>No. ${i + 1}–${i + g.length}</i></div>` + table(g.map(p => row(p, mem(p), p.at || mem(p).last)).join(""));
+    }
+    $("v-wait").innerHTML = html; $("v-wc").textContent = `${play.length} main · ${que.length} queue`;
+    // hutang mabar: everyone with balance
+    const hq = ($("v-hq").value || "").trim().toLowerCase();
+    const debt = Object.entries(members).filter(([, m]) => tot(m) > 0);
+    $("v-hc").textContent = `${debt.length} orang`;
+    const hrows = debt.filter(([kk, m]) => !hq || kk.includes(hq) || (m.name || "").toLowerCase().includes(hq) || String(m.mlid || "").includes(hq))
+      .sort((a, b) => (a[1].last || 9e15) - (b[1].last || 9e15));
+    $("v-hutang").innerHTML = hrows.length ? hrows.map(([kk, m]) => row({ key: kk }, m, m.last)).join("") : `<tr><td colspan="4" class="empty">${hq ? "Tiada nama sepadan." : "Tiada hutang mabar."}</td></tr>`;
+    // MVP
+    $("v-mvrules").textContent = S.mvpRules != null ? S.mvpRules : (CFG.mvpRules || "");
+    const mq = ($("v-mq").value || "").trim().toLowerCase(), mv = (S.mvp || []).filter(x => !mq || x.name.toLowerCase().includes(mq));
+    $("v-mc").textContent = `${(S.mvp || []).length} orang`;
+    $("v-mvp").innerHTML = mv.length ? mv.map(x => `<tr class="${raw && x.name.toLowerCase() === raw ? "me" : ""}"><td class="nm">${esc(x.name)}</td><td><div class="chips">${(x.hist || []).map(h => `<span class="${h.c ? "ok" : ""}">${h.n}</span>`).join("")}<b>${x.cur || 0}</b></div></td></tr>`).join("") : `<tr><td colspan="2" class="empty">Tiada.</td></tr>`;
+    // slot mainkan akaun
+    const ak = S.akaun || [];
+    $("v-akaun").innerHTML = ak.length ? ak.map(r => `<tr><td>${esc(r.day)}</td><td class="nm">${esc(r.name)}</td><td class="dt">${esc(r.date)}</td></tr>`).join("") : `<tr><td colspan="3" class="empty">Tiada slot.</td></tr>`;
+    // peraturan
+    const rules = S.rules != null ? S.rules : (CFG.rules || "");
+    let out = "", open = false;
+    rules.split(/\r?\n/).forEach(l => {
+      l = l.trim(); if (!l) return;
+      if (l.startsWith("#")) { if (open) out += "</ul>"; out += `<h3>${esc(l.replace(/^#+\s*/, ""))}</h3><ul>`; open = true; }
+      else { if (!open) { out += "<ul>"; open = true; } out += `<li>${esc(l)}</li>`; }
+    });
+    $("v-rules").innerHTML = out + (open ? "</ul>" : "");
+    // W/L + lookup
     $("v-w").textContent = S.wins || 0; $("v-l").textContent = S.losses || 0;
     const res = $("v-res");
-    if (k) {
-      const m = members[k], pos = (S.queue || []).findIndex(p => p.key === k), playing = (S.playing || []).some(p => p.key === k);
+    if (raw) {
+      const m = members[k], pos = que.findIndex(p => p.key === k), playing = play.some(p => p.key === k);
+      const mvx = (S.mvp || []).find(x => x.name.toLowerCase() === (m ? m.name : raw).toLowerCase());
       res.hidden = false;
-      res.innerHTML = m ? `<div><div style="font-size:18px">${esc(m.name)}</div><small>${m.mlid ? `ID ${esc(m.mlid)}<br>` : ""}${playing ? "Sedang main sekarang" : pos >= 0 ? `Dalam queue · nombor ${pos + 1}` : "Tiada dalam queue"}${m.last ? `<br>Order terakhir ${fd(m.last)}` : ""}</small></div><div style="text-align:right"><b>${m.bal}</b><br><small>baki game</small></div>`
-        : `<div><div style="font-size:18px">${esc(me)}</div><small>Tiada rekod VIP dengan nama ni. Semak ejaan atau tanya admin.</small></div>`;
+      res.innerHTML = m ? `<div><div style="font-size:18px">${esc(m.name)}${m.vvip ? ` <i class="vv">VVIP</i>` : ""}</div><small>${m.mlid ? `ID ${esc(m.mlid)}<br>` : ""}${playing ? "Sedang main sekarang" : pos >= 0 ? `Dalam queue · nombor ${pos + 1}` : "Tiada dalam queue"}${m.last ? `<br>Order ${fdt(m.last)}` : ""}${m.vbal ? `<br>${m.bal || 0} biasa + ${m.vbal} VVIP` : ""}${mvx ? `<br>MVP: ${mvx.cur || 0}` : ""}${m.miss ? `<br>Hilang: ${m.miss} kali` : ""}</small></div><div style="text-align:right"><b>${tot(m)}</b><br><small>baki game</small></div>`
+        : `<div><div style="font-size:18px">${esc(me)}</div><small>Tiada rekod dengan nama / ID ni.${mvx ? ` MVP: ${mvx.cur || 0}` : ""} Semak ejaan atau tanya admin.</small></div>`;
     } else res.hidden = true;
   }
   function tickLive() {
@@ -132,13 +229,16 @@
     live.querySelector("span").textContent = L.running ? "LIVE" : "OFFLINE";
     live.querySelector("b").textContent = L.running ? fmt(ms) : "";
   }
+  let lastTxt = "";
   function load() {
     if (/^https?:$/.test(location.protocol)) {
-      fetch("api/state", { cache: "no-store" }).then(r => r.ok ? r.text() : "").then(t => { if (t && t.trim()) { try { S = JSON.parse(decodeURIComponent(t)); render(); } catch (e) {} } }).catch(() => {});
+      fetch("api/state", { cache: "no-store" }).then(r => r.ok ? r.text() : "").then(t => { if (t && t.trim() && t !== lastTxt) { try { S = JSON.parse(decodeURIComponent(t)); lastTxt = t; render(); } catch (e) {} } }).catch(() => {});
     } else { try { S = JSON.parse(localStorage.getItem("chouOverlay.v1") || "null"); render(); } catch (e) {} }
   }
-  $("v-form").addEventListener("submit", e => { e.preventDefault(); me = $("v-name").value; try { localStorage.setItem("syno.viewer.me", me); } catch (e) {} render(); });
-  $("v-name").addEventListener("input", () => { me = $("v-name").value; try { localStorage.setItem("syno.viewer.me", me); } catch (e) {} render(); });
+  const setMe = () => { me = $("v-name").value; ls.set("syno.viewer.me", me); render(); };
+  $("v-form").addEventListener("submit", e => { e.preventDefault(); setMe(); });
+  $("v-name").addEventListener("input", setMe);
+  $("v-hq").addEventListener("input", render); $("v-mq").addEventListener("input", render);
   load(); setInterval(load, 4000); setInterval(tickLive, 1000);
 })();
 </script>

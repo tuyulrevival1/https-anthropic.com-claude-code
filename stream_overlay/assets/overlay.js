@@ -39,7 +39,7 @@
   const defaults = () => ({
     wins: CFG.defaults.wins, losses: CFG.defaults.losses, streak: 0,
     showQueue: true, showBanner: true, playing: [], queue: [], members: {},
-    live: { running: false, start: 0, acc: 0 }, yt: { viewers: null, at: 0 }, song: { on: true, manual: "" }, rev: 0, updated: 0
+    live: { running: false, start: 0, acc: 0 }, yt: { viewers: null, at: 0 }, song: { on: true, manual: "" }, mvp: [], rev: 0, updated: 0
   });
   // upgrade older saves (queue entries with name/games) to members + balance
   function normalize(s) {
@@ -48,6 +48,11 @@
     s.live = Object.assign({ running: false, start: 0, acc: 0 }, s.live || {});
     s.yt = Object.assign({ viewers: null, at: 0 }, s.yt || {});
     s.song = Object.assign({ on: true, manual: "" }, s.song || {});
+    Object.values(s.members).forEach(m => { m.bal = m.bal || 0; m.vbal = m.vbal || 0; });
+    s.mvp = Array.isArray(s.mvp) ? s.mvp : [];
+    if (!Array.isArray(s.akaun)) s.akaun = defaultAkaun();
+    if (typeof s.rules !== "string") s.rules = CFG.rules || "";
+    if (typeof s.mvpRules !== "string") s.mvpRules = CFG.mvpRules || "";
     const fix = e => {
       if (e.key) return e;
       const k = keyOf(e.name); if (!k) return null;
@@ -58,6 +63,9 @@
     s.queue = (s.queue || []).map(fix).filter(Boolean);
     return s;
   }
+  const DAYS = ["Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu", "Ahad"];
+  function defaultAkaun() { return [...DAYS, ...DAYS].map(d => ({ day: d, name: "", date: "" })).concat([1, 2, 3].map(() => ({ day: "", name: "", date: "" }))); }
+  const tot = m => m ? (m.bal || 0) + (m.vbal || 0) : 0;
   const liveElapsed = (s, nowMs = Date.now()) => {
     const L = s.live || {}; return Math.max(0, (L.acc || 0) + (L.running ? nowMs - (L.start || nowMs) : 0));
   };
@@ -118,52 +126,144 @@
 
   /* ---------- queue, VIP balance, W/L, timer ---------- */
   const inLine = (s, k) => s.playing.some(p => p.key === k) || s.queue.some(p => p.key === k);
+  const leave = (s, k) => { s.playing = s.playing.filter(p => p.key !== k); s.queue = s.queue.filter(p => p.key !== k); };
+  // VVIP (fast track) goes to the front of the queue, behind other VVIP; everyone else to the bottom
+  const enqueue = (s, e) => {
+    if (e.vip) { let i = 0; while (i < s.queue.length && s.queue[i].vip) i++; s.queue.splice(i, 0, e); } else s.queue.push(e);
+  };
+  const MAX = () => CFG.mabar.maxPlaying, ROT = () => CFG.mabar.rotateEvery || 0;
   const Q = {
+    tot,
     fillSlots(s) {
-      const max = CFG.mabar.maxPlaying;
-      while (s.playing.length < max && s.queue.length) {
+      while (s.playing.length < MAX() && s.queue.length) {
         const e = s.queue.shift(), m = s.members[e.key];
-        if (m && m.bal > 0) s.playing.push(e);
+        if (tot(m) > 0) { e.n = 0; s.playing.push(e); }
       }
     },
-    // top up a VIP (creates the member) and put them in the queue
     // top up a VIP (creates the member) and put them in the queue.
-    // extra: { mlid: "123456 (1234)", at: order time in ms, src: "sociabuzz" }
+    // extra: { mlid: "123456 (1234)", at: order time in ms, src: "sociabuzz", vip: true = VVIP games }
     add(name, games, join = true, extra = {}) {
       name = String(name || "").trim().slice(0, 24); const k = keyOf(name); if (!k) return null;
       games = Math.max(0, Math.min(999, parseInt(games, 10) || 0));
       const at = +extra.at || Date.now(), mlid = String(extra.mlid || "").trim().slice(0, 32);
-      Store.set(s => Q._add(s, k, name, games, join, at, mlid, extra.src));
+      Store.set(s => Q._add(s, k, name, games, join, at, mlid, extra.src, { vip: !!extra.vip }));
       return k;
     },
     _add(s, k, name, games, join, at, mlid, src, info = {}) {
-      const m = s.members[k] || (s.members[k] = { name, bal: 0 });
-      m.name = name; m.bal += games; m.last = at; if (mlid) m.mlid = mlid;
+      const m = s.members[k] || (s.members[k] = { name, bal: 0, vbal: 0 });
+      m.name = name; m.last = at; if (mlid) m.mlid = mlid;
+      if (info.vip) { m.vbal = (m.vbal || 0) + games; m.vvip = true; } else m.bal = (m.bal || 0) + games;
       Q._log(s, Object.assign({ key: k, name, mlid: m.mlid || "", games, at, src: src || "manual" }, info));
       const e = s.queue.find(p => p.key === k);
-      if (e) e.at = e.at || at;
-      else if (join && m.bal > 0 && !s.playing.some(p => p.key === k)) s.queue.push({ id: uid("p"), key: k, at });
+      if (e) { e.at = e.at || at; if (info.vip && !e.vip) { s.queue = s.queue.filter(p => p !== e); e.vip = true; enqueue(s, e); } }
+      else if (join && tot(m) > 0 && !s.playing.some(p => p.key === k)) enqueue(s, { id: uid("p"), key: k, at, vip: (m.vbal || 0) > 0 });
       Q.fillSlots(s);
     },
     _log(s, o) { (s.orders = s.orders || []).unshift(Object.assign({ rx: Date.now() }, o)); s.orders = s.orders.slice(0, 200); },
     setMl(k, v) { Store.set(s => { const m = s.members[k]; if (m) m.mlid = String(v || "").trim().slice(0, 32); }); },
-    join(k) { Store.set(s => { const m = s.members[k]; if (m && m.bal > 0 && !inLine(s, k)) s.queue.push({ id: uid("p"), key: k, at: Date.now() }); Q.fillSlots(s); }); },
-    addBal(k, d) { Store.set(s => { const m = s.members[k]; if (!m) return; m.bal = Math.max(0, m.bal + d); if (m.bal === 0) { s.playing = s.playing.filter(p => p.key !== k); s.queue = s.queue.filter(p => p.key !== k); } Q.fillSlots(s); }); },
-    setBal(k, v) { Store.set(s => { const m = s.members[k]; if (!m) return; m.bal = Math.max(0, parseInt(v, 10) || 0); if (m.bal === 0) { s.playing = s.playing.filter(p => p.key !== k); s.queue = s.queue.filter(p => p.key !== k); } Q.fillSlots(s); }); },
-    delMember(k) { Store.set(s => { delete s.members[k]; s.playing = s.playing.filter(p => p.key !== k); s.queue = s.queue.filter(p => p.key !== k); Q.fillSlots(s); }); },
+    // edit any member field: name, last (order time ms), miss, vvip
+    setMember(k, patch) { Store.set(s => { const m = s.members[k]; if (m) Object.assign(m, patch); }); },
+    join(k) { Store.set(s => { const m = s.members[k]; if (m && tot(m) > 0 && !inLine(s, k)) enqueue(s, { id: uid("p"), key: k, at: Date.now(), vip: (m.vbal || 0) > 0 }); Q.fillSlots(s); }); },
+    addBal(k, d, vip) { Store.set(s => { const m = s.members[k]; if (!m) return; const f = vip ? "vbal" : "bal"; m[f] = Math.max(0, (m[f] || 0) + d); if (vip && d > 0) m.vvip = true; if (!tot(m)) leave(s, k); Q.fillSlots(s); }); },
+    setBal(k, v, vip) { Store.set(s => { const m = s.members[k]; if (!m) return; m[vip ? "vbal" : "bal"] = Math.max(0, parseInt(v, 10) || 0); if (!tot(m)) leave(s, k); Q.fillSlots(s); }); },
+    delMember(k) { Store.set(s => { delete s.members[k]; leave(s, k); Q.fillSlots(s); }); },
+    // game finished: everyone playing pays 1 game (VVIP games first if they came in as VVIP),
+    // then the rotation rule: after N games a player makes room, but only if someone is waiting
     endGame(result) {
+      let rotated = [];
       Store.set(s => {
         if (result === "W") { s.wins++; s.streak = s.streak > 0 ? s.streak + 1 : 1; }
         if (result === "L") { s.losses++; s.streak = s.streak < 0 ? s.streak - 1 : -1; }
-        s.playing.forEach(p => { const m = s.members[p.key]; if (m) m.bal = Math.max(0, m.bal - 1); });
-        s.playing = s.playing.filter(p => (s.members[p.key] || {}).bal > 0);
+        s.playing.forEach(p => {
+          const m = s.members[p.key]; if (!m) return;
+          if (p.vip && m.vbal > 0) m.vbal--; else if (m.bal > 0) m.bal--; else if (m.vbal > 0) m.vbal--;
+          p.n = (p.n || 0) + 1;
+        });
+        s.playing = s.playing.filter(p => tot(s.members[p.key]) > 0);
+        const waiting = s.queue.filter(p => tot(s.members[p.key]) > 0).length;
+        if (ROT() && waiting) {
+          const due = s.playing.filter(p => (p.n || 0) >= ROT()).sort((a, b) => (b.n || 0) - (a.n || 0)).slice(0, Math.min(waiting, CFG.mabar.rotateCount || 2));
+          due.forEach(p => {
+            s.playing = s.playing.filter(x => x !== p); rotated.push((s.members[p.key] || {}).name || p.key);
+            if (CFG.mabar.autoRequeue) { p.n = 0; p.at = Date.now(); enqueue(s, p); }
+          });
+        }
         Q.fillSlots(s);
       });
+      return rotated;
+    },
+    // didn't show up when called: out of the line (balance stays = hutang mabar), penalty on repeat
+    noShow(id) {
+      let res = null;
+      Store.set(s => {
+        const e = s.playing.find(p => p.id === id) || s.queue.find(p => p.id === id); if (!e) return;
+        const m = s.members[e.key]; leave(s, e.key);
+        if (m) {
+          m.miss = (m.miss || 0) + 1;
+          let pen = m.miss === 2 ? 1 : m.miss >= 3 ? 2 : 0, left = pen;
+          const fromB = Math.min(m.bal || 0, left); m.bal -= fromB; left -= fromB; m.vbal = Math.max(0, (m.vbal || 0) - left);
+          res = { name: m.name, miss: m.miss, pen };
+        }
+        Q.fillSlots(s);
+      });
+      return res;
+    },
+    /* ---------- MVP list ---------- */
+    mvpAdd(name) {
+      name = String(name || "").trim().slice(0, 24); if (!name) return;
+      Store.set(s => { if (!s.mvp.some(x => keyOf(x.name) === keyOf(name))) s.mvp.push({ id: uid("v"), name, cur: 0, hist: [] }); });
+    },
+    // +1 / -1 MVP win. VVIP who gets MVP win: free 1 game (VVIP balance)
+    mvpBump(id, d) {
+      let free = null;
+      Store.set(s => {
+        const x = s.mvp.find(v => v.id === id); if (!x) return;
+        x.cur = Math.max(0, (x.cur || 0) + d);
+        const m = s.members[keyOf(x.name)];
+        if (d > 0 && CFG.mabar.vvipMvpFree && m && m.vvip) { m.vbal = (m.vbal || 0) + 1; free = m.name; }
+      });
+      return free;
+    },
+    mvpSet(id, patch) { Store.set(s => { const x = s.mvp.find(v => v.id === id); if (x) Object.assign(x, patch); }); },
+    // close a cycle (5 or 15 reached): the count goes into the history, counter restarts
+    mvpClose(id, claimed) { Store.set(s => { const x = s.mvp.find(v => v.id === id); if (x && x.cur > 0) { x.hist.push({ n: x.cur, c: !!claimed }); x.cur = 0; } }); },
+    mvpToggle(id, i) { Store.set(s => { const x = s.mvp.find(v => v.id === id); if (x && x.hist[i]) x.hist[i].c = !x.hist[i].c; }); },
+    mvpDelHist(id, i) { Store.set(s => { const x = s.mvp.find(v => v.id === id); if (x) x.hist.splice(i, 1); }); },
+    mvpDel(id) { Store.set(s => { s.mvp = s.mvp.filter(v => v.id !== id); }); },
+    /* ---------- slot mainkan akaun ---------- */
+    akaunSet(i, f, v) { Store.set(s => { if (s.akaun[i]) s.akaun[i][f] = String(v || "").slice(0, 40); }); },
+    akaunAdd() { Store.set(s => { s.akaun.push({ day: "", name: "", date: "" }); }); },
+    akaunDel(i) { Store.set(s => { s.akaun.splice(i, 1); }); },
+    akaunReset() { Store.set(s => { s.akaun = defaultAkaun(); }); },
+    /* ---------- import the old Google Doc list (once) ---------- */
+    importDoc(seed) {
+      const out = { members: 0, mvp: 0 };
+      Store.set(s => {
+        (seed.hutang || []).forEach(r => {
+          const name = String(r.name).trim(); let k = keyOf(name); if (!k) return;
+          const id = String(r.id || "").trim();
+          if (s.members[k] && id && s.members[k].mlid && s.members[k].mlid !== id) k = `${k} #${id}`;
+          const m = s.members[k] || (s.members[k] = { name, bal: 0, vbal: 0 });
+          if (!m.src) out.members++;
+          m.src = "doc"; m.bal = (m.bal || 0) + (r.bal || 0); m.vbal = (m.vbal || 0) + (r.vbal || 0);
+          if (r.vvip || r.vbal) m.vvip = true;
+          if (id && !m.mlid) m.mlid = id;
+          const at = r.at || (r.date ? Date.parse(r.date + "T12:00:00") : 0);
+          if (at && !m.last) m.last = at;
+        });
+        (seed.mvp || []).forEach(r => {
+          if (s.mvp.some(x => keyOf(x.name) === keyOf(r.name))) return;
+          s.mvp.push({ id: uid("v"), name: r.name, cur: r.cur || 0, hist: (r.hist || []).map(h => ({ n: h.n, c: !!h.c })) }); out.mvp++;
+        });
+        s.docImported = Date.now();
+      });
+      return out;
     },
     wl(k, d) { Store.set(s => { s[k] = Math.max(0, (s[k] || 0) + d); if (d > 0) s.streak = k === "wins" ? (s.streak > 0 ? s.streak + 1 : 1) : (s.streak < 0 ? s.streak - 1 : -1); }); },
     remove(id) { Store.set(s => { s.playing = s.playing.filter(p => p.id !== id); s.queue = s.queue.filter(p => p.id !== id); Q.fillSlots(s); }); },
+    toBottom(id) { Store.set(s => { const i = s.queue.findIndex(p => p.id === id); if (i >= 0) { const [x] = s.queue.splice(i, 1); s.queue.push(x); } }); },
     up(id) { Store.set(s => { const i = s.queue.findIndex(p => p.id === id); if (i > 0) { const [x] = s.queue.splice(i, 1); s.queue.splice(i - 1, 0, x); } }); },
-    playNow(id) { Store.set(s => { const i = s.queue.findIndex(p => p.id === id); if (i >= 0 && s.playing.length < CFG.mabar.maxPlaying) s.playing.push(s.queue.splice(i, 1)[0]); }); },
+    playNow(id) { Store.set(s => { const i = s.queue.findIndex(p => p.id === id); if (i >= 0 && s.playing.length < CFG.mabar.maxPlaying) { const e = s.queue.splice(i, 1)[0]; e.n = 0; s.playing.push(e); } }); },
     clear() { Store.set(s => { s.playing = []; s.queue = []; }); },
     patch(obj) { Store.set(s => Object.assign(s, obj)); },
     timer(act) {
@@ -200,14 +300,16 @@
     let games = parseInt(pick(b, ["quantity", "qty", "jumlah"]), 10) || 0;
     const gm = msg.match(/(\d{1,3})\s*(?:x\s*)?(?:game|games|g\b|gem|match|kali)/i);
     if (!games && gm) games = parseInt(gm[1], 10);
+    const vip = /\b(vvip|fast\s*track)\b/i.test(msg);
     if (!games && rm > 0) {
-      if (/immortal/i.test(msg)) games = Math.floor(rm / SB.immortalPerGame + 1e-9);
-      else { let rest = rm; for (const p of SB.packs) { const n = Math.floor(rest / p.rm + 1e-9); games += n * p.games; rest -= n * p.rm; } }
+      const packs = vip ? (SB.vvipPacks || [{ rm: 20, games: 3 }, { rm: 8, games: 1 }])
+        : /immortal/i.test(msg) ? (SB.immortalPacks || [{ rm: SB.immortalPerGame, games: 1 }]) : SB.packs;
+      let rest = rm; for (const p of packs) { const n = Math.floor(rest / p.rm + 1e-9); games += n * p.games; rest -= n * p.rm; }
     }
     const at = Date.parse(pick(b, ["created_at", "paid_at", "date"]) || "") || entry.t || Date.now();
     const id = String(pick(b, ["id", "transaction_id", "order_id"]) || `${name}|${amount}|${at}`);
     const test = /ini hanya test notifikasi/i.test(msg) || String(b.email_supporter || "") === "jessica@example.com";
-    return { id, name, mlid, games, at, amount, cur, msg: msg.slice(0, 120), test };
+    return { id, name, mlid, games, at, amount, cur, msg: msg.slice(0, 120), test, vip };
   }
   let ordersBusy = false;
   function pullOrders() {
@@ -221,7 +323,7 @@
         for (const o of orders) {
           if (s.seenOrders.includes(o.id)) continue;
           s.seenOrders.unshift(o.id);
-          const info = { amount: o.amount, cur: o.cur, note: o.msg };
+          const info = { amount: o.amount, cur: o.cur, note: o.msg, vip: !!o.vip };
           if (o.test) { Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "test" }, info)); continue; }
           const k = keyOf(o.name);
           if (o.games > 0 && k) Q._add(s, k, o.name, o.games, SB.autoQueue, o.at, o.mlid, "sociabuzz", info);
@@ -381,12 +483,12 @@
     let slots = "";
     for (let i = 0; i < max; i++) {
       const p = s.playing[i];
-      if (p) { const m = mem(s, p); slots += `<li class="slot${isNew(p.id)}"><span class="ix">${i + 1}</span><span class="nm">${esc(m.name)}</span>${m.mlid ? `<span class="mid">${esc(m.mlid)}</span>` : ""}<span class="bal">${m.bal}<small>G</small></span></li>`; }
+      if (p) { const m = mem(s, p); slots += `<li class="slot${isNew(p.id)}"><span class="ix">${i + 1}</span><span class="nm">${esc(m.name)}</span>${m.mlid ? `<span class="mid">${esc(m.mlid)}</span>` : ""}<span class="bal">${p.vip ? "<i class=\"vv\">★</i>" : ""}${tot(m)}<small>G</small></span></li>`; }
       else slots += `<li class="slot is-empty"><span class="ix">${i + 1}</span><span class="nm">SLOT KOSONG</span></li>`;
     }
     const lim = wide ? 6 : compact ? 2 : 3;
     let next = s.queue.slice(0, lim).map((p, i) =>
-      `<li class="nx${isNew(p.id)}"><span class="no">${String(i + 1).padStart(2, "0")}</span><span class="nm">${esc(mem(s, p).name)}</span>${mem(s, p).mlid ? `<span class="mid">${esc(mem(s, p).mlid)}</span>` : ""}<span class="g">${mem(s, p).bal}G</span></li>`).join("");
+      `<li class="nx${isNew(p.id)}"><span class="no">${String(i + 1).padStart(2, "0")}</span><span class="nm">${esc(mem(s, p).name)}</span>${mem(s, p).mlid ? `<span class="mid">${esc(mem(s, p).mlid)}</span>` : ""}<span class="g">${p.vip ? "★" : ""}${tot(mem(s, p))}G</span></li>`).join("");
     if (s.queue.length > lim) next += `<li class="nx more">+${s.queue.length - lim} LAGI</li>`;
     const nextBlock = s.queue.length ? `<ol>${next}</ol>` : `<p class="q-empty">${full ? "Queue kosong" : "Slot masih ada"}</p>`;
     return `<div class="q-head"><div><div class="q-open${full ? " full" : ""}">${full ? "PENUH · MASUK QUEUE" : "SLOT DIBUKA"}</div><h3 class="ov-h">${esc(CFG.mabar.title)}</h3></div><div class="q-prices">${chipsHTML()}</div></div>

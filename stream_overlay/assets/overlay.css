@@ -316,3 +316,5 @@
 .ov-band .np.scroll .npw { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 16px), transparent); mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 16px), transparent); }
 .ov-band .np.scroll .npt { padding-left: 12px; animation: np-scroll var(--np-dur, 10s) ease-in-out infinite alternate; }
 @keyframes np-scroll { 0%, 18% { transform: translateX(0); } 82%, 100% { transform: translateX(var(--np-d, 0)); } }
+/* VVIP star in the overlay queue */
+.ov-card .bal .vv, .vv { color: #ffd84f; font-style: normal; margin-right: 2px; }

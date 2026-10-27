@@ -15,7 +15,11 @@ window.OVERLAY_CONFIG = {
       { qty: "3 GAME", price: "RM10", games: 3 },
       { qty: "IMMORTAL", price: "RM6", games: 1, note: "/ GAME" }
     ],
-    maxPlaying: 4 // berapa orang main sekali (max 4, sebab party 5)
+    maxPlaying: 4,      // berapa orang main sekali (max 4, sebab party 5)
+    rotateEvery: 3,     // Sistem Rotation: lepas 3 game keluar beri ruang (hanya bila ada orang menunggu)
+    rotateCount: 2,     // berapa orang rotate setiap kali
+    autoRequeue: false, // true = lepas rotate terus masuk semula ke bawah queue
+    vvipMvpFree: true   // VVIP dapat MVP Win: free 1 game (ditambah bila tekan +1 MVP)
   },
 
   // Order automatik dari Sociabuzz (webhook). Pembeli tulis ID ML dalam mesej,
@@ -24,8 +28,33 @@ window.OVERLAY_CONFIG = {
     autoQueue: true,
     toMYR: { MYR: 1, RM: 1, IDR: 0.00028, SGD: 3.3, USD: 4.4 },   // anggaran tukaran ke RM
     packs: [{ rm: 10, games: 3 }, { rm: 4, games: 1 }],            // pakej besar dulu
-    immortalPerGame: 6                                             // kalau mesej sebut "immortal"
+    immortalPerGame: 6,                                            // kalau mesej sebut "immortal"
+    immortalPacks: [{ rm: 15, games: 3 }, { rm: 6, games: 1 }],    // Immortal RM6 / 3 game RM15
+    vvipPacks: [{ rm: 20, games: 3 }, { rm: 8, games: 1 }]         // mesej sebut "vvip" / "fast track": RM8 / 3 game RM20
   },
+
+  // Peraturan (nilai permulaan; edit terus dalam App > Peraturan). Baris "# ..." = tajuk.
+  rules: `# Fast Track (VVIP)
+RM8 (1 game) / RM20 (3 game)
+Terus main tanpa tunggu queue
+Untuk VVIP: MVP Win free 1 game
+# Harga Mabar
+Immortal RM6 per game | 3 game RM15
+Bawah Immortal semua RM4 per game
+# Sistem Rotation
+2 orang rotate setiap 3 game
+Queue tak ramai boleh habiskan balance
+# Peraturan Queue
+Dah masuk, tunggu turn dipanggil
+Tak muncul: keluar queue, masuk ke hutang mabar
+Boleh re-queue dari bawah
+Hilang 2 kali: tolak 1 game
+Hilang 3 kali: tolak 2 game
+# Re-Queue & Balance
+Habis 3 game boleh re-queue jika ada balance
+Masuk queue: bagitahu nama + baki game`,
+  mvpRules: `MVP WIN x5: FREE SKIN SHOP BAWAH 1K DIAMOND
+MVP WIN x15: CLAIM 1 SKIN EVENT YANG BOLEH GIFT`,
 
   // Servis lain (keluar bila queue disorok)
   services: [

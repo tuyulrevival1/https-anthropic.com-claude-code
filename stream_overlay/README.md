@@ -16,7 +16,8 @@ Semua dalam HTML: tak perlu edit video, tak perlu install Python.
 | `AMBIL_LOGO_RANK.bat` | Muat turun logo rank MLBB asli (Epic hingga Immortal) dari wiki |
 | `overlay.html` | Overlay 1080×1920 untuk OBS |
 | `control.html` | **App Kawalan SYNO**: timer, W/L, game habis, queue (ID ML + tarikh), baki VIP, order Sociabuzz, YouTube, link |
-| `viewer.html` | Halaman penonton: semak baki & queue (lihat sahaja) |
+| `viewer.html` | Halaman penonton (lihat sahaja): Waiting list, Hutang mabar, MVP, Slot akaun, Peraturan |
+| `assets/seed_doc.js` | Data lama dari dokumen MABAR VIP SYNO (tak ada dalam repo: letak sendiri, diimport sekali) |
 | `banner.html` | Banner sahaja, 1080×192 |
 | `obs-overlay.html` | Overlay untuk OBS "Local file" (tanpa server) |
 | `assets/config.js` | **Ubah teks & harga di sini** |

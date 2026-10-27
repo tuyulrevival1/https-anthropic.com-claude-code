@@ -71,7 +71,7 @@ ${embedded ? "" : `<header class="app-top">
       <button class="btn lose" type="button" data-end="L">Kalah</button>
     </div>
     <button class="btn ghost wide" type="button" data-end="X">Habis (tak kira W/L)</button>
-    <p class="muted">Setiap tekan: tambah W/L, semua yang sedang main tolak 1 game dari baki. Baki habis keluar, queue naik sendiri.</p>
+    <p class="muted">Setiap tekan: tambah W/L, semua yang sedang main tolak 1 game (VVIP tolak baki VVIP dulu). Baki habis keluar. <b>Rotation:</b> lepas ${CFG.mabar.rotateEvery || 3} game, pemain keluar beri ruang kalau ada orang menunggu (queue tak ramai = boleh habiskan baki).</p>
   </section>
 
   <section class="card queue">
@@ -79,22 +79,47 @@ ${embedded ? "" : `<header class="app-top">
     <ol class="list" id="ap-play"></ol>
     <h3>Queue <span id="ap-qc"></span></h3>
     <ol class="list" id="ap-queue"></ol>
+    <p class="muted">★ = VVIP fast track (terus ke depan queue). <b>Tak muncul</b> = keluar queue, baki kekal dalam hutang mabar; hilang kali ke-2 tolak 1 game, kali ke-3 tolak 2 game.</p>
     <button class="btn ghost" type="button" id="ap-clearq" data-confirm="Tekan lagi untuk kosongkan">Kosongkan queue</button>
   </section>
 
   <section class="card vip">
-    <h3>VIP &amp; baki game</h3>
+    <h3>Hutang Mabar · baki game <span id="ap-mc"></span></h3>
     <form id="ap-add" class="addform" autocomplete="off">
       <div class="two"><label class="fld">Nama<input id="ap-name" maxlength="24" placeholder="cth Aqil.MY"></label>
       <label class="fld">ID ML<input id="ap-mlid" maxlength="32" placeholder="cth 123456789 (1234)"></label></div>
       <div class="two"><label class="fld">Bilangan game<input id="ap-games" type="number" min="1" max="999" value="1" inputmode="numeric"></label>
       <label class="fld">Tarikh order<input id="ap-date" type="datetime-local"></label></div>
       <div class="row pk"><span class="muted">Isi cepat:</span>${pkgs.map(p => `<button class="btn" type="button" data-fill="${p.n}">${esc(p.label)}</button>`).join("")}</div>
-      <div class="row"><button class="btn red" type="submit">Tambah VIP</button>
-      <label class="tog small"><input id="ap-joinq" type="checkbox" checked><span>Terus masuk queue</span></label></div>
+      <div class="row"><button class="btn red" type="submit">Tambah</button>
+      <label class="tog small"><input id="ap-joinq" type="checkbox" checked><span>Terus masuk queue</span></label>
+      <label class="tog small"><input id="ap-vip" type="checkbox"><span>VVIP (fast track)</span></label></div>
     </form>
     <input id="ap-search" class="search" placeholder="Cari nama atau ID…" aria-label="Cari VIP">
     <ol class="list members" id="ap-members"></ol>
+  </section>
+
+  <section class="card mvp">
+    <h3>Senarai MVP <span id="ap-mvc"></span></h3>
+    <textarea id="ap-mvprules" class="rules-in" rows="3" aria-label="Peraturan MVP"></textarea>
+    <form id="ap-mvpadd" class="row" autocomplete="off"><input id="ap-mvpname" maxlength="24" placeholder="Nama pemain baru" aria-label="Nama MVP baru"><button class="btn red" type="submit">Tambah</button></form>
+    <input id="ap-mvpsearch" class="search" placeholder="Cari nama…" aria-label="Cari MVP">
+    <p class="muted"><b>+</b> = MVP Win (VVIP dapat free 1 game). Bila cukup 5 / 15: <b>Claim ✓</b> (ditanda hijau) atau <b>Simpan</b> (belum claim). Tekan nombor lama untuk tukar claim / belum.</p>
+    <ol class="list mvplist" id="ap-mvp"></ol>
+  </section>
+
+  <section class="card akaun">
+    <h3>Slot Mainkan Akaun (15-20 game)</h3>
+    <div class="ak-head"><span>Hari</span><span>Nama</span><span>Tarikh</span><span></span></div>
+    <ol class="list aklist" id="ap-akaun"></ol>
+    <div class="row"><button class="btn" type="button" id="ap-akadd">+ Baris</button><button class="btn ghost" type="button" id="ap-akreset" data-confirm="Tekan lagi: kosongkan semua">Reset jadual</button></div>
+  </section>
+
+  <section class="card rules">
+    <h3>Peraturan</h3>
+    <textarea id="ap-rules" class="rules-in" rows="14" aria-label="Peraturan Mabar"></textarea>
+    <div class="row"><button class="btn red" type="button" id="ap-rulesave">Simpan peraturan</button><span class="muted">Baris mula dengan <b>#</b> = tajuk. Penonton nampak dalam halaman penonton.</span></div>
+    <div class="row"><button class="btn ghost" type="button" id="ap-import" data-confirm="Tekan lagi untuk import">Import data doc lama</button><input type="file" id="ap-impfile" accept=".js,.json,text/javascript,application/json" hidden><span class="muted" id="ap-impst"></span></div>
   </section>
 
   <section class="card orders">
@@ -140,7 +165,10 @@ ${embedded ? "" : `<header class="app-top">
     });
     root.querySelectorAll("[data-wl]").forEach(b => b.addEventListener("click", () => Q.wl(b.dataset.wl, +b.dataset.d)));
     twoStep($("ap-resetwl"), () => { Q.patch({ wins: 0, losses: 0, streak: 0 }); toast("W/L direset"); });
-    root.querySelectorAll("[data-end]").forEach(b => b.addEventListener("click", () => { Q.endGame(b.dataset.end); toast(b.dataset.end === "W" ? "Menang +1" : b.dataset.end === "L" ? "Kalah +1" : "Game habis"); }));
+    root.querySelectorAll("[data-end]").forEach(b => b.addEventListener("click", () => {
+      const rot = Q.endGame(b.dataset.end) || [];
+      toast((b.dataset.end === "W" ? "Menang +1" : b.dataset.end === "L" ? "Kalah +1" : "Game habis") + (rot.length ? ` · rotate: ${rot.join(", ")}` : ""));
+    }));
     twoStep($("ap-clearq"), () => { Q.clear(); toast("Queue dikosongkan"); });
     $("ap-showq").addEventListener("change", e => Q.patch({ showQueue: e.target.checked }));
     $("ap-showb").addEventListener("change", e => Q.patch({ showBanner: e.target.checked }));
@@ -166,16 +194,23 @@ ${embedded ? "" : `<header class="app-top">
       const g = parseInt($("ap-games").value, 10) || 0;
       if (g <= 0) { $("ap-games").focus(); toast("Masukkan bilangan game"); return; }
       const at = $("ap-date").value ? new Date($("ap-date").value).getTime() : Date.now();
-      Q.add(name, g, $("ap-joinq").checked, { mlid: $("ap-mlid").value, at });
-      toast(`${name}: +${g} game`);
-      $("ap-name").value = ""; $("ap-mlid").value = ""; $("ap-games").value = "1"; resetDate(); $("ap-name").focus();
+      const vip = $("ap-vip").checked;
+      Q.add(name, g, $("ap-joinq").checked, { mlid: $("ap-mlid").value, at, vip });
+      toast(`${name}: +${g} game${vip ? " VVIP" : ""}`);
+      $("ap-name").value = ""; $("ap-mlid").value = ""; $("ap-games").value = "1"; $("ap-vip").checked = false; resetDate(); $("ap-name").focus();
     });
     $("ap-search").addEventListener("input", () => render(Store.state, true));
-    root.addEventListener("change", e => { const t = e.target; if (t.classList.contains("idin")) { Q.setMl(t.dataset.k, t.value); toast("ID disimpan"); } });
+    root.addEventListener("change", e => {
+      const t = e.target;
+      if (t.classList.contains("idin")) { Q.setMl(t.dataset.k, t.value); toast("ID disimpan"); }
+      else if (t.classList.contains("dtin")) { Q.setMember(t.dataset.k, { last: t.value ? new Date(t.value).getTime() : 0 }); toast("Tarikh disimpan"); }
+      else if (t.classList.contains("akin")) { Q.akaunSet(+t.dataset.i, t.dataset.f, t.value.trim()); toast("Disimpan"); }
+      else if (t.classList.contains("mvcin")) { Q.mvpSet(t.dataset.id, { cur: Math.max(0, parseInt(t.value, 10) || 0) }); toast("MVP disimpan"); }
+    });
     root.addEventListener("keydown", e => {
       const t = e.target; if (e.key !== "Enter") return;
       if (t.classList.contains("gin")) { e.preventDefault(); t.closest("li").querySelector('[data-a="addn"]').click(); }
-      if (t.classList.contains("idin")) { e.preventDefault(); t.blur(); }
+      if (t.classList.contains("idin") || t.classList.contains("akin") || t.classList.contains("mvcin")) { e.preventDefault(); t.blur(); }
     });
 
     root.addEventListener("click", e => {
@@ -183,10 +218,29 @@ ${embedded ? "" : `<header class="app-top">
       const a = b.dataset.a, id = b.dataset.id, k = b.dataset.k;
       if (a === "rm") Q.remove(id); else if (a === "up") Q.up(id); else if (a === "now") Q.playNow(id);
       else if (a === "b+") Q.addBal(k, 1); else if (a === "b-") Q.addBal(k, -1); else if (a === "join") { Q.join(k); toast("Masuk queue"); }
+      else if (a === "bottom") { Q.toBottom(id); toast("Ke bawah queue"); }
+      else if (a === "noshow") {
+        if (!b.dataset.armed) { b.dataset.armed = "1"; b.dataset.label = b.textContent; b.textContent = "Pasti?"; setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = b.dataset.label; } }, 2500); return; }
+        const r = Q.noShow(id); if (r) toast(`${r.name}: hilang ${r.miss}x${r.pen ? ` · tolak ${r.pen} game` : ""}`);
+      }
+      else if (a === "miss0") { Q.setMember(k, { miss: 0 }); toast("Kiraan hilang direset"); }
+      else if (a === "vvip") { const m = Store.state.members[k]; Q.setMember(k, { vvip: !(m && m.vvip) }); }
+      else if (a === "mv+") { const f = Q.mvpBump(id, 1); toast(f ? `MVP +1 · ${f} VVIP free 1 game` : "MVP +1"); }
+      else if (a === "mv-") Q.mvpBump(id, -1);
+      else if (a === "mvclaim") { Q.mvpClose(id, true); toast("Claim ✓ (hijau)"); }
+      else if (a === "mvkeep") { Q.mvpClose(id, false); toast("Disimpan (belum claim)"); }
+      else if (a === "mvh") Q.mvpToggle(id, +b.dataset.i);
+      else if (a === "mvhdel") Q.mvpDelHist(id, +b.dataset.i);
+      else if (a === "mvdel") {
+        if (b.dataset.armed) Q.mvpDel(id);
+        else { b.dataset.armed = "1"; b.textContent = "Pasti?"; setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = "✕"; } }, 2500); }
+      }
+      else if (a === "akdel") Q.akaunDel(+b.dataset.i);
       else if (a === "addn" || a === "setn") {
         const inp = b.closest("li").querySelector(".gin"), n = parseInt(inp.value, 10);
         if (isNaN(n)) { inp.focus(); toast("Taip nombor dulu"); return; }
-        if (a === "addn") { Q.addBal(k, n); toast(`${n >= 0 ? "+" : ""}${n} game`); } else { Q.setBal(k, n); toast(`Baki = ${Math.max(0, n)}`); }
+        const vip = (b.closest("li").querySelector(".gsel") || {}).value === "v", lbl = vip ? " VVIP" : "";
+        if (a === "addn") { Q.addBal(k, n, vip); toast(`${n >= 0 ? "+" : ""}${n} game${lbl}`); } else { Q.setBal(k, n, vip); toast(`Baki${lbl} = ${Math.max(0, n)}`); }
         inp.value = "";
       }
       else if (a === "del") {
@@ -199,45 +253,105 @@ ${embedded ? "" : `<header class="app-top">
     setInterval(() => { const st = Store.state; timerEl.textContent = O.fmtTime(O.liveElapsed(st)); timerEl.classList.toggle("on", st.live.running); }, 250);
 
     const fmtDate = ms => { if (!ms) return ""; const d = new Date(ms), h = d.getHours(); return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)} ${h % 12 || 12}:${pad2(d.getMinutes())} ${h < 12 ? "AM" : "PM"}`; };
-    let pendingMembers = false;
+    const toInput = ms => ms ? toLocalInput(new Date(ms)) : "";
+    const busyIn = box => box.contains(document.activeElement) && /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName);
+    let pending = {};
     function render(s, force) {
-      const max = CFG.mabar.maxPlaying, mem = p => s.members[p.key] || { name: p.key, bal: 0 };
-      const who = p => `<span class="who"><span class="nm">${esc(mem(p).name)}</span><span class="sub">${mem(p).mlid ? `ID ${esc(mem(p).mlid)}` : "tiada ID"}${p.at ? ` · order ${fmtDate(p.at)}` : ""}</span></span>`;
+      const max = CFG.mabar.maxPlaying, rot = CFG.mabar.rotateEvery || 0, T = O.Q.tot;
+      const mem = p => s.members[p.key] || { name: p.key, bal: 0, vbal: 0 };
+      const balTxt = m => (m.vbal ? `${m.bal || 0} + ${m.vbal} VVIP` : `${m.bal || 0}`) + " game";
+      const who = (p, extra = "") => `<span class="who"><span class="nm">${p.vip ? `<i class="vv">★</i> ` : ""}${esc(mem(p).name)}</span><span class="sub">${mem(p).mlid ? `ID ${esc(mem(p).mlid)}` : "tiada ID"}${p.at ? ` · order ${fmtDate(p.at)}` : ""}${extra}</span></span>`;
       $("ap-wins").textContent = s.wins; $("ap-losses").textContent = s.losses;
       $("ap-streak").textContent = s.streak >= 2 ? `Win streak ${s.streak}` : s.streak <= -2 ? `Lose ${-s.streak} berturut` : "";
       $("ap-showq").checked = !!s.showQueue; $("ap-showb").checked = !!s.showBanner; $("ap-shows").checked = !s.song || s.song.on !== false;
       if (document.activeElement !== $("ap-song")) $("ap-song").value = (s.song && s.song.manual) || "";
       $("ap-pc").textContent = `${s.playing.length}/${max}`; $("ap-qc").textContent = s.queue.length;
-      $("ap-play").innerHTML = s.playing.length ? s.playing.map(p => `<li>${who(p)}<span class="bal">${mem(p).bal} game</span>
-<button class="btn sq" data-a="b-" data-k="${esc(p.key)}" aria-label="Tolak baki">−</button><button class="btn sq" data-a="b+" data-k="${esc(p.key)}" aria-label="Tambah baki">+</button><button class="btn sq" data-a="rm" data-id="${p.id}" aria-label="Keluarkan">✕</button></li>`).join("")
-        : `<li class="empty">Belum ada. Tambah VIP di bawah.</li>`;
-      $("ap-queue").innerHTML = s.queue.length ? s.queue.map((p, i) => `<li><span class="no">${i + 1}</span>${who(p)}<span class="bal">${mem(p).bal} game</span>
-<button class="btn sq" data-a="up" data-id="${p.id}" aria-label="Naik">↑</button>${s.playing.length < max ? `<button class="btn sq" data-a="now" data-id="${p.id}" aria-label="Main sekarang">▶</button>` : ""}<button class="btn sq" data-a="rm" data-id="${p.id}" aria-label="Buang dari queue">✕</button></li>`).join("")
+      $("ap-play").innerHTML = s.playing.length ? s.playing.map(p => `<li class="qrow"><div class="qtop">${who(p, ` · game ke-${p.n || 0}${rot && (p.n || 0) >= rot ? " · cukup " + rot + ", rotate bila ada queue" : ""}`)}<span class="bal">${balTxt(mem(p))}</span></div>
+<div class="qctl"><button class="btn sq" data-a="b-" data-k="${esc(p.key)}" aria-label="Tolak baki">−</button><button class="btn sq" data-a="b+" data-k="${esc(p.key)}" aria-label="Tambah baki">+</button><button class="btn small ghost" data-a="noshow" data-id="${p.id}">Tak muncul</button><button class="btn sq" data-a="rm" data-id="${p.id}" aria-label="Keluarkan">✕</button></div></li>`).join("")
+        : `<li class="empty">Belum ada. Tambah dalam Hutang Mabar di bawah.</li>`;
+      $("ap-queue").innerHTML = s.queue.length ? s.queue.map((p, i) => `<li class="qrow"><div class="qtop"><span class="no">${i + 1}</span>${who(p)}<span class="bal">${balTxt(mem(p))}</span></div>
+<div class="qctl"><button class="btn sq" data-a="up" data-id="${p.id}" aria-label="Naik">↑</button><button class="btn sq" data-a="bottom" data-id="${p.id}" aria-label="Ke bawah queue">⤓</button>${s.playing.length < max ? `<button class="btn sq" data-a="now" data-id="${p.id}" aria-label="Main sekarang">▶</button>` : ""}<button class="btn small ghost" data-a="noshow" data-id="${p.id}">Tak muncul</button><button class="btn sq" data-a="rm" data-id="${p.id}" aria-label="Buang dari queue">✕</button></div></li>`).join("")
         : `<li class="empty">Queue kosong.</li>`;
       const ords = (s.orders || []).slice(0, 40);
       $("ap-oc").textContent = ords.length ? `${ords.length}` : "";
       const srcTag = o => o.src === "sociabuzz" ? `<span class="tag sb">SOCIABUZZ</span>` : o.src === "test" ? `<span class="tag test">TEST</span>` : o.src === "sim" ? `<span class="tag test">ALERT</span>` : `<span class="tag man">MANUAL</span>`;
-      $("ap-orders").innerHTML = ords.length ? ords.map(o => `<li class="${o.warn ? "warn" : ""}">${srcTag(o)}<span class="who"><span class="nm">${esc(o.name)}</span><span class="sub">${o.mlid ? `ID ${esc(o.mlid)} · ` : "tiada ID · "}${fmtDate(o.at)}${o.amount ? ` · ${esc(o.cur || "")} ${o.amount}` : ""}${o.warn ? ` · ${esc(o.warn)}` : ""}</span></span><span class="bal">${o.games ? `+${o.games} game` : "—"}</span></li>`).join("")
+      $("ap-orders").innerHTML = ords.length ? ords.map(o => `<li class="${o.warn ? "warn" : ""}">${srcTag(o)}<span class="who"><span class="nm">${esc(o.name)}</span><span class="sub">${o.mlid ? `ID ${esc(o.mlid)} · ` : "tiada ID · "}${fmtDate(o.at)}${o.amount ? ` · ${esc(o.cur || "")} ${o.amount}` : ""}${o.warn ? ` · ${esc(o.warn)}` : ""}</span></span><span class="bal">${o.games ? `+${o.games} game${o.vip ? " VVIP" : ""}` : "—"}</span></li>`).join("")
         : `<li class="empty">Belum ada order.</li>`;
-      // don't wipe what is being typed in the VIP list
+      // text areas: never overwrite while being edited
+      if (document.activeElement !== $("ap-rules") && !$("ap-rules").dataset.dirty) $("ap-rules").value = s.rules || "";
+      if (document.activeElement !== $("ap-mvprules")) $("ap-mvprules").value = s.mvpRules || "";
+      $("ap-impst").textContent = s.docImported ? `Dah diimport ${fmtDate(s.docImported)}` : "Belum diimport";
+      // hutang mabar (members)
+      const list = Object.entries(s.members);
+      $("ap-mc").textContent = `${list.filter(([, m]) => T(m) > 0).length} orang · ${list.reduce((a, [, m]) => a + T(m), 0)} game`;
       const box = $("ap-members");
-      if (!force && box.contains(document.activeElement) && /INPUT/.test(document.activeElement.tagName)) { pendingMembers = true; return; }
-      pendingMembers = false;
-      const q = ($("ap-search").value || "").trim().toLowerCase();
-      const inLine = k => s.playing.some(p => p.key === k) || s.queue.some(p => p.key === k);
-      const list = Object.entries(s.members).filter(([k, m]) => !q || k.includes(q) || String(m.mlid || "").toLowerCase().includes(q)).sort((a, b) => (b[1].last || 0) - (a[1].last || 0) || a[1].name.localeCompare(b[1].name));
-      box.innerHTML = list.length ? list.map(([k, m]) => `<li class="mrow">
-<div class="mtop"><span class="who"><span class="nm">${esc(m.name)}</span><span class="sub">${m.last ? `order terakhir ${fmtDate(m.last)}` : ""}</span></span>
-${inLine(k) ? `<span class="tag">${s.playing.some(p => p.key === k) ? "MAIN" : "QUEUE"}</span>` : `<button class="btn sq" data-a="join" data-k="${esc(k)}" aria-label="Masuk queue" title="Masuk queue" ${m.bal > 0 ? "" : "disabled"}>Q</button>`}
-<span class="bal big">${m.bal}</span><small class="muted">game</small></div>
+      if (!force && busyIn(box)) pending.members = true;
+      else {
+        pending.members = false;
+        const q = ($("ap-search").value || "").trim().toLowerCase();
+        const inLine = k => s.playing.some(p => p.key === k) || s.queue.some(p => p.key === k);
+        const rows = list.filter(([k, m]) => !q || k.includes(q) || String(m.mlid || "").toLowerCase().includes(q)).sort((a, b) => (T(b[1]) > 0) - (T(a[1]) > 0) || (b[1].last || 0) - (a[1].last || 0) || a[1].name.localeCompare(b[1].name));
+        box.innerHTML = rows.length ? rows.map(([k, m]) => `<li class="mrow${T(m) ? "" : " zero"}">
+<div class="mtop"><span class="who"><span class="nm">${esc(m.name)} <button class="vvbtn${m.vvip ? " on" : ""}" type="button" data-a="vvip" data-k="${esc(k)}" title="Tanda VVIP">VVIP</button></span><span class="sub">${m.last ? `order ${fmtDate(m.last)}` : "tiada tarikh"}${m.miss ? ` · hilang ${m.miss}x` : ""}</span></span>
+${inLine(k) ? `<span class="tag">${s.playing.some(p => p.key === k) ? "MAIN" : "QUEUE"}</span>` : `<button class="btn sq" data-a="join" data-k="${esc(k)}" aria-label="Masuk queue" title="Masuk queue" ${T(m) > 0 ? "" : "disabled"}>Q</button>`}
+<span class="bal big">${T(m)}</span><small class="muted">${m.vbal ? `${m.bal || 0}+${m.vbal}V` : "game"}</small></div>
 <div class="mctl"><input class="idin" data-k="${esc(k)}" value="${esc(m.mlid || "")}" placeholder="ID ML" aria-label="ID ML ${esc(m.name)}">
-<input class="gin" type="number" inputmode="numeric" placeholder="game" aria-label="Bilangan game untuk ${esc(m.name)}">
+<input class="dtin" type="datetime-local" data-k="${esc(k)}" value="${toInput(m.last)}" aria-label="Waktu order ${esc(m.name)}"></div>
+<div class="mctl"><input class="gin" type="number" inputmode="numeric" placeholder="game" aria-label="Bilangan game untuk ${esc(m.name)}">
+<select class="gsel" aria-label="Jenis baki"><option value="">Biasa</option><option value="v">VVIP</option></select>
 <button class="btn" data-a="addn" data-k="${esc(k)}">Tambah</button><button class="btn ghost" data-a="setn" data-k="${esc(k)}">Set baki</button>
-<button class="btn sq ghost" data-a="del" data-k="${esc(k)}" aria-label="Padam VIP">✕</button></div></li>`).join("")
-        : `<li class="empty">${q ? "Tiada nama sepadan." : "Belum ada VIP."}</li>`;
+${m.miss ? `<button class="btn ghost" data-a="miss0" data-k="${esc(k)}">Reset hilang</button>` : ""}<button class="btn sq ghost" data-a="del" data-k="${esc(k)}" aria-label="Padam">✕</button></div></li>`).join("")
+          : `<li class="empty">${q ? "Tiada nama sepadan." : "Belum ada rekod."}</li>`;
+      }
+      // MVP
+      const mvBox = $("ap-mvp");
+      $("ap-mvc").textContent = `${(s.mvp || []).length} orang`;
+      if (!force && busyIn(mvBox)) pending.mvp = true;
+      else {
+        pending.mvp = false;
+        const q = ($("ap-mvpsearch").value || "").trim().toLowerCase();
+        const mv = (s.mvp || []).filter(x => !q || x.name.toLowerCase().includes(q));
+        mvBox.innerHTML = mv.length ? mv.map(x => `<li class="mvrow"><div class="mtop"><span class="who"><span class="nm">${esc(x.name)}</span>
+<span class="hist">${(x.hist || []).map((h, i) => `<button class="hc${h.c ? " ok" : ""}" type="button" data-a="mvh" data-id="${x.id}" data-i="${i}" title="Tekan: tukar claim / belum">${h.n}</button>`).join("")}</span></span>
+<button class="btn sq" data-a="mv-" data-id="${x.id}" aria-label="MVP tolak 1">−</button><input class="mvcin" type="number" inputmode="numeric" data-id="${x.id}" value="${x.cur || 0}" aria-label="MVP ${esc(x.name)}"><button class="btn sq gold" data-a="mv+" data-id="${x.id}" aria-label="MVP tambah 1">+</button></div>
+<div class="mctl">${(x.cur || 0) >= 5 ? `<button class="btn small gold" data-a="mvclaim" data-id="${x.id}">Claim ${x.cur} ✓</button><button class="btn small ghost" data-a="mvkeep" data-id="${x.id}">Simpan ${x.cur}</button>` : `<span class="muted">${5 - (x.cur || 0)} lagi untuk x5</span>`}
+${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-id="${x.id}" data-i="${x.hist.length - 1}">Buang nombor akhir</button>` : ""}<button class="btn sq ghost" data-a="mvdel" data-id="${x.id}" aria-label="Padam">✕</button></div></li>`).join("")
+          : `<li class="empty">${q ? "Tiada nama sepadan." : "Belum ada."}</li>`;
+      }
+      // slot mainkan akaun
+      const akBox = $("ap-akaun");
+      if (!force && busyIn(akBox)) pending.akaun = true;
+      else {
+        pending.akaun = false;
+        akBox.innerHTML = (s.akaun || []).map((r, i) => `<li class="akrow"><input class="akin" data-i="${i}" data-f="day" value="${esc(r.day)}" placeholder="Hari" aria-label="Hari"><input class="akin" data-i="${i}" data-f="name" value="${esc(r.name)}" placeholder="Nama" aria-label="Nama"><input class="akin" data-i="${i}" data-f="date" value="${esc(r.date)}" placeholder="Tarikh" aria-label="Tarikh"><button class="btn sq ghost" data-a="akdel" data-i="${i}" aria-label="Buang baris">✕</button></li>`).join("");
+      }
     }
-    root.addEventListener("focusout", () => setTimeout(() => { if (pendingMembers && !$("ap-members").contains(document.activeElement)) render(Store.state); }, 50));
+    root.addEventListener("focusout", () => setTimeout(() => { if (Object.values(pending).some(Boolean) && !busyIn(root)) render(Store.state); }, 50));
     render(Store.state); Store.on(render);
+    $("ap-mvpsearch").addEventListener("input", () => render(Store.state, true));
+    $("ap-mvpadd").addEventListener("submit", e => { e.preventDefault(); const n = $("ap-mvpname").value.trim(); if (!n) return; Q.mvpAdd(n); $("ap-mvpname").value = ""; toast(`${n} ditambah`); });
+    $("ap-mvprules").addEventListener("change", e => { Q.patch({ mvpRules: e.target.value.trim() }); toast("Peraturan MVP disimpan"); });
+    $("ap-rules").addEventListener("input", e => { e.target.dataset.dirty = "1"; });
+    $("ap-rulesave").addEventListener("click", () => { Q.patch({ rules: $("ap-rules").value.trim() }); delete $("ap-rules").dataset.dirty; toast("Peraturan disimpan"); });
+    $("ap-akadd").addEventListener("click", () => Q.akaunAdd());
+    twoStep($("ap-akreset"), () => { Q.akaunReset(); toast("Jadual dikosongkan"); });
+    const runImport = seed => { const r = Q.importDoc(seed); toast(`Import: ${r.members} orang, ${r.mvp} MVP`); };
+    const doImport = () => window.SYNO_SEED ? runImport(window.SYNO_SEED) : $("ap-impfile").click();
+    // no assets/seed_doc.js on this device: pick the file (seed_doc.js or .json) instead
+    $("ap-impfile").addEventListener("change", e => {
+      const f = e.target.files && e.target.files[0]; if (!f) return;
+      f.text().then(t => {
+        const j = t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1);
+        const seed = JSON.parse(j); if (!seed || !Array.isArray(seed.hutang)) throw new Error("bad");
+        runImport(seed);
+      }).catch(() => toast("Fail tak sah")).finally(() => { e.target.value = ""; });
+    });
+    twoStep($("ap-import"), doImport);
+    // first run on the PC: bring in the old Google Doc list automatically (once)
+    let autoImp = false;
+    const tryAutoImport = () => { if (autoImp || !window.SYNO_SEED || !Store.canWrite || Store.state.docImported) return; if (/^https?:$/.test(location.protocol) && !Store.remote) return; autoImp = true; doImport(); };
+    window.addEventListener("ov-remote", () => setTimeout(tryAutoImport, 1500));
+    if (!/^https?:$/.test(location.protocol)) setTimeout(tryAutoImport, 800);
     Store.on((s, prev) => {
       const a = (s.orders || [])[0], b = prev && (prev.orders || [])[0];
       if (a && (!b || a.rx !== b.rx) && a.src !== "manual" && a.src !== "sim") toast(a.src === "test" ? "Test Sociabuzz diterima ✓" : `Order Sociabuzz: ${a.name} +${a.games} game`);
