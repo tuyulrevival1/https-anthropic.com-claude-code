@@ -136,7 +136,7 @@ ${embedded ? "" : `<header class="app-top">
     <p class="muted">Order Sociabuzz masuk sendiri ke sini dan ke queue. Pembeli perlu tulis ID ML dalam mesej, contoh <b>ID 123456789 (1234) 3 game</b>.</p>
     <div class="hookst" id="ap-hookst"><b>Status webhook</b><span id="ap-hooklast">Masuk dengan PIN / buka START_OVERLAY.bat</span></div>
     <ol class="list hooklog" id="ap-hooklog"></ol>
-    <div class="row"><button class="btn gold" type="button" id="ap-simorder">Simulasi order</button><button class="btn" type="button" id="ap-testalert">Test alert</button></div>
+    <div class="row"><button class="btn gold" type="button" id="ap-simorder">Simulasi order</button><button class="btn" type="button" id="ap-testalert">Test alert</button><button class="btn ghost" type="button" id="ap-cleartest" data-confirm="Tekan lagi: buang semua baris TEST">Buang baris TEST</button></div>
     <p class="muted"><b>Simulasi order</b> hantar order palsu (Test SYNO, ID 123456789 (1234), RM10 = 3 game) melalui webhook yang sama dengan Sociabuzz: masuk queue + alert di overlay. Padam VIP "Test SYNO" lepas test. <b>Test alert</b> cuma tunjuk alert di overlay.</p>
   </section>
 
@@ -537,6 +537,7 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
       $("ap-alname").value = ""; $("ap-almlid").value = ""; $("ap-alnote").value = ""; toast(`${n}: komen album ditambah`);
     });
     twoStep($("ap-alclear"), () => { Q.albumClearDone(); toast("Yang dah siap dibuang"); });
+    twoStep($("ap-cleartest"), () => { Store.set(s => { s.orders = (s.orders || []).filter(o => o.src !== "test" && o.src !== "sim"); }); toast("Baris TEST dibuang"); });
     twoStep($("ap-akreset"), () => { Q.akaunReset(); toast("Jadual dikosongkan"); });
     const runImport = seed => { const r = Q.importDoc(seed); toast(`Import: ${r.members} orang, ${r.mvp} MVP`); };
     const doImport = () => window.SYNO_SEED ? runImport(window.SYNO_SEED) : $("ap-impfile").click();
