@@ -69,8 +69,8 @@ MVP WIN x15: CLAIM 1 SKIN EVENT YANG BOLEH GIFT`,
   banner: {
     secondsPerMessage: 4.8,
     messages: [
-      { kicker: "TOPUP MLBB", main: "TOPUP DIAMOND MURAH", tags: ["LINK DI BIO"], art: "diamond", hook: "MURAH!" },
-      { kicker: "SERVIS JOKI", main: "JOKI RANK MURAH", tags: ["& TERPERCAYA"], art: "rank", hook: "MURAH!" },
+      { kicker: "TOPUP MLBB", main: "TOPUP DIAMOND MURAH", tags: ["& TERPERCAYA"], art: "diamond", hook: "MURAH!" },
+      { kicker: "SERVIS JOKI", main: "JOKI RANK MURAH", tags: ["& PANTAS"], art: "rank", hook: "PANTAS!" },
       { kicker: "JOM MABAR", main: "MABAR VIP", tags: ["RM4 / GAME", "3 GAME RM10", "IMMORTAL RM6"], art: "mabar", hook: "RM4" },
       { kicker: "SERVIS LAIN", main: "KOMEN ALBUM RM5", tags: ["MAINKAN AKAUN RM40"], art: "album", hook: "RM5" },
       { kicker: "SEMUA DI {store}", main: "TEKAN LINK DI BIO", tags: ["{store}"], art: "link", hook: "TAP!" }
@@ -89,8 +89,8 @@ MVP WIN x15: CLAIM 1 SKIN EVENT YANG BOLEH GIFT`,
     brandSeconds: 4,
     itemSeconds: 4,
     items: [
-      { bold: "TOPUP DIAMOND", light: "MURAH · LINK DI BIO", icon: "diamond" },
-      { bold: "JOKI RANK", light: "MURAH & TERPERCAYA", icon: "rank" },
+      { bold: "TOPUP DIAMOND", light: "MURAH & TERPERCAYA", icon: "diamond" },
+      { bold: "JOKI RANK", light: "MURAH & PANTAS", icon: "rank" },
       { bold: "MABAR VIP", light: "RM4 / GAME · IMMORTAL RM6", icon: "mabar" },
       { bold: "KOMEN ALBUM", light: "RM5 · MAINKAN AKAUN RM40", icon: "album" },
       { bold: "synostore", light: "", pill: "Link in Bio", icon: "link" }
