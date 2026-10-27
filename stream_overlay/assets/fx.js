@@ -301,37 +301,62 @@ ${mile ? `<div class="fx-mile">🎁 CUKUP ${n} MVP · CLAIM SKIN!</div>` : info.
     try {
       const sy = window.speechSynthesis; if (!sy) return;
       const u = new SpeechSynthesisUtterance(VTXT[type] || type), vs = sy.getVoices().filter(v => /^en/i.test(v.lang));
-      u.voice = vs.find(v => /male|david|guy|daniel|george|mark/i.test(v.name) && !/female/i.test(v.name)) || vs[0] || null; u.pitch = .2; u.rate = .9; u.volume = 1;
+      u.voice = vs.find(v => /male|david|guy|daniel|george|mark/i.test(v.name) && !/female/i.test(v.name)) || vs[0] || null; u.pitch = 1.15; u.rate = 1.15; u.volume = 1;
       sy.cancel(); sy.speak(u);
     } catch (e) {}
+  }
+  // crowd roar that swells with the announcer (many voices = filtered noise bands that wobble, plus "wooo" shouts)
+  function crowd(t, dur, vol) {
+    const A = kAudio(), out = A.createGain(); out.connect(A.destination);
+    out.gain.setValueAtTime(.0001, t); out.gain.linearRampToValueAtTime(vol, t + .45); out.gain.setValueAtTime(vol, t + dur * .45); out.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    for (let i = 0; i < 6; i++) {
+      const src = A.createBufferSource(), bp = A.createBiquadFilter(), g = A.createGain(), lfo = A.createOscillator(), lg = A.createGain();
+      src.buffer = noiseBuf(dur + .1); bp.type = "bandpass"; bp.frequency.value = rnd(450, 2600); bp.Q.value = 1.1;
+      lfo.frequency.value = rnd(2.5, 8); lg.gain.value = .35; g.gain.value = .55; lfo.connect(lg).connect(g.gain);
+      let n = src.connect(bp).connect(g); if (A.createStereoPanner) { const p = A.createStereoPanner(); p.pan.value = rnd(-.9, .9); n = n.connect(p); }
+      n.connect(out); src.start(t); lfo.start(t); src.stop(t + dur + .1); lfo.stop(t + dur + .1);
+    }
+    for (let i = 0; i < 5; i++) {   // "woooo!"
+      const o = A.createOscillator(), f1 = A.createBiquadFilter(), f2 = A.createBiquadFilter(), g = A.createGain(), d = rnd(.1, .5), f0 = rnd(230, 380);
+      o.type = "sawtooth"; o.frequency.setValueAtTime(f0, t + d); o.frequency.linearRampToValueAtTime(f0 * rnd(1.25, 1.5), t + d + .5); o.frequency.linearRampToValueAtTime(f0 * 1.1, t + d + 1.4);
+      f1.type = "bandpass"; f1.frequency.value = 350; f1.Q.value = 5; f2.type = "bandpass"; f2.frequency.value = 900; f2.Q.value = 6;
+      env(g, t + d, .2, .05, 1.5); o.connect(f1).connect(g); o.connect(f2).connect(g); g.connect(out); o.start(t + d); o.stop(t + d + 1.6);
+    }
   }
   function speak(type, delay) {
     loadVoice(type).then(buf => {
       if (!buf) return browserVoice(type);
       const A = kAudio(), t = A.currentTime + (delay || 0);
-      const out = A.createGain(), comp = A.createDynamicsCompressor(); out.gain.value = 1.15; comp.threshold.value = -20; comp.ratio.value = 8; comp.attack.value = .002; comp.release.value = .15;
-      const low = A.createBiquadFilter(); low.type = "lowshelf"; low.frequency.value = 160; low.gain.value = 10;
-      const bite = A.createBiquadFilter(); bite.type = "peaking"; bite.frequency.value = 2400; bite.Q.value = 1; bite.gain.value = 6;
-      const ws = A.createWaveShaper(); ws.curve = driveCurve(6); ws.oversample = "4x";
-      const mix = A.createGain(); mix.gain.value = 1.3;
-      // two slightly detuned copies = thick, powerful voice; slower + deeper than the original
-      [[.8, 0, -.35], [.79, .018, .35]].forEach(([rate, dl, pan]) => {
+      // bright, hyped arena announcer: normal speed (no slow-down), body + presence + air, hard compression
+      const mix = A.createGain(); mix.gain.value = 1.1;
+      const hp = A.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 85;
+      const body = A.createBiquadFilter(); body.type = "peaking"; body.frequency.value = 230; body.Q.value = 1; body.gain.value = 3;
+      const pres = A.createBiquadFilter(); pres.type = "peaking"; pres.frequency.value = 3200; pres.Q.value = .9; pres.gain.value = 7;
+      const air = A.createBiquadFilter(); air.type = "highshelf"; air.frequency.value = 8500; air.gain.value = 4;
+      const ws = A.createWaveShaper(); ws.curve = driveCurve(3.5); ws.oversample = "4x";
+      const comp = A.createDynamicsCompressor(); comp.threshold.value = -24; comp.knee.value = 4; comp.ratio.value = 10; comp.attack.value = .002; comp.release.value = .12;
+      const out = A.createGain(); out.gain.value = 1.35;
+      // two copies a hair apart = wide, thick "stadium PA" voice
+      [[1.02, 0, -.3], [1.008, .014, .3]].forEach(([rate, dl, pan]) => {
         const src = A.createBufferSource(); src.buffer = buf; src.playbackRate.value = rate;
         let n = src; if (A.createStereoPanner) { const p = A.createStereoPanner(); p.pan.value = pan; n = src.connect(p); }
         n.connect(mix); src.start(t + dl);
       });
-      mix.connect(ws).connect(low).connect(bite).connect(comp).connect(out).connect(A.destination);
-      // big arena reverb + slap echo
-      impulse = impulse || reverbIR(2.6);
-      const conv = A.createConvolver(), wet = A.createGain(); conv.buffer = impulse; wet.gain.value = .45; comp.connect(conv).connect(wet).connect(A.destination);
-      const d = A.createDelay(1), fb = A.createGain(), dw = A.createGain(); d.delayTime.value = .14; fb.gain.value = .3; dw.gain.value = .32; comp.connect(d); d.connect(fb).connect(d); d.connect(dw).connect(A.destination);
+      mix.connect(hp).connect(ws).connect(body).connect(pres).connect(air).connect(comp).connect(out).connect(A.destination);
+      // stadium echo ("KILL... kill... kill") + arena reverb
+      const d = A.createDelay(1), fb = A.createGain(), el = A.createBiquadFilter(), dw = A.createGain();
+      d.delayTime.value = .23; fb.gain.value = .38; el.type = "bandpass"; el.frequency.value = 1500; el.Q.value = .6; dw.gain.value = .42;
+      out.connect(d); d.connect(el).connect(fb).connect(d); el.connect(dw).connect(A.destination);
+      impulse = impulse || reverbIR(2.2);
+      const conv = A.createConvolver(), wet = A.createGain(); conv.buffer = impulse; wet.gain.value = .3; out.connect(conv).connect(wet).connect(A.destination);
+      crowd(t - .05, Math.max(2.4, buf.duration + 1.8), .16);
     });
   }
   function killSound(type, k, voice) {
     try {
       const A = kAudio(); if (A.state === "suspended") A.resume();
       const o = bus(voice ? .5 + k.lvl * .04 : .6 + k.lvl * .05); (SND[type] || SND.double)(o, A.currentTime + .02);
-      if (voice) speak(type, .12);
+      if (voice) speak(type, .05);
     } catch (e) {}
   }
   // load all voices once so a kill speaks instantly

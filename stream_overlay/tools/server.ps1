@@ -748,17 +748,48 @@ function SiteVer {
   return $script:siteVer
 }
 # suara announcer: teks setiap kill
-$voiceText = @{ solo = 'Solo kill!'; first = 'First blood!'; double = 'Double kill!'; triple = 'Triple kill!'; maniac = 'Maniac!'; savage = 'Savage!'; shutdown = 'Shut down!'; spree = 'Killing spree!'; monster = 'Monster kill!'; mega = 'Mega kill!'; unstoppable = 'Unstoppable!'; godlike = 'God like!'; legendary = 'Legendary!'; rampage = 'Rampage!'; wiped = 'Wiped out!' }
+$voiceText = @{ solo = 'Solo kill!'; first = 'First blood!'; double = 'Double kill!'; triple = 'Triple kill!'; maniac = 'Maniac!'; savage = 'Savage!'; shutdown = 'Shut down!'; spree = 'Killing spree!'; monster = 'Monster kill!'; mega = 'Mega kill!'; unstoppable = 'Unstoppable!'; godlike = 'Godlike!'; legendary = 'Legendary!'; rampage = 'Rampage!'; wiped = 'Wiped out!' }
+$voiceVer = 'v2'   # tukar bila gaya suara berubah (fail lama dijana semula)
+# SSML gaya announcer bersemangat: perkataan awal laju, perkataan akhir dihentak tinggi dan kuat
+function Voice-Ssml([string]$text, [string]$lang) {
+  $wds = @($text.Split(' ') | Where-Object { $_ })
+  $last = [System.Security.SecurityElement]::Escape($wds[$wds.Count - 1])
+  $lead = ''; if ($wds.Count -gt 1) { $lead = '<prosody rate="fast" pitch="+12%" volume="x-loud">' + [System.Security.SecurityElement]::Escape(($wds[0..($wds.Count - 2)] -join ' ')) + '</prosody> ' }
+  return '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="' + $lang + '">' + $lead + '<prosody rate="+8%" pitch="+28%" volume="x-loud"><emphasis level="strong">' + $last + '</emphasis></prosody></speak>'
+}
 function Make-Voice([string]$text, [string]$file) {
+  # 1) suara Windows moden (OneCore: Guy / Davis / Mark ...), 2) suara lama System.Speech (David)
+  try {
+    [void][Windows.Media.SpeechSynthesis.SpeechSynthesizer, Windows.Media.SpeechSynthesis, ContentType = WindowsRuntime]
+    $wsyn = New-Object Windows.Media.SpeechSynthesis.SpeechSynthesizer
+    $allv = @([Windows.Media.SpeechSynthesis.SpeechSynthesizer]::AllVoices)
+    $pick = $null
+    foreach ($want in @('Guy', 'Davis', 'Christopher', 'Eric', 'Andrew', 'Brian', 'Mark', 'David')) { $pick = $allv | Where-Object { $_.DisplayName -match $want -and [string]$_.Gender -eq 'Male' -and $_.Language -like 'en*' } | Select-Object -First 1; if ($pick) { break } }
+    if (-not $pick) { $pick = $allv | Where-Object { [string]$_.Gender -eq 'Male' -and $_.Language -like 'en*' } | Select-Object -First 1 }
+    if ($pick) { $wsyn.Voice = $pick }
+    $lang = 'en-US'; if ($pick) { $lang = [string]$pick.Language }
+    $vst = $null; $ss = Voice-Ssml $text $lang
+    foreach ($try in @($ss, ($ss -replace '</?emphasis[^>]*>', ''), '')) {
+      try {
+        if ($try) { $op = $wsyn.SynthesizeSsmlToStreamAsync($try) } else { $op = $wsyn.SynthesizeTextToStreamAsync($text) }
+        $vt = $npAsTask.MakeGenericMethod([Windows.Media.SpeechSynthesis.SpeechSynthesisStream]).Invoke($null, @($op))
+        if ($vt.Wait(8000)) { $vst = $vt.Result; break }
+      } catch { }
+    }
+    if (-not $vst) { throw 'tiada suara' }
+    $vin = [System.IO.WindowsRuntimeStreamExtensions]::AsStreamForRead($vst.GetInputStreamAt(0))
+    $vfs = [System.IO.File]::Create($file)
+    try { $vin.CopyTo($vfs) } finally { $vfs.Close(); $vin.Dispose() }
+    if ((Get-Item -LiteralPath $file).Length -gt 1000) { return }
+  } catch { }
   Add-Type -AssemblyName System.Speech
   $syn = New-Object System.Speech.Synthesis.SpeechSynthesizer
   try {
     try { $syn.SelectVoiceByHints([System.Speech.Synthesis.VoiceGender]::Male, [System.Speech.Synthesis.VoiceAge]::Adult) } catch { }
     $fmt = New-Object System.Speech.AudioFormat.SpeechAudioFormatInfo 44100, ([System.Speech.AudioFormat.AudioBitsPerSample]::Sixteen), ([System.Speech.AudioFormat.AudioChannel]::Mono)
     $syn.SetOutputToWaveFile($file, $fmt)
-    $syn.Volume = 100
-    $ssml = '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US"><prosody pitch="x-low" rate="-15%" volume="x-loud"><emphasis level="strong">' + [System.Security.SecurityElement]::Escape($text) + '</emphasis></prosody></speak>'
-    try { $syn.SpeakSsml($ssml) } catch { $syn.Speak($text) }
+    $syn.Volume = 100; $syn.Rate = 2
+    try { $syn.SpeakSsml((Voice-Ssml $text 'en-US')) } catch { $syn.Speak($text) }
     $syn.SetOutputToNull()
   } finally { $syn.Dispose() }
 }
@@ -939,7 +970,7 @@ while ($true) {
         else {
           $vdir = Join-Path $dataDir 'voice'
           if (-not (Test-Path -LiteralPath $vdir)) { New-Item -ItemType Directory -Path $vdir | Out-Null }
-          $vfile = Join-Path $vdir ($vk + '.wav')
+          $vfile = Join-Path $vdir ($vk + '-' + $voiceVer + '.wav')
           if (-not (Test-Path -LiteralPath $vfile)) { try { Make-Voice $vt $vfile } catch { Write-Host ('Suara announcer gagal: ' + $_.Exception.Message) -ForegroundColor DarkYellow } }
           if ((Test-Path -LiteralPath $vfile) -and (Get-Item -LiteralPath $vfile).Length -gt 1000) { $body = [System.IO.File]::ReadAllBytes($vfile); $type = 'audio/wav' }
           else { $status = '404 Not Found'; $body = ToBytes 'Suara tak dapat dijana' }
