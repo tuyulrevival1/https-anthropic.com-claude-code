@@ -648,7 +648,23 @@
     }
     return null;
   }
-  const ifxFind = (texts, sm) => ifxNow(texts) || ifxBySmtc(texts, sm);
+  // IndoFinity "Song Requests" table: [requester] [title] [channel] [3:41] [status] for every request.
+  // The row that is playing (status), or the row with the title Windows reports, gives the requester.
+  function ifxTable(texts, sm) {
+    if (!Array.isArray(texts)) return null;
+    const T = texts.map(String).filter(t => !/^\[tetingkap\]/.test(t)), rows = [];
+    for (let d = 3; d < T.length; d++) {
+      if (!/^\d{1,2}:\d{2}(:\d{2})?$/.test(T[d].trim())) continue;
+      const user = (T[d - 3] || "").trim().replace(/^@/, ""), title = (T[d - 2] || "").trim(), status = (T[d + 1] || "").trim();
+      if (!/^[\w.]{2,32}$/.test(user) || title.length < 2 || /^\d{1,2}:\d{2}/.test(title)) continue;
+      rows.push({ user, title, channel: T[d - 1], status });
+    }
+    if (!rows.length) return null;
+    const key = sm && sm.title ? String(sm.title).toLowerCase().slice(0, 24) : "";
+    const r = rows.find(x => /playing|now|sedang|main\b|current/i.test(x.status)) || (key && rows.find(x => x.title.toLowerCase().includes(key)));
+    return r ? { title: tidyTitle(r.title).slice(0, 90), user: r.user } : null;
+  }
+  const ifxFind = (texts, sm) => ifxTable(texts, sm) || ifxNow(texts) || ifxBySmtc(texts, sm);
   // song title only: never the app's own name ("IndoFinity"), a web address or "YouTube"
   function songTitleOf(sm, au, want) {
     const clean = t => String(t || "").replace(/\s*[-|–—:•·]\s*(indofinity|youtube music|youtube|google chrome|microsoft edge)\b.*$/i, "").replace(/^(indofinity|youtube music|youtube)\s*[-|–—:•·]\s*/i, "").trim();
