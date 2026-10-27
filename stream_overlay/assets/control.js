@@ -385,15 +385,19 @@ ${embedded ? "" : `<header class="app-top">
     // add / top up VIP
     const pad2 = n => String(n).padStart(2, "0");
     const toLocalInput = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-    const resetDate = () => { $("ap-date").value = toLocalInput(new Date()); };
+    // order time follows the clock until it is changed by hand
+    let dateTouched = false;
+    const resetDate = () => { dateTouched = false; $("ap-date").value = toLocalInput(new Date()); };
     resetDate();
+    $("ap-date").addEventListener("input", () => { dateTouched = true; });
+    setInterval(() => { if (!dateTouched && document.activeElement !== $("ap-date")) $("ap-date").value = toLocalInput(new Date()); }, 20000);
     root.querySelectorAll("[data-fill]").forEach(b => b.addEventListener("click", () => { $("ap-games").value = b.dataset.fill; $("ap-games").focus(); }));
     $("ap-add").addEventListener("submit", e => {
       e.preventDefault();
       const name = $("ap-name").value.trim(); if (!name) { $("ap-name").focus(); toast("Taip nama dulu"); return; }
       const g = parseInt($("ap-games").value, 10) || 0;
       if (g <= 0) { $("ap-games").focus(); toast("Masukkan bilangan game"); return; }
-      const at = $("ap-date").value ? new Date($("ap-date").value).getTime() : Date.now();
+      const at = dateTouched && $("ap-date").value ? new Date($("ap-date").value).getTime() : Date.now();
       const vip = $("ap-vip").checked;
       Q.add(name, g, $("ap-joinq").checked, { mlid: $("ap-mlid").value, at, vip });
       toast(`${name}: +${g} game${vip ? " VVIP" : ""}`);
@@ -405,12 +409,13 @@ ${embedded ? "" : `<header class="app-top">
       if (t.classList.contains("idin")) { Q.setMl(t.dataset.k, t.value); toast("ID disimpan"); }
       else if (t.classList.contains("dtin")) { Q.setMember(t.dataset.k, { last: t.value ? new Date(t.value).getTime() : 0 }); toast("Tarikh disimpan"); }
       else if (t.classList.contains("akin")) { Q.akaunSet(+t.dataset.i, t.dataset.f, t.value.trim()); toast("Disimpan"); }
+      else if (t.classList.contains("mvnote")) { Q.mvpSet(t.dataset.id, { note: t.value.trim().slice(0, 80) }); toast("Remark disimpan"); }
       else if (t.classList.contains("mvcin")) { Q.mvpSet(t.dataset.id, { cur: Math.max(0, parseInt(t.value, 10) || 0) }); toast("MVP disimpan"); }
     });
     root.addEventListener("keydown", e => {
       const t = e.target; if (e.key !== "Enter") return;
       if (t.classList.contains("gin")) { e.preventDefault(); t.closest("li").querySelector('[data-a="addn"]').click(); }
-      if (t.classList.contains("idin") || t.classList.contains("akin") || t.classList.contains("mvcin")) { e.preventDefault(); t.blur(); }
+      if (t.classList.contains("idin") || t.classList.contains("akin") || t.classList.contains("mvcin") || t.classList.contains("mvnote")) { e.preventDefault(); t.blur(); }
     });
 
     root.addEventListener("click", e => {
@@ -441,6 +446,7 @@ ${embedded ? "" : `<header class="app-top">
         if (r) toast(`${r.name}: MVP ${r.cur}${r.cur === 5 || r.cur === 15 ? ` · cukup ${r.cur}, boleh claim!` : ""}${r.free ? " · VVIP free 1 game" : ""}`, 3500);
       }
       else if (a === "import") doImport();
+      else if (a === "role") Q.setRole(k, b.dataset.r);
       else if (a === "orddel") {
         if (!b.dataset.armed) { b.dataset.armed = "1"; b.textContent = "Pasti?"; setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = "✕"; } }, 2500); return; }
         const rx = +b.dataset.rx;
@@ -476,8 +482,10 @@ ${embedded ? "" : `<header class="app-top">
       const max = CFG.mabar.maxPlaying, rot = CFG.mabar.rotateEvery || 0, T = O.Q.tot;
       const mem = p => s.members[p.key] || { name: p.key, bal: 0, vbal: 0 };
       const mvpOf = p => { const x = (s.mvp || []).find(v => O.keyOf(v.name) === p.key || O.keyOf(v.name) === O.keyOf(mem(p).name)); return x ? ` · MVP ${x.cur || 0}` : ""; };
+      const roleRow = p => `<div class="roles" role="group" aria-label="Role ${esc(mem(p).name)}">${O.ROLES.map(r => `<button type="button" class="rlb rl-${r.toLowerCase()}${mem(p).role === r ? " on" : ""}" data-a="role" data-k="${esc(p.key)}" data-r="${r}" aria-pressed="${mem(p).role === r}">${r}</button>`).join("")}</div>`;
+      const roleBadge = m => m && m.role ? `<span class="rl rl-${m.role.toLowerCase()}">${m.role === "JUNGLE" ? "JGL" : m.role}</span>` : "";
       const balTxt = m => (m.vbal ? `${m.bal || 0} + ${m.vbal} VVIP` : `${m.bal || 0}`) + " game";
-      const who = (p, extra = "") => `<span class="who"><span class="nm">${p.vip ? `<i class="vv">★</i> ` : ""}${esc(mem(p).name)}</span><span class="sub">${mem(p).mlid ? `ID ${esc(mem(p).mlid)}` : "tiada ID"}${mem(p).last ? ` · order ${fmtDate(mem(p).last)}` : ""}${extra}</span></span>`;
+      const who = (p, extra = "") => `<span class="who"><span class="nm">${p.vip ? `<i class="vv">★</i> ` : ""}${roleBadge(mem(p))}${esc(mem(p).name)}</span><span class="sub">${mem(p).mlid ? `ID ${esc(mem(p).mlid)}` : "tiada ID"}${mem(p).last ? ` · order ${fmtDate(mem(p).last)}` : ""}${extra}</span></span>`;
       $("ap-wins").textContent = s.wins; $("ap-losses").textContent = s.losses;
       const tabc = (id, v) => { const e = root.querySelector(`[data-tabc="${id}"]`); if (e) e.textContent = v; };
       tabc("live", `${s.playing.length}/${max}${s.queue.length ? ` · Q${s.queue.length}` : ""}`);
@@ -492,10 +500,10 @@ ${embedded ? "" : `<header class="app-top">
       if (document.activeElement !== $("ap-song")) $("ap-song").value = (s.song && s.song.manual) || "";
       $("ap-pc").textContent = `${s.playing.length}/${max}`; $("ap-qc").textContent = s.queue.length;
       $("ap-play").innerHTML = s.playing.length ? s.playing.map(p => `<li class="qrow"><div class="qtop">${who(p, (p.n ? ` · dah ${p.n} game` : "") + (rot && (p.n || 0) >= rot ? " · boleh rotate" : "") + mvpOf(p))}<span class="bal">${balTxt(mem(p))}</span></div>
-<div class="qctl"><button class="btn sq" data-a="b-" data-k="${esc(p.key)}" aria-label="Tolak baki">−</button><button class="btn sq" data-a="b+" data-k="${esc(p.key)}" aria-label="Tambah baki">+</button><button class="btn small gold" data-a="mvpp" data-k="${esc(p.key)}" title="Pemain ni MVP: +1 dalam senarai MVP">★ MVP</button><button class="btn small ghost" data-a="noshow" data-id="${p.id}">Tak muncul</button><button class="btn sq" data-a="rm" data-id="${p.id}" aria-label="Keluarkan">✕</button></div></li>`).join("")
+<div class="qctl"><button class="btn sq" data-a="b-" data-k="${esc(p.key)}" aria-label="Tolak baki">−</button><button class="btn sq" data-a="b+" data-k="${esc(p.key)}" aria-label="Tambah baki">+</button><button class="btn small gold" data-a="mvpp" data-k="${esc(p.key)}" title="Pemain ni MVP: +1 dalam senarai MVP">★ MVP</button><button class="btn small ghost" data-a="noshow" data-id="${p.id}">Tak muncul</button><button class="btn sq" data-a="rm" data-id="${p.id}" aria-label="Keluarkan">✕</button></div>${roleRow(p)}</li>`).join("")
         : `<li class="empty">Belum ada. Tambah dalam Hutang Mabar di bawah.</li>`;
       $("ap-queue").innerHTML = s.queue.length ? s.queue.map((p, i) => `<li class="qrow"><div class="qtop"><span class="no">${i + 1}</span>${who(p)}<span class="bal">${balTxt(mem(p))}</span></div>
-<div class="qctl"><button class="btn sq" data-a="up" data-id="${p.id}" aria-label="Naik">↑</button><button class="btn sq" data-a="bottom" data-id="${p.id}" aria-label="Ke bawah queue">⤓</button>${s.playing.length < max ? `<button class="btn sq" data-a="now" data-id="${p.id}" aria-label="Main sekarang">▶</button>` : ""}<button class="btn small ghost" data-a="noshow" data-id="${p.id}">Tak muncul</button><button class="btn sq" data-a="rm" data-id="${p.id}" aria-label="Buang dari queue">✕</button></div></li>`).join("")
+<div class="qctl"><button class="btn sq" data-a="up" data-id="${p.id}" aria-label="Naik">↑</button><button class="btn sq" data-a="bottom" data-id="${p.id}" aria-label="Ke bawah queue">⤓</button>${s.playing.length < max ? `<button class="btn sq" data-a="now" data-id="${p.id}" aria-label="Main sekarang">▶</button>` : ""}<button class="btn small ghost" data-a="noshow" data-id="${p.id}">Tak muncul</button><button class="btn sq" data-a="rm" data-id="${p.id}" aria-label="Buang dari queue">✕</button></div>${roleRow(p)}</li>`).join("")
         : `<li class="empty">Queue kosong.</li>`;
       const ords = (s.orders || []).slice(0, 40);
       $("ap-oc").textContent = ords.length ? `${ords.length}` : "";
@@ -518,7 +526,7 @@ ${embedded ? "" : `<header class="app-top">
         const inLine = k => s.playing.some(p => p.key === k) || s.queue.some(p => p.key === k);
         const rows = list.filter(([k, m]) => !q || k.includes(q) || String(m.mlid || "").toLowerCase().includes(q)).sort((a, b) => (T(b[1]) > 0) - (T(a[1]) > 0) || (b[1].last || 0) - (a[1].last || 0) || a[1].name.localeCompare(b[1].name));
         box.innerHTML = rows.length ? `<li class="mhead" aria-hidden="true"><span>Nickname</span><span></span><span>Baki</span><span>ID ML</span><span>Waktu order</span><span>Tambah / set baki</span></li>` + rows.map(([k, m]) => `<li class="mrow${T(m) ? "" : " zero"}">
-<span class="who mc-name"><span class="nm">${esc(m.name)} <button class="vvbtn${m.vvip ? " on" : ""}" type="button" data-a="vvip" data-k="${esc(k)}" title="${m.vvip ? "VVIP (tekan untuk buang)" : "Tanda sebagai VVIP"}" aria-label="VVIP ${esc(m.name)}">${m.vvip ? "★ VVIP" : "☆"}</button></span><span class="sub">${m.last ? `order ${fmtDate(m.last)}` : "tiada tarikh"}${m.miss ? ` · hilang ${m.miss}x` : ""}</span></span>
+<span class="who mc-name"><span class="nm">${roleBadge(m)}${esc(m.name)} <button class="vvbtn${m.vvip ? " on" : ""}" type="button" data-a="vvip" data-k="${esc(k)}" title="${m.vvip ? "VVIP (tekan untuk buang)" : "Tanda sebagai VVIP"}" aria-label="VVIP ${esc(m.name)}">${m.vvip ? "★ VVIP" : "☆"}</button></span><span class="sub">${m.last ? `order ${fmtDate(m.last)}` : "tiada tarikh"}${m.miss ? ` · hilang ${m.miss}x` : ""}</span></span>
 <span class="mc-st">${inLine(k) ? `<span class="tag">${s.playing.some(p => p.key === k) ? "MAIN" : "QUEUE"}</span>` : `<button class="btn sq" data-a="join" data-k="${esc(k)}" aria-label="Masuk queue" title="Masuk queue" ${T(m) > 0 ? "" : "disabled"}>Q</button>`}</span>
 <span class="mbal"><span class="bal big">${T(m)}</span><small class="muted">${m.vbal ? `${m.bal || 0}+${m.vbal}V` : "game"}</small></span>
 <input class="idin mc-id" data-k="${esc(k)}" value="${esc(m.mlid || "")}" placeholder="ID ML" aria-label="ID ML ${esc(m.name)}">
@@ -539,6 +547,7 @@ ${m.miss ? `<div class="mctl mc-miss"><span class="muted">Hilang ${m.miss} kali<
         const q = ($("ap-mvpsearch").value || "").trim().toLowerCase();
         const mv = (s.mvp || []).filter(x => !q || x.name.toLowerCase().includes(q));
         mvBox.innerHTML = mv.length ? mv.map(x => `<li class="mvrow"><div class="mtop"><span class="who"><span class="nm">${esc(x.name)}</span>
+<input class="mvnote" data-id="${x.id}" value="${esc(x.note || "")}" maxlength="80" placeholder="Remark (cth skin yang dituntut)" aria-label="Remark ${esc(x.name)}">
 <span class="hist">${(x.hist || []).map((h, i) => `<button class="hc${h.c ? " ok" : ""}" type="button" data-a="mvh" data-id="${x.id}" data-i="${i}" title="Tekan: tukar claim / belum">${h.n}</button>`).join("")}</span></span>
 <button class="btn sq" data-a="mv-" data-id="${x.id}" aria-label="MVP tolak 1">−</button><input class="mvcin" type="number" inputmode="numeric" data-id="${x.id}" value="${x.cur || 0}" aria-label="MVP ${esc(x.name)}"><button class="btn sq gold" data-a="mv+" data-id="${x.id}" aria-label="MVP tambah 1">+</button></div>
 <div class="mctl mvctl">${(x.cur || 0) >= 5 ? `<button class="btn small gold" data-a="mvclaim" data-id="${x.id}">Claim ${x.cur} ✓</button><button class="btn small ghost" data-a="mvkeep" data-id="${x.id}">Simpan ${x.cur}</button>` : `<span class="muted">${5 - (x.cur || 0)} lagi untuk x5</span>`}
@@ -556,7 +565,7 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
       if (!force && busyIn(akBox)) pending.akaun = true;
       else {
         pending.akaun = false;
-        akBox.innerHTML = (s.akaun || []).map((r, i) => `<li class="akrow"><input class="akin" data-i="${i}" data-f="day" value="${esc(r.day)}" placeholder="Hari" aria-label="Hari"><input class="akin" data-i="${i}" data-f="name" value="${esc(r.name)}" placeholder="Nama" aria-label="Nama"><input class="akin" data-i="${i}" data-f="date" value="${esc(r.date)}" placeholder="Tarikh" aria-label="Tarikh"><button class="btn sq ghost" data-a="akdel" data-i="${i}" aria-label="Buang baris">✕</button></li>`).join("");
+        akBox.innerHTML = (s.akaun || []).map((r, i) => `<li class="akrow"><input class="akin" data-i="${i}" data-f="day" value="${esc(r.day)}" placeholder="Hari" aria-label="Hari"><input class="akin" data-i="${i}" data-f="name" value="${esc(r.name)}" placeholder="Nama" aria-label="Nama"><input class="akin akdate" type="date" data-i="${i}" data-f="date" value="${/^\d{4}-\d{2}-\d{2}$/.test(r.date || "") ? esc(r.date) : ""}" aria-label="Tarikh"><button class="btn sq ghost" data-a="akdel" data-i="${i}" aria-label="Buang baris">✕</button></li>`).join("");
       }
     }
     root.addEventListener("focusout", () => setTimeout(() => { if (Object.values(pending).some(Boolean) && !busyIn(root)) render(Store.state); }, 50));

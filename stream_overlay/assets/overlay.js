@@ -52,6 +52,7 @@
     s.mvp = Array.isArray(s.mvp) ? s.mvp : [];
     s.album = Array.isArray(s.album) ? s.album : [];
     if (!Array.isArray(s.akaun)) s.akaun = defaultAkaun();
+    s.akaun.forEach(r => { const m = String(r.date || "").match(/^(\d{1,2})\/(\d{1,2})$/); if (m) r.date = `${new Date().getFullYear()}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`; });
     if (typeof s.rules !== "string") s.rules = CFG.rules || "";
     s.rules = s.rules.replace(/5 game RM20/gi, "6 game RM20"); // harga lama yang dah tersimpan
     if (typeof s.mvpRules !== "string") s.mvpRules = CFG.mvpRules || "";
@@ -192,11 +193,13 @@
     },
     _log(s, o) { (s.orders = s.orders || []).unshift(Object.assign({ rx: Date.now() }, o)); s.orders = s.orders.slice(0, 200); },
     setMl(k, v) { Store.set(s => { const m = s.members[k]; if (m) m.mlid = String(v || "").trim().slice(0, 32); }); },
+    // role in the party: EXP / JUNGLE / MID / GOLD / ROAM (tap again to clear)
+    setRole(k, r) { Store.set(s => { const m = s.members[k]; if (m) m.role = m.role === r ? "" : r; }); },
     // edit any member field: name, last (order time ms), miss, vvip
     setMember(k, patch) { Store.set(s => { const m = s.members[k]; if (m) Object.assign(m, patch); }); },
     join(k) { Store.set(s => { const m = s.members[k]; if (m && tot(m) > 0 && !inLine(s, k)) enqueue(s, { id: uid("p"), key: k, at: Date.now(), vip: (m.vbal || 0) > 0 }); Q.fillSlots(s); }); },
-    addBal(k, d, vip) { Store.set(s => { const m = s.members[k]; if (!m) return; const f = vip ? "vbal" : "bal"; m[f] = Math.max(0, (m[f] || 0) + d); if (vip && d > 0) m.vvip = true; if (!tot(m)) leave(s, k); Q.fillSlots(s); }); },
-    setBal(k, v, vip) { Store.set(s => { const m = s.members[k]; if (!m) return; m[vip ? "vbal" : "bal"] = Math.max(0, parseInt(v, 10) || 0); if (!tot(m)) leave(s, k); Q.fillSlots(s); }); },
+    addBal(k, d, vip) { Store.set(s => { const m = s.members[k]; if (!m) return; const f = vip ? "vbal" : "bal"; m[f] = Math.max(0, (m[f] || 0) + d); if (vip && d > 0) m.vvip = true; if (d > 0) m.last = Date.now(); if (!tot(m)) leave(s, k); Q.fillSlots(s); }); },
+    setBal(k, v, vip) { Store.set(s => { const m = s.members[k]; if (!m) return; const f = vip ? "vbal" : "bal", nv = Math.max(0, parseInt(v, 10) || 0); if (nv > (m[f] || 0)) m.last = Date.now(); m[f] = nv; if (!tot(m)) leave(s, k); Q.fillSlots(s); }); },
     delMember(k) { Store.set(s => { delete s.members[k]; leave(s, k); Q.fillSlots(s); }); },
     // game finished: everyone playing pays 1 game (VVIP games first if they came in as VVIP),
     // then the rotation rule: after N games a player makes room, but only if someone is waiting
@@ -288,13 +291,14 @@
     albumClearDone() { Store.set(s => { s.album = (s.album || []).filter(x => !x.done); }); },
     // RM40 order: first empty name in the Slot Mainkan Akaun table (adds a row if full)
     _akaunBook(s, name, at) {
-      const d = new Date(at || Date.now()), dt = `${d.getDate()}/${d.getMonth() + 1}`;
+      const d = new Date(at || Date.now()), dt = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       let r = (s.akaun || []).find(x => !String(x.name || "").trim());
       if (!r) { r = { day: "", name: "", date: "" }; s.akaun.push(r); }
-      r.name = String(name || "").slice(0, 40); r.date = r.date || dt;
+      r.name = String(name || "").slice(0, 40); if (!r.date) { r.date = dt; r.day = DAYS[(d.getDay() + 6) % 7]; }
     },
     /* ---------- slot mainkan akaun ---------- */
-    akaunSet(i, f, v) { Store.set(s => { if (s.akaun[i]) s.akaun[i][f] = String(v || "").slice(0, 40); }); },
+    // date comes from a calendar (YYYY-MM-DD); picking one also fills the day name
+    akaunSet(i, f, v) { Store.set(s => { const r = s.akaun[i]; if (!r) return; r[f] = String(v || "").slice(0, 40); if (f === "date" && /^\d{4}-\d{2}-\d{2}$/.test(r.date)) r.day = DAYS[(new Date(r.date + "T12:00:00").getDay() + 6) % 7]; }); },
     akaunAdd() { Store.set(s => { s.akaun.push({ day: "", name: "", date: "" }); }); },
     akaunDel(i) { Store.set(s => { s.akaun.splice(i, 1); }); },
     akaunReset() { Store.set(s => { s.akaun = defaultAkaun(); }); },
@@ -607,6 +611,8 @@
   const svcHTML = () => CFG.services.map(v => `<div><span>${esc(v.label)}</span><b>${esc(v.price)}</b></div>`).join("");
 
   const mem = (s, p) => s.members[p.key] || { name: p.key, bal: 0 };
+  const ROLES = ["EXP", "JUNGLE", "MID", "GOLD", "ROAM"];
+  const roleTag = m => m && m.role && ROLES.includes(m.role) ? `<span class="rl rl-${m.role.toLowerCase()}">${m.role === "JUNGLE" ? "JGL" : m.role}</span>` : "";
   function queueHTML(s, variant, prevIds) {
     const wide = variant === "wide", compact = variant === "compact";
     const max = CFG.mabar.maxPlaying, full = s.playing.length >= max;
@@ -614,12 +620,12 @@
     let slots = "";
     for (let i = 0; i < max; i++) {
       const p = s.playing[i];
-      if (p) { const m = mem(s, p); slots += `<li class="slot${isNew(p.id)}"><span class="ix">${i + 1}</span><span class="nm">${esc(m.name)}</span>${m.mlid ? `<span class="mid">${esc(m.mlid)}</span>` : ""}<span class="bal">${p.vip ? "<i class=\"vv\">★</i>" : ""}${tot(m)}<small>G</small></span></li>`; }
+      if (p) { const m = mem(s, p); slots += `<li class="slot${isNew(p.id)}"><span class="ix">${i + 1}</span>${roleTag(m)}<span class="nm">${esc(m.name)}</span>${m.mlid ? `<span class="mid">${esc(m.mlid)}</span>` : ""}<span class="bal">${p.vip ? "<i class=\"vv\">★</i>" : ""}${tot(m)}<small>G</small></span></li>`; }
       else slots += `<li class="slot is-empty"><span class="ix">${i + 1}</span><span class="nm">SLOT KOSONG</span></li>`;
     }
     const lim = wide ? 6 : compact ? 2 : 3;
     let next = s.queue.slice(0, lim).map((p, i) =>
-      `<li class="nx${isNew(p.id)}"><span class="no">${String(i + 1).padStart(2, "0")}</span><span class="nm">${esc(mem(s, p).name)}</span>${mem(s, p).mlid ? `<span class="mid">${esc(mem(s, p).mlid)}</span>` : ""}<span class="g">${p.vip ? "★" : ""}${tot(mem(s, p))}G</span></li>`).join("");
+      `<li class="nx${isNew(p.id)}"><span class="no">${String(i + 1).padStart(2, "0")}</span>${roleTag(mem(s, p))}<span class="nm">${esc(mem(s, p).name)}</span>${mem(s, p).mlid ? `<span class="mid">${esc(mem(s, p).mlid)}</span>` : ""}<span class="g">${p.vip ? "★" : ""}${tot(mem(s, p))}G</span></li>`).join("");
     if (s.queue.length > lim) next += `<li class="nx more">+${s.queue.length - lim} LAGI</li>`;
     const nextBlock = s.queue.length ? `<ol>${next}</ol>` : `<p class="q-empty">${full ? "Queue kosong" : "Slot masih ada"}</p>`;
     return `<div class="q-head"><div><div class="q-open${full ? " full" : ""}">${full ? "PENUH · MASUK QUEUE" : "SLOT DIBUKA"}</div><h3 class="ov-h">${esc(CFG.mabar.title)}</h3></div><div class="q-prices">${chipsHTML()}</div></div>
@@ -888,5 +894,5 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
 
   requestAnimationFrame(loop);
   const util = { el, esc, clamp, seg, eOut, eBack, frac, rnd, TAU, fill, priceHL, uid, tickers, now };
-  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util, keyOf, liveElapsed, fmtTime, parseOrder, NP, songText, ACTIONS };
+  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util, keyOf, liveElapsed, fmtTime, parseOrder, NP, songText, ACTIONS, ROLES: ["EXP", "JUNGLE", "MID", "GOLD", "ROAM"] };
 })();

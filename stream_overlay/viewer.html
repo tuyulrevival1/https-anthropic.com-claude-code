@@ -74,6 +74,9 @@
   .prices b { font: 400 22px/1 var(--disp); color: var(--gold); font-weight: 400; white-space: nowrap; }
   .foot { color: var(--mut); font-size: 13px; text-align: center; }
   td .ok { color: #6dffb0; font-weight: 700; } td .wait { color: var(--gold); font-weight: 700; }
+  td small.note { display: block; font-weight: 500; font-size: 12px; color: var(--mut); margin-top: 2px; }
+  .rl { display: inline-block; font: 700 10px/1 var(--hud); letter-spacing: .05em; padding: 3px 4px 2px; margin-right: 5px; color: #0b0507; vertical-align: 1px; }
+  .rl-exp { background: #ff7a45; } .rl-jungle { background: #3ddc84; } .rl-mid { background: #b388ff; } .rl-gold { background: #ffcf4a; } .rl-roam { background: #4fc3f7; }
   @media (max-width: 420px) { table { font-size: 14px; } td.id { font-size: 15px; } col.c-id { width: 26%; } col.c-dt { width: 22%; } col.c-g { width: 21%; } }
 </style>
 </head>
@@ -185,7 +188,7 @@
     if (!S) return;
     const members = S.members || {}, max = CFG.mabar.maxPlaying, raw = me.trim().toLowerCase(), k = findKey(members, raw);
     const mem = p => members[p.key] || { name: p.key };
-    const row = (p, m, at) => `<tr class="${p && p.key === k ? "me" : ""}"><td class="id">${esc(m.mlid || "")}</td><td class="nm">${p && p.vip ? `<i class="vv">★</i> ` : ""}${esc(m.name)}</td><td class="dt">${at ? `<mark>${fd(at)}</mark>` : ""}</td><td class="g">${gameCell(m)}</td></tr>`;
+    const row = (p, m, at) => `<tr class="${p && p.key === k ? "me" : ""}"><td class="id">${esc(m.mlid || "")}</td><td class="nm">${p && p.vip ? `<i class="vv">★</i> ` : ""}${m.role ? `<span class="rl rl-${esc(m.role.toLowerCase())}">${m.role === "JUNGLE" ? "JGL" : esc(m.role)}</span>` : ""}${esc(m.name)}</td><td class="dt">${at ? `<mark>${fd(at)}</mark>` : ""}</td><td class="g">${gameCell(m)}</td></tr>`;
     const table = rows => `<table><colgroup><col class="c-id"><col class="c-nm"><col class="c-dt"><col class="c-g"></colgroup><thead><tr><th>ID</th><th>Nickname</th><th>Waktu order</th><th class="g">Baki game</th></tr></thead><tbody>${rows}</tbody></table>`;
     // waiting list: playing (green) + QUE in groups of 4
     const play = S.playing || [], que = S.queue || [];
@@ -207,14 +210,14 @@
     $("v-mvrules").textContent = S.mvpRules != null ? S.mvpRules : (CFG.mvpRules || "");
     const mq = ($("v-mq").value || "").trim().toLowerCase(), mv = (S.mvp || []).filter(x => !mq || x.name.toLowerCase().includes(mq));
     $("v-mc").textContent = `${(S.mvp || []).length} orang`;
-    $("v-mvp").innerHTML = mv.length ? mv.map(x => `<tr class="${raw && x.name.toLowerCase() === raw ? "me" : ""}"><td class="nm">${esc(x.name)}</td><td><div class="chips">${(x.hist || []).map(h => `<span class="${h.c ? "ok" : ""}">${h.n}</span>`).join("")}<b>${x.cur || 0}</b></div></td></tr>`).join("") : `<tr><td colspan="2" class="empty">Tiada.</td></tr>`;
+    $("v-mvp").innerHTML = mv.length ? mv.map(x => `<tr class="${raw && x.name.toLowerCase() === raw ? "me" : ""}"><td class="nm">${esc(x.name)}${x.note ? `<small class="note">${esc(x.note)}</small>` : ""}</td><td><div class="chips">${(x.hist || []).map(h => `<span class="${h.c ? "ok" : ""}">${h.n}</span>`).join("")}<b>${x.cur || 0}</b></div></td></tr>`).join("") : `<tr><td colspan="2" class="empty">Tiada.</td></tr>`;
     // komen album: waiting first, then done
     const al = (S.album || []).slice().sort((a, b) => (a.done - b.done) || (a.at - b.at));
     $("v-alc").textContent = al.length ? `${al.filter(a => !a.done).length} menunggu` : "";
     $("v-album").innerHTML = al.length ? al.map(a => `<tr class="${raw && a.name.toLowerCase() === raw ? "me" : ""}"><td class="nm">${esc(a.name)}</td><td class="dt">${fd(a.at)}</td><td>${a.done ? `<span class="ok">✓ Siap</span>` : `<span class="wait">Menunggu</span>`}</td></tr>`).join("") : `<tr><td colspan="3" class="empty">Tiada order komen album.</td></tr>`;
     // slot mainkan akaun
     const ak = S.akaun || [];
-    $("v-akaun").innerHTML = ak.length ? ak.map(r => `<tr><td>${esc(r.day)}</td><td class="nm">${esc(r.name)}</td><td class="dt">${esc(r.date)}</td></tr>`).join("") : `<tr><td colspan="3" class="empty">Tiada slot.</td></tr>`;
+    $("v-akaun").innerHTML = ak.length ? ak.map(r => `<tr><td>${esc(r.day)}</td><td class="nm">${esc(r.name)}</td><td class="dt">${/^\d{4}-\d{2}-\d{2}$/.test(r.date || "") ? fd(Date.parse(r.date + "T12:00:00")) : esc(r.date)}</td></tr>`).join("") : `<tr><td colspan="3" class="empty">Tiada slot.</td></tr>`;
     // peraturan
     const rules = S.rules != null ? S.rules : (CFG.rules || "");
     let out = "", open = false;

@@ -251,3 +251,20 @@
 .app .ctest .pk { display: flex; flex-wrap: wrap; gap: 6px; }
 .app .ctest .pk .btn { flex: 1 1 64px; width: auto; padding: 8px 4px; }
 .app .ctest .gsel { width: 100%; padding: 9px 6px; }
+
+/* ---- roles ---- */
+.app .roles { display: flex; gap: 4px; flex-wrap: wrap; }
+.app .rlb { font: 700 11px/1 "OV Raj", Rajdhani, sans-serif; letter-spacing: .08em; padding: 7px 8px 6px; cursor: pointer; background: transparent; border: 1px solid; opacity: .55; }
+.app .rlb.on { opacity: 1; color: #0b0507 !important; }
+.app .rlb:hover { opacity: .9; } .app .rlb:focus-visible { outline: 2px solid var(--c-gold); }
+.app .rlb.rl-exp { color: #ff7a45; border-color: #ff7a45; } .app .rlb.rl-exp.on { background: #ff7a45; }
+.app .rlb.rl-jungle { color: #3ddc84; border-color: #3ddc84; } .app .rlb.rl-jungle.on { background: #3ddc84; }
+.app .rlb.rl-mid { color: #b388ff; border-color: #b388ff; } .app .rlb.rl-mid.on { background: #b388ff; }
+.app .rlb.rl-gold { color: #ffcf4a; border-color: #ffcf4a; } .app .rlb.rl-gold.on { background: #ffcf4a; }
+.app .rlb.rl-roam { color: #4fc3f7; border-color: #4fc3f7; } .app .rlb.rl-roam.on { background: #4fc3f7; }
+.app .rl { display: inline-block; font: 700 10px/1 "OV Raj", Rajdhani, sans-serif; letter-spacing: .06em; padding: 3px 5px 2px; margin-right: 6px; color: #0b0507; vertical-align: 2px; }
+.app .rl.rl-exp { background: #ff7a45; } .app .rl.rl-jungle { background: #3ddc84; } .app .rl.rl-mid { background: #b388ff; } .app .rl.rl-gold { background: #ffcf4a; } .app .rl.rl-roam { background: #4fc3f7; }
+/* ---- MVP remark ---- */
+.app .mvnote { width: 100%; margin-top: 4px; padding: 6px 8px; font-size: 13px; }
+.app .akrow .akdate { min-width: 0; padding: 6px 6px; font-size: 13px; }
+.app .ak-head, .app .akrow { grid-template-columns: .9fr 1.3fr 1.2fr 36px; }
