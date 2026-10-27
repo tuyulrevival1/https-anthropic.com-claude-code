@@ -193,7 +193,8 @@ Perlu: `START_OVERLAY.bat` jalan dan overlay (OBS) atau App terbuka.
    - **Tekan sekejap** = Menang / Kalah (W/L +1, tolak baki, rotation). Boleh tukar jadi "W +1 sahaja" dalam tetapan butang.
    - **Tahan 0.6 saat** = W / L tolak 1 (butang tulis -1).
    - **Tahan 2 saat** = reset W/L jadi 0 (butang tulis RESET).
-   - Butang tunjuk bilangan W / L sekarang.
+   - Butang tunjuk **nombor besar** W / L sekarang (contoh 10 menang = 10). Biar ruang Title Stream Deck kosong.
+   - Ruang **Alamat overlay** dalam tetapan butang: biar kosong.
 
 **Cara lain: Website (tekan sahaja)**
 

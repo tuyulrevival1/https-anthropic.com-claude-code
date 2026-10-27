@@ -13,14 +13,39 @@ let ws = null, last = { w: null, l: null };
 const keys = {}; // context -> { action, settings, down, stage, t1, t2 }
 const send = o => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
 const setTitle = (ctx, t) => send({ event: "setTitle", context: ctx, payload: { title: t, target: 0 } });
+// draw the key: label on top, big number in the middle (Stream Deck shows the image; title stays empty)
+const COL = { win: "#ffcf4a", lose: "#ff2346" };
+function keyImage(kd, big, small) {
+  const c = document.createElement("canvas"); c.width = c.height = 144;
+  const g = c.getContext("2d"), acc = COL[kd];
+  g.fillStyle = "#0e0609"; g.fillRect(0, 0, 144, 144);
+  const grd = g.createLinearGradient(0, 70, 0, 144); grd.addColorStop(0, "rgba(0,0,0,0)"); grd.addColorStop(1, kd === "win" ? "rgba(255,207,74,.28)" : "rgba(255,35,70,.3)");
+  g.fillStyle = grd; g.fillRect(0, 0, 144, 144);
+  g.strokeStyle = acc; g.lineWidth = 6; g.strokeRect(5, 5, 134, 134);
+  g.fillStyle = acc; g.fillRect(5, 5, 134, 30);
+  g.fillStyle = "#160a00"; g.font = "bold 22px 'Segoe UI', Arial, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+  g.fillText(small, 72, 21);
+  const len = String(big).length, size = len <= 2 ? 72 : len === 3 ? 56 : 40;
+  g.font = `900 ${size}px 'Arial Black', 'Segoe UI', Arial, sans-serif`;
+  g.fillStyle = big === "-" ? "#777" : "#ffffff"; g.shadowColor = acc; g.shadowBlur = 14;
+  g.fillText(String(big), 72, 92);
+  return c.toDataURL("image/png");
+}
+function show(ctx, k, big, small) {
+  const key = big + "|" + small;
+  if (k.shown === key) return; k.shown = key;
+  send({ event: "setImage", context: ctx, payload: { image: keyImage(kind(k.action), big, small), target: 0 } });
+  setTitle(ctx, "");
+}
 const kind = a => /\.lose$/.test(a) ? "lose" : "win";
 const base = k => String((k && k.settings && k.settings.server) || BASE_DEF).trim().replace(/\/+$/, "");
 const label = k => kind(k.action) === "win" ? "WIN" : "LOSE";
-function paint() {
+function paint(force) {
   for (const [ctx, k] of Object.entries(keys)) {
-    if (k.down) continue;
+    if (k.down && !force) continue;
+    if (force) k.shown = "";
     const v = kind(k.action) === "win" ? last.w : last.l;
-    setTitle(ctx, label(k) + "\n" + (v == null ? "-" : v));
+    show(ctx, k, v == null ? "-" : v, v == null ? "OFFLINE" : label(k));
   }
 }
 function refresh() {
@@ -37,15 +62,22 @@ function run(ctx, k, name) {
 }
 function keyDown(ctx, k) {
   k.down = Date.now(); k.stage = 0;
-  setTitle(ctx, label(k) + "\n+1");
-  k.t1 = setTimeout(() => { k.stage = 1; setTitle(ctx, label(k) + "\n-1"); }, HOLD_MS);
-  k.t2 = setTimeout(() => { k.stage = 2; setTitle(ctx, "RESET\nW/L"); }, LONG_MS);
+  show(ctx, k, "+1", label(k));
+  k.t1 = setTimeout(() => { k.stage = 1; show(ctx, k, "-1", "TAHAN"); }, HOLD_MS);
+  k.t2 = setTimeout(() => { k.stage = 2; show(ctx, k, "0", "RESET W/L"); }, LONG_MS);
 }
 function keyUp(ctx, k) {
   clearTimeout(k.t1); clearTimeout(k.t2);
   const w = kind(k.action) === "win", st = k.stage; k.down = 0;
   const tap = (k.settings && k.settings.tap) || (w ? "end-win" : "end-lose");
-  run(ctx, k, st === 2 ? "wl-reset" : st === 1 ? (w ? "win-1" : "lose-1") : tap);
+  const name = st === 2 ? "wl-reset" : st === 1 ? (w ? "win-1" : "lose-1") : tap;
+  if (last.w != null) {
+    if (st === 2) last = { w: 0, l: 0 };
+    else if (w) last.w = Math.max(0, last.w + (st === 1 ? -1 : 1));
+    else last.l = Math.max(0, last.l + (st === 1 ? -1 : 1));
+  }
+  paint(true);
+  run(ctx, k, name);
 }
 function connectElgatoStreamDeckSocket(inPort, inUUID, inRegisterEvent) {
   ws = new WebSocket("ws://127.0.0.1:" + inPort);
@@ -53,7 +85,7 @@ function connectElgatoStreamDeckSocket(inPort, inUUID, inRegisterEvent) {
   ws.onmessage = ev => {
     let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
     const ctx = m.context, p = m.payload || {};
-    if (m.event === "willAppear") { keys[ctx] = { action: m.action, settings: p.settings || {} }; refresh(); }
+    if (m.event === "willAppear") { keys[ctx] = { action: m.action, settings: p.settings || {} }; paint(); refresh(); }
     else if (m.event === "willDisappear") delete keys[ctx];
     else if (m.event === "didReceiveSettings" && keys[ctx]) { keys[ctx].settings = p.settings || {}; refresh(); }
     else if (m.event === "keyDown" && keys[ctx]) keyDown(ctx, keys[ctx]);

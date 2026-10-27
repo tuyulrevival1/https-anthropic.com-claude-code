@@ -1,7 +1,7 @@
 {
   "Name": "SYNO Mabar",
   "Author": "SYNOSTORE",
-  "Version": "1.0.0",
+  "Version": "1.1.0",
   "SDKVersion": 2,
   "Description": "Win / Lose untuk overlay SYNO. Tekan = tambah, tahan = tolak 1, tahan lama = reset W/L.",
   "Category": "SYNO Mabar",
@@ -33,7 +33,7 @@
           "Image": "img/win_key",
           "TitleAlignment": "middle",
           "FontSize": "16",
-          "ShowTitle": true
+          "ShowTitle": false
         }
       ],
       "SupportedInMultiActions": false
@@ -48,7 +48,7 @@
           "Image": "img/lose_key",
           "TitleAlignment": "middle",
           "FontSize": "16",
-          "ShowTitle": true
+          "ShowTitle": false
         }
       ],
       "SupportedInMultiActions": false
