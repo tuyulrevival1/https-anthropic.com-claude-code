@@ -608,20 +608,26 @@
   }
   setInterval(mediaTick, 1000);
   const tidyTitle = t => String(t || "").replace(/\s*[(\[](official|lirik|lyrics?|lyric video|audio|music video|mv|video klip|visualizer|hd|4k)[^)\]]*[)\]]/gi, "").replace(/[….]{1,3}$/, "").replace(/\s{2,}/g, " ").trim();
-  // IndoFinity now-playing card: "<title>", "<channel>", "@<requester>" (first @name that follows a song title)
+  // IndoFinity player bar: "<title>", "<channel>", "@<requester>". The window also shows the streamer's own
+  // account ("@name" + "Not connected to live") and menu items, so every "@name" is scored and the one that
+  // follows the most song-like title wins.
   function ifxNow(texts) {
     if (!Array.isArray(texts) || !texts.length) return null;
-    const songish = t => t.length >= 6 && !/^@/.test(t) && !/^\d{1,2}[:.]\d{2}/.test(t) && !/indofinity|^https?:|^(update|subathon|settings?|pengaturan|song requests?|queue|antrian)\b/i.test(t);
     texts = texts.map(String).filter(t => !/^\[tetingkap\]/.test(t));
+    const menu = /^(indofinity|default|favorites|auction|welcome|dashboard|analytics|plans|balance|setup|connection|interaction|tiktok gift|soundboards|simulator|tools|stream avatar|giveaway|youtube music|read comments|donation|gift tracker|subathon|update|new|playlists|song requests?|blacklists|settings?|command|connect|what's new|coins|queue|antrian|pengaturan)\b/i;
+    const songish = t => t.length >= 4 && !/^@/.test(t) && !/^\d{1,2}[:.]\d{2}/.test(t) && !/indofinity|^https?:|connected to live/i.test(t) && !menu.test(t);
+    let best = null;
     for (let i = 0; i < texts.length; i++) {
-      // "@name" on its own, or inside a longer line ("7clouds · @name", "Request by @name")
       const m = texts[i].match(/^@([\w.]{2,32})$/) || texts[i].match(/(?:^|[\s·•|(])@([\w.]{2,32})\b/); if (!m) continue;
+      if (/connected to live|live$/i.test(texts[i + 1] || "") || /connected to live/i.test(texts[i])) continue; // streamer's own account in the header
       const own = texts[i].replace(/@[\w.]{2,32}.*$/, "").replace(/[\s·•|(-]+$/, "").trim();
-      const prev = texts.slice(Math.max(0, i - 3), i).concat(own && own.length >= 6 && !/^(req|request|by|oleh|dari)\b/i.test(own) ? [own] : []);
+      const prev = texts.slice(Math.max(0, i - 3), i).concat(own && own.length >= 4 && !/^(req|request|by|oleh|dari)\b/i.test(own) ? [own] : []);
       const t = prev.length >= 2 && songish(prev[prev.length - 2]) ? prev[prev.length - 2] : prev.length && songish(prev[prev.length - 1]) ? prev[prev.length - 1] : "";
-      if (t) return { title: tidyTitle(t).slice(0, 90), user: m[1] };
+      if (!t) continue;
+      const score = (/\s[-–]\s/.test(t) ? 3 : 0) + (/lyrics?|lirik|official|ft\.|feat|remix|audio|video|cover/i.test(t) ? 2 : 0) + i / texts.length;
+      if (!best || score >= best.score) best = { score, title: tidyTitle(t).slice(0, 90), user: m[1] };
     }
-    return null;
+    return best ? { title: best.title, user: best.user } : null;
   }
   // song title only: never the app's own name ("IndoFinity"), a web address or "YouTube"
   function songTitleOf(sm, au, want) {
@@ -664,12 +670,12 @@
           try { o = parseOrder(e); }
           catch (err) {
             let raw = ""; try { raw = atob(e.b || "").slice(0, 500); } catch (x) {}
-            Q._log(s, { key: "", name: "Order tak dapat dibaca", mlid: "", games: 0, at: e.t || Date.now(), src: "sociabuzz", warn: "Semak Data asal", raw });
+            Q._log(s, { key: "", name: "Order could not be read", mlid: "", games: 0, at: e.t || Date.now(), src: "sociabuzz", warn: "Check the raw data", raw });
             continue;
           }
           // Sociabuzz sends the same id on every Test Notification: never drop a test as a duplicate
           const info = { amount: o.amount, cur: o.cur, note: o.msg, vip: !!o.vip, raw: o.raw, svc: o.svc, trial: !!o.trial };
-          if (!o.test && !o.trial && s.seenOrders.includes(o.dk)) { Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz", warn: "Order sama dengan sebelum ni, diabaikan" }, info)); continue; }
+          if (!o.test && !o.trial && s.seenOrders.includes(o.dk)) { Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz", warn: "Same order as before, ignored" }, info)); continue; }
           if (!o.test && !o.trial) s.seenOrders.unshift(o.dk);
           if (o.test) { Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "test" }, info)); continue; }
           if (o.svc === "album") { const albumId = Q._albumAdd(s, o.name, o.mlid, albumNote(o.msg), o.at, "sociabuzz"); Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz", albumId }, info)); continue; }
@@ -677,7 +683,7 @@
           if (o.svc === "akaun") { Q._akaunBook(s, o.name, o.at); Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz" }, info)); continue; }
           const k = keyOf(o.name);
           if (o.games > 0 && k) Q._add(s, k, o.name, o.games, SB.autoQueue, o.at, o.mlid, "sociabuzz", info);
-          else Q._log(s, Object.assign({ key: k, name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz", warn: "Jumlah tak cukup untuk 1 game" }, info));
+          else Q._log(s, Object.assign({ key: k, name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz", warn: "Amount too low for 1 game" }, info));
         }
         s.seenOrders = s.seenOrders.slice(0, 300);
         const top = Math.max(from, res.last || 0, ...list.map(e => +e.n || 0));
