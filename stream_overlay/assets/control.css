@@ -125,3 +125,27 @@
 .app .list li.akrow { display: grid; padding: 3px; min-height: 0; background: transparent; }
 .app .akrow input { padding: 7px 8px; font-size: 14px; }
 .app .list.aklist { max-height: 560px; }
+
+/* ---- tidy pass ---- */
+.app h3 { flex-wrap: wrap; align-items: baseline; row-gap: 4px; }
+.app h3 span { letter-spacing: .12em; }
+.app .list#ap-play, .app .list.aklist { max-height: none; }
+.app .list#ap-queue, .app .list.members, .app .list.mvplist { max-height: min(70vh, 720px); }
+.app .list li.qrow .who .sub { white-space: normal; }
+.app .qtop .bal { align-self: flex-start; padding-top: 2px; }
+.app .pk { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.app .pk .muted { grid-column: 1 / -1; }
+.app .pk .btn { width: 100%; padding: 10px 6px; font-size: 13px; letter-spacing: .06em; }
+.app .mgrid { display: grid; grid-template-columns: 58px 74px 1fr 1fr 36px; gap: 6px; align-items: stretch; }
+.app .mgrid .gin { width: 100%; padding: 6px 8px 4px; font: 600 20px/1 "OV Teko", Teko, monospace; }
+.app .mgrid .gsel { width: 100%; }
+.app .mgrid .btn { padding: 8px 4px; font-size: 12px; letter-spacing: .06em; }
+.app .mgrid .btn.sq { width: 36px; height: auto; }
+.app .vvbtn { font: 700 11px/1 "OV Raj", Rajdhani, sans-serif; letter-spacing: .1em; padding: 3px 6px; border-style: solid; }
+.app .mvctl { justify-content: space-between; }
+.app .mvctl > .btn.sq { margin-left: auto; }
+.app .songbox #ap-song { width: 100%; }
+.app .songbox .row .btn { flex: 1; }
+.app .gsel { font: 600 13px/1 "OV Raj", Rajdhani, sans-serif; color: var(--c-fg); background: #0a0405; border: 1px solid var(--c-line); padding: 6px 4px; border-radius: 0; }
+.app .gsel:focus-visible { outline: 2px solid var(--c-gold); }
+.app .list.members, .app .list.mvplist, .app .list#ap-queue { border-bottom: 1px solid var(--c-line); }

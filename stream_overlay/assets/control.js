@@ -50,8 +50,8 @@ ${embedded ? "" : `<header class="app-top">
     </div>
     <div class="songbox">
       <div class="np-now"><span>♪ Sedang main</span><b id="ap-npauto">—</b></div>
-      <div class="row"><input id="ap-song" placeholder="Taip tajuk lagu (kosong = auto dari Spotify)" aria-label="Tajuk lagu manual">
-      <button class="btn" type="button" id="ap-songset">Set</button><button class="btn ghost" type="button" id="ap-songauto">Auto</button></div>
+      <input id="ap-song" placeholder="Taip tajuk lagu sendiri (pilihan)" aria-label="Tajuk lagu manual">
+      <div class="row"><button class="btn" type="button" id="ap-songset">Set lagu</button><button class="btn ghost" type="button" id="ap-songauto">Ikut Spotify</button></div>
     </div>
   </section>
 
@@ -84,7 +84,7 @@ ${embedded ? "" : `<header class="app-top">
   </section>
 
   <section class="card vip">
-    <h3>Hutang Mabar · baki game <span id="ap-mc"></span></h3>
+    <h3>Hutang Mabar <span id="ap-mc"></span></h3>
     <form id="ap-add" class="addform" autocomplete="off">
       <div class="two"><label class="fld">Nama<input id="ap-name" maxlength="24" placeholder="cth Aqil.MY"></label>
       <label class="fld">ID ML<input id="ap-mlid" maxlength="32" placeholder="cth 123456789 (1234)"></label></div>
@@ -109,7 +109,7 @@ ${embedded ? "" : `<header class="app-top">
   </section>
 
   <section class="card akaun">
-    <h3>Slot Mainkan Akaun (15-20 game)</h3>
+    <h3>Slot Mainkan Akaun <span>15-20 game</span></h3>
     <div class="ak-head"><span>Hari</span><span>Nama</span><span>Tarikh</span><span></span></div>
     <ol class="list aklist" id="ap-akaun"></ol>
     <div class="row"><button class="btn" type="button" id="ap-akadd">+ Baris</button><button class="btn ghost" type="button" id="ap-akreset" data-confirm="Tekan lagi: kosongkan semua">Reset jadual</button></div>
@@ -260,13 +260,13 @@ ${embedded ? "" : `<header class="app-top">
       const max = CFG.mabar.maxPlaying, rot = CFG.mabar.rotateEvery || 0, T = O.Q.tot;
       const mem = p => s.members[p.key] || { name: p.key, bal: 0, vbal: 0 };
       const balTxt = m => (m.vbal ? `${m.bal || 0} + ${m.vbal} VVIP` : `${m.bal || 0}`) + " game";
-      const who = (p, extra = "") => `<span class="who"><span class="nm">${p.vip ? `<i class="vv">★</i> ` : ""}${esc(mem(p).name)}</span><span class="sub">${mem(p).mlid ? `ID ${esc(mem(p).mlid)}` : "tiada ID"}${p.at ? ` · order ${fmtDate(p.at)}` : ""}${extra}</span></span>`;
+      const who = (p, extra = "") => `<span class="who"><span class="nm">${p.vip ? `<i class="vv">★</i> ` : ""}${esc(mem(p).name)}</span><span class="sub">${mem(p).mlid ? `ID ${esc(mem(p).mlid)}` : "tiada ID"}${mem(p).last ? ` · order ${fmtDate(mem(p).last)}` : ""}${extra}</span></span>`;
       $("ap-wins").textContent = s.wins; $("ap-losses").textContent = s.losses;
       $("ap-streak").textContent = s.streak >= 2 ? `Win streak ${s.streak}` : s.streak <= -2 ? `Lose ${-s.streak} berturut` : "";
       $("ap-showq").checked = !!s.showQueue; $("ap-showb").checked = !!s.showBanner; $("ap-shows").checked = !s.song || s.song.on !== false;
       if (document.activeElement !== $("ap-song")) $("ap-song").value = (s.song && s.song.manual) || "";
       $("ap-pc").textContent = `${s.playing.length}/${max}`; $("ap-qc").textContent = s.queue.length;
-      $("ap-play").innerHTML = s.playing.length ? s.playing.map(p => `<li class="qrow"><div class="qtop">${who(p, ` · game ke-${p.n || 0}${rot && (p.n || 0) >= rot ? " · cukup " + rot + ", rotate bila ada queue" : ""}`)}<span class="bal">${balTxt(mem(p))}</span></div>
+      $("ap-play").innerHTML = s.playing.length ? s.playing.map(p => `<li class="qrow"><div class="qtop">${who(p, (p.n ? ` · dah ${p.n} game` : "") + (rot && (p.n || 0) >= rot ? " · boleh rotate" : ""))}<span class="bal">${balTxt(mem(p))}</span></div>
 <div class="qctl"><button class="btn sq" data-a="b-" data-k="${esc(p.key)}" aria-label="Tolak baki">−</button><button class="btn sq" data-a="b+" data-k="${esc(p.key)}" aria-label="Tambah baki">+</button><button class="btn small ghost" data-a="noshow" data-id="${p.id}">Tak muncul</button><button class="btn sq" data-a="rm" data-id="${p.id}" aria-label="Keluarkan">✕</button></div></li>`).join("")
         : `<li class="empty">Belum ada. Tambah dalam Hutang Mabar di bawah.</li>`;
       $("ap-queue").innerHTML = s.queue.length ? s.queue.map((p, i) => `<li class="qrow"><div class="qtop"><span class="no">${i + 1}</span>${who(p)}<span class="bal">${balTxt(mem(p))}</span></div>
@@ -292,15 +292,16 @@ ${embedded ? "" : `<header class="app-top">
         const inLine = k => s.playing.some(p => p.key === k) || s.queue.some(p => p.key === k);
         const rows = list.filter(([k, m]) => !q || k.includes(q) || String(m.mlid || "").toLowerCase().includes(q)).sort((a, b) => (T(b[1]) > 0) - (T(a[1]) > 0) || (b[1].last || 0) - (a[1].last || 0) || a[1].name.localeCompare(b[1].name));
         box.innerHTML = rows.length ? rows.map(([k, m]) => `<li class="mrow${T(m) ? "" : " zero"}">
-<div class="mtop"><span class="who"><span class="nm">${esc(m.name)} <button class="vvbtn${m.vvip ? " on" : ""}" type="button" data-a="vvip" data-k="${esc(k)}" title="Tanda VVIP">VVIP</button></span><span class="sub">${m.last ? `order ${fmtDate(m.last)}` : "tiada tarikh"}${m.miss ? ` · hilang ${m.miss}x` : ""}</span></span>
+<div class="mtop"><span class="who"><span class="nm">${esc(m.name)} <button class="vvbtn${m.vvip ? " on" : ""}" type="button" data-a="vvip" data-k="${esc(k)}" title="${m.vvip ? "VVIP (tekan untuk buang)" : "Tanda sebagai VVIP"}" aria-label="VVIP ${esc(m.name)}">${m.vvip ? "★ VVIP" : "☆"}</button></span><span class="sub">${m.last ? `order ${fmtDate(m.last)}` : "tiada tarikh"}${m.miss ? ` · hilang ${m.miss}x` : ""}</span></span>
 ${inLine(k) ? `<span class="tag">${s.playing.some(p => p.key === k) ? "MAIN" : "QUEUE"}</span>` : `<button class="btn sq" data-a="join" data-k="${esc(k)}" aria-label="Masuk queue" title="Masuk queue" ${T(m) > 0 ? "" : "disabled"}>Q</button>`}
 <span class="bal big">${T(m)}</span><small class="muted">${m.vbal ? `${m.bal || 0}+${m.vbal}V` : "game"}</small></div>
 <div class="mctl"><input class="idin" data-k="${esc(k)}" value="${esc(m.mlid || "")}" placeholder="ID ML" aria-label="ID ML ${esc(m.name)}">
 <input class="dtin" type="datetime-local" data-k="${esc(k)}" value="${toInput(m.last)}" aria-label="Waktu order ${esc(m.name)}"></div>
-<div class="mctl"><input class="gin" type="number" inputmode="numeric" placeholder="game" aria-label="Bilangan game untuk ${esc(m.name)}">
+<div class="mgrid"><input class="gin" type="number" inputmode="numeric" placeholder="0" aria-label="Bilangan game untuk ${esc(m.name)}">
 <select class="gsel" aria-label="Jenis baki"><option value="">Biasa</option><option value="v">VVIP</option></select>
-<button class="btn" data-a="addn" data-k="${esc(k)}">Tambah</button><button class="btn ghost" data-a="setn" data-k="${esc(k)}">Set baki</button>
-${m.miss ? `<button class="btn ghost" data-a="miss0" data-k="${esc(k)}">Reset hilang</button>` : ""}<button class="btn sq ghost" data-a="del" data-k="${esc(k)}" aria-label="Padam">✕</button></div></li>`).join("")
+<button class="btn" data-a="addn" data-k="${esc(k)}">Tambah</button><button class="btn ghost" data-a="setn" data-k="${esc(k)}">Set</button>
+<button class="btn sq ghost" data-a="del" data-k="${esc(k)}" aria-label="Padam ${esc(m.name)}">✕</button></div>
+${m.miss ? `<div class="mctl"><span class="muted">Hilang ${m.miss} kali</span><button class="btn small ghost" data-a="miss0" data-k="${esc(k)}">Reset hilang</button></div>` : ""}</li>`).join("")
           : `<li class="empty">${q ? "Tiada nama sepadan." : "Belum ada rekod."}</li>`;
       }
       // MVP
@@ -314,7 +315,7 @@ ${m.miss ? `<button class="btn ghost" data-a="miss0" data-k="${esc(k)}">Reset hi
         mvBox.innerHTML = mv.length ? mv.map(x => `<li class="mvrow"><div class="mtop"><span class="who"><span class="nm">${esc(x.name)}</span>
 <span class="hist">${(x.hist || []).map((h, i) => `<button class="hc${h.c ? " ok" : ""}" type="button" data-a="mvh" data-id="${x.id}" data-i="${i}" title="Tekan: tukar claim / belum">${h.n}</button>`).join("")}</span></span>
 <button class="btn sq" data-a="mv-" data-id="${x.id}" aria-label="MVP tolak 1">−</button><input class="mvcin" type="number" inputmode="numeric" data-id="${x.id}" value="${x.cur || 0}" aria-label="MVP ${esc(x.name)}"><button class="btn sq gold" data-a="mv+" data-id="${x.id}" aria-label="MVP tambah 1">+</button></div>
-<div class="mctl">${(x.cur || 0) >= 5 ? `<button class="btn small gold" data-a="mvclaim" data-id="${x.id}">Claim ${x.cur} ✓</button><button class="btn small ghost" data-a="mvkeep" data-id="${x.id}">Simpan ${x.cur}</button>` : `<span class="muted">${5 - (x.cur || 0)} lagi untuk x5</span>`}
+<div class="mctl mvctl">${(x.cur || 0) >= 5 ? `<button class="btn small gold" data-a="mvclaim" data-id="${x.id}">Claim ${x.cur} ✓</button><button class="btn small ghost" data-a="mvkeep" data-id="${x.id}">Simpan ${x.cur}</button>` : `<span class="muted">${5 - (x.cur || 0)} lagi untuk x5</span>`}
 ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-id="${x.id}" data-i="${x.hist.length - 1}">Buang nombor akhir</button>` : ""}<button class="btn sq ghost" data-a="mvdel" data-id="${x.id}" aria-label="Padam">✕</button></div></li>`).join("")
           : `<li class="empty">${q ? "Tiada nama sepadan." : "Belum ada."}</li>`;
       }
@@ -393,6 +394,7 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
 
     /* ---------- connection, PIN, links ---------- */
     const conn = $("ap-conn"), auth = $("ap-auth"), pinbar = $("ap-pinbar");
+    let ran = false; // ?do= link pantas dijalankan sekali sahaja
     const checkAuth = () => fetch("api/auth", { headers: { "X-Pin": lsGet(PIN_KEY, "") }, cache: "no-store" }).then(r => r.json()).then(a => {
       auth.hidden = false;
       auth.textContent = a.local ? "PC INI" : a.ok ? "ADMIN" : "PERLU PIN";
@@ -473,7 +475,6 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
     });
 
     // ?do=win etc. (link pantas)
-    let ran = false;
     function runAction() {
       if (ran) return; ran = true;
       const act = new URLSearchParams(location.search).get("do");

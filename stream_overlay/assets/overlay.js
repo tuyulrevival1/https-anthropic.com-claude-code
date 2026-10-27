@@ -472,7 +472,7 @@
   }
 
   /* ---------- panels ---------- */
-  const chipsHTML = () => CFG.mabar.prices.map(p => `<span class="ov-chip"><span>${p.note ? `${esc(p.qty)} <b>${esc(p.price)}</b>${esc(p.note)}` : `<b>${esc(p.price)}</b> / ${esc(p.qty)}`}</span></span>`).join("");
+  const chipsHTML = () => CFG.mabar.prices.filter(p => p.overlay !== false).map(p => `<span class="ov-chip"><span>${p.note ? `${esc(p.qty)} <b>${esc(p.price)}</b>${esc(p.note)}` : `<b>${esc(p.price)}</b> / ${esc(p.qty)}`}</span></span>`).join("");
   const svcHTML = () => CFG.services.map(v => `<div><span>${esc(v.label)}</span><b>${esc(v.price)}</b></div>`).join("");
 
   const mem = (s, p) => s.members[p.key] || { name: p.key, bal: 0 };

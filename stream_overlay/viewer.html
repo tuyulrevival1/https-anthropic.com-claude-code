@@ -37,9 +37,8 @@
   .wl small { font-size: 12px; letter-spacing: .3em; color: var(--mut); }
   .wl b { font: 600 32px/1 var(--num); }
   .wl .w b { color: var(--gold); } .wl .l b { color: var(--red); }
-  .tabs { position: sticky; top: 0; z-index: 3; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding: 6px 0; background: var(--bg); }
-  .tabs::-webkit-scrollbar { display: none; }
-  .tabs button { flex: none; font: 700 13px/1 var(--hud); letter-spacing: .14em; text-transform: uppercase; color: var(--mut); background: #1a0b10; border: 1px solid var(--line); padding: 11px 12px; cursor: pointer; }
+  .tabs { position: sticky; top: 0; z-index: 3; display: grid; grid-template-columns: 1.15fr 1fr .8fr .95fr 1.35fr; gap: 4px; padding: 6px 0; background: var(--bg); }
+  .tabs button { min-width: 0; font: 700 12px/1 var(--hud); letter-spacing: .04em; text-transform: uppercase; color: var(--mut); background: #1a0b10; border: 1px solid var(--line); padding: 12px 2px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tabs button[aria-selected="true"] { color: #fff; background: var(--red); border-color: var(--red); }
   /* doc-style tables */
   table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 15px; }
@@ -90,10 +89,10 @@
   </section>
 
   <nav class="tabs" role="tablist" aria-label="Senarai">
-    <button role="tab" data-tab="wait">Waiting list</button>
-    <button role="tab" data-tab="hutang">Hutang mabar</button>
+    <button role="tab" data-tab="wait">Waiting</button>
+    <button role="tab" data-tab="hutang">Hutang</button>
     <button role="tab" data-tab="mvp">MVP</button>
-    <button role="tab" data-tab="akaun">Slot akaun</button>
+    <button role="tab" data-tab="akaun">Akaun</button>
     <button role="tab" data-tab="rules">Peraturan</button>
   </nav>
 
@@ -179,11 +178,11 @@
     const table = rows => `<table><colgroup><col class="c-id"><col class="c-nm"><col class="c-dt"><col class="c-g"></colgroup><thead><tr><th>ID</th><th>Nickname</th><th>Waktu order</th><th class="g">Baki game</th></tr></thead><tbody>${rows}</tbody></table>`;
     // waiting list: playing (green) + QUE in groups of 4
     const play = S.playing || [], que = S.queue || [];
-    let html = `<div class="grp play">SEDANG MAIN <i>${play.length}/${max}</i></div>` + table(play.length ? play.map(p => row(p, mem(p), p.at || mem(p).last)).join("") : `<tr><td colspan="4" class="empty">Belum ada yang main.</td></tr>`);
+    let html = `<div class="grp play">SEDANG MAIN <i>${play.length}/${max}</i></div>` + table(play.length ? play.map(p => row(p, mem(p), mem(p).last)).join("") : `<tr><td colspan="4" class="empty">Belum ada yang main.</td></tr>`);
     if (!que.length) html += `<div class="grp que">QUE</div><p class="empty">Queue kosong.</p>`;
     for (let i = 0; i < que.length; i += max) {
       const g = que.slice(i, i + max);
-      html += `<div class="grp que">QUE ${i / max + 1} <i>No. ${i + 1}–${i + g.length}</i></div>` + table(g.map(p => row(p, mem(p), p.at || mem(p).last)).join(""));
+      html += `<div class="grp que">QUE ${i / max + 1} <i>No. ${i + 1}–${i + g.length}</i></div>` + table(g.map(p => row(p, mem(p), mem(p).last)).join(""));
     }
     $("v-wait").innerHTML = html; $("v-wc").textContent = `${play.length} main · ${que.length} queue`;
     // hutang mabar: everyone with balance
