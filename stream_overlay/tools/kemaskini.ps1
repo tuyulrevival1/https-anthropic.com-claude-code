@@ -53,7 +53,7 @@ if ((Test-Path -LiteralPath $oldCfg) -and (Test-Path -LiteralPath $newCfg) -and 
 }
 
 Write-Host '  [3] Salin fail baru...'
-$skip = @('data\*', 'exports\frames\*', 'assets\ranks\pilihan\*', 'assets\seed_doc.js')
+$skip = @('data\*', 'exports\frames\*', 'assets\ranks\pilihan\*', 'assets\seed_doc.js', 'KEMASKINI.bat')  # KEMASKINI.bat sedang berjalan: jangan timpa
 $n = 0
 Get-ChildItem -LiteralPath $src.FullName -Recurse -File | ForEach-Object {
   $rel = $_.FullName.Substring($src.FullName.Length).TrimStart('\')
