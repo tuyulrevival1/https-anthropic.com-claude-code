@@ -66,10 +66,10 @@ Banner minimal: `http://127.0.0.1:8787/overlay.html?banner=minimal` · tanpa han
 | **Live** | Timer stream: Mula / Jeda / Reset. On/off queue, banner & lagu. Lagu ikut Spotify sendiri, atau taip tajuk › **Set** (**Auto** untuk ikut Spotify semula). |
 | **Win / Lose** | Tambah / tolak W/L manual, reset. |
 | **Game habis** | Menang / Kalah: tambah W/L **dan** tolak 1 game dari baki semua yang sedang main. Baki habis keluar, queue naik sendiri. |
-| **Sedang main / Queue** | Nama, **ID ML**, **tarikh order**, ★ = VVIP. **★ MVP** pada pemain yang sedang main = +1 terus dalam Senarai MVP (VVIP dapat free 1 game). Naik ↑, ke bawah ⤓, main sekarang ▶, **Tak muncul** (keluar queue, baki kekal; hilang kali ke-2 tolak 1 game, kali ke-3 tolak 2 game), keluarkan ✕. |
-| **Hutang Mabar** | Semua orang + baki. Isi **Nama**, **ID ML**, **Bilangan game**, **Tarikh order**, tanda **VVIP** kalau fast track › **Tambah**. Setiap orang: edit ID, waktu order, tambah / set baki (pilih **Biasa** atau **VVIP**), tanda VVIP, reset kiraan hilang. |
-| **Senarai MVP** | Tambah nama, **+ / −** MVP Win (VVIP dapat free 1 game sendiri). Cukup 5 / 15: **Claim ✓** (hijau) atau **Simpan** (belum claim). Tekan nombor lama untuk tukar claim. Peraturan MVP boleh diedit. |
-| **Slot Mainkan Akaun** | Jadual Hari / Nama / Tarikh, edit terus. |
+| **Sedang main / Queue** | Nama, **ID ML**, **tarikh order**, ★ = VVIP. **★ MVP** pada pemain yang sedang main = +1 terus dalam Senarai MVP (VVIP dapat free 1 game). Naik ↑, ke bawah ⤓, main sekarang ▶, **Tak muncul** (keluar queue, baki kekal; hilang kali ke-2 tolak 1 game, kali ke-3 tolak 2 game), keluarkan ✕. **Role**: tekan **EXP / JUNGLE / MID / GOLD / ROAM** (tekan lagi = buang); keluar di overlay dan halaman penonton. |
+| **Hutang Mabar** | Semua orang + baki. **Tarikh order ikut masa sekarang** bila tambah (kecuali diubah sendiri); Tambah game pada orang sedia ada = tarikh order dikemas kini. Isi **Nama**, **ID ML**, **Bilangan game**, **Tarikh order**, tanda **VVIP** kalau fast track › **Tambah**. Setiap orang: edit ID, waktu order, tambah / set baki (pilih **Biasa** atau **VVIP**), tanda VVIP, reset kiraan hilang. |
+| **Senarai MVP** | **Remark** setiap pemain (contoh skin yang dituntut). Tambah nama, **+ / −** MVP Win (VVIP dapat free 1 game sendiri). Cukup 5 / 15: **Claim ✓** (hijau) atau **Simpan** (belum claim). Tekan nombor lama untuk tukar claim. Peraturan MVP boleh diedit. |
+| **Slot Mainkan Akaun** | Jadual Hari / Nama / Tarikh. Tarikh guna **kalendar**; pilih tarikh = Hari diisi sendiri. |
 | **Peraturan** | Edit peraturan (baris `#` = tajuk) › **Simpan**. Penonton nampak terus. |
 | **Order masuk** | Semua order: SOCIABUZZ (automatik), MANUAL, TEST. |
 | **YouTube** | Penonton live YouTube pada bar LIVE (perlu API key, bahagian 9). |
