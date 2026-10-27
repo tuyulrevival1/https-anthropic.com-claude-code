@@ -93,3 +93,8 @@
 .app .hookst.warn { border-left-color: var(--c-gold); } .app .hookst.warn span { color: var(--c-gold); }
 .app .list.hooklog li { min-height: 0; padding: 4px 8px; } .app .list.hooklog .nm { font-size: 14px; }
 .app .list.hooklog li.bad .sub { color: #ff8a9b; }
+.app .songbox { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; background: #10070a; border-left: 3px solid var(--c-red); }
+.app .np-now { display: flex; flex-direction: column; gap: 2px; }
+.app .np-now span { font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--c-mut); }
+.app .np-now b { font-size: 16px; overflow-wrap: anywhere; }
+.app .songbox .row input { flex: 1 1 160px; }

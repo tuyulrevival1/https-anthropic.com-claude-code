@@ -46,6 +46,12 @@ ${embedded ? "" : `<header class="app-top">
     <div class="row toggles">
       <label class="tog"><input id="ap-showq" type="checkbox"><span>Queue</span></label>
       <label class="tog"><input id="ap-showb" type="checkbox"><span>Banner</span></label>
+      <label class="tog"><input id="ap-shows" type="checkbox"><span>Lagu</span></label>
+    </div>
+    <div class="songbox">
+      <div class="np-now"><span>♪ Sedang main</span><b id="ap-npauto">—</b></div>
+      <div class="row"><input id="ap-song" placeholder="Taip tajuk lagu (kosong = auto dari Spotify)" aria-label="Tajuk lagu manual">
+      <button class="btn" type="button" id="ap-songset">Set</button><button class="btn ghost" type="button" id="ap-songauto">Auto</button></div>
     </div>
   </section>
 
@@ -138,6 +144,15 @@ ${embedded ? "" : `<header class="app-top">
     twoStep($("ap-clearq"), () => { Q.clear(); toast("Queue dikosongkan"); });
     $("ap-showq").addEventListener("change", e => Q.patch({ showQueue: e.target.checked }));
     $("ap-showb").addEventListener("change", e => Q.patch({ showBanner: e.target.checked }));
+    const songPatch = o => Store.set(s => { s.song = Object.assign({ on: true, manual: "" }, s.song || {}, o); });
+    $("ap-shows").addEventListener("change", e => songPatch({ on: e.target.checked }));
+    $("ap-songset").addEventListener("click", () => { songPatch({ manual: $("ap-song").value.trim().slice(0, 120) }); toast("Lagu ditukar"); });
+    $("ap-song").addEventListener("keydown", e => { if (e.key === "Enter") $("ap-songset").click(); });
+    $("ap-songauto").addEventListener("click", () => { $("ap-song").value = ""; songPatch({ manual: "" }); toast("Lagu ikut Spotify"); });
+    if (O.NP) { O.NP.start(); setInterval(() => {
+      const st = Store.state.song || {}, a = O.NP.text;
+      $("ap-npauto").textContent = st.on === false ? "Lagu disorok" : st.manual ? `${st.manual}  (manual)` : a ? a : (Store.remote ? "Tiada lagu dikesan: buka Spotify di PC & mainkan lagu" : "Perlu START_OVERLAY.bat");
+    }, 1000); }
 
     // add / top up VIP
     const pad2 = n => String(n).padStart(2, "0");
@@ -190,7 +205,8 @@ ${embedded ? "" : `<header class="app-top">
       const who = p => `<span class="who"><span class="nm">${esc(mem(p).name)}</span><span class="sub">${mem(p).mlid ? `ID ${esc(mem(p).mlid)}` : "tiada ID"}${p.at ? ` · order ${fmtDate(p.at)}` : ""}</span></span>`;
       $("ap-wins").textContent = s.wins; $("ap-losses").textContent = s.losses;
       $("ap-streak").textContent = s.streak >= 2 ? `Win streak ${s.streak}` : s.streak <= -2 ? `Lose ${-s.streak} berturut` : "";
-      $("ap-showq").checked = !!s.showQueue; $("ap-showb").checked = !!s.showBanner;
+      $("ap-showq").checked = !!s.showQueue; $("ap-showb").checked = !!s.showBanner; $("ap-shows").checked = !s.song || s.song.on !== false;
+      if (document.activeElement !== $("ap-song")) $("ap-song").value = (s.song && s.song.manual) || "";
       $("ap-pc").textContent = `${s.playing.length}/${max}`; $("ap-qc").textContent = s.queue.length;
       $("ap-play").innerHTML = s.playing.length ? s.playing.map(p => `<li>${who(p)}<span class="bal">${mem(p).bal} game</span>
 <button class="btn sq" data-a="b-" data-k="${esc(p.key)}" aria-label="Tolak baki">−</button><button class="btn sq" data-a="b+" data-k="${esc(p.key)}" aria-label="Tambah baki">+</button><button class="btn sq" data-a="rm" data-id="${p.id}" aria-label="Keluarkan">✕</button></li>`).join("")
@@ -224,8 +240,7 @@ ${inLine(k) ? `<span class="tag">${s.playing.some(p => p.key === k) ? "MAIN" : "
     render(Store.state); Store.on(render);
     Store.on((s, prev) => {
       const a = (s.orders || [])[0], b = prev && (prev.orders || [])[0];
-      if (a && (!b || a.rx !== b.rx) && a.src !== "manual") if (a && a.src === "sim") return;
-      toast(a.src === "test" ? "Test Sociabuzz diterima ✓" : `Order Sociabuzz: ${a.name} +${a.games} game`);
+      if (a && (!b || a.rx !== b.rx) && a.src !== "manual" && a.src !== "sim") toast(a.src === "test" ? "Test Sociabuzz diterima ✓" : `Order Sociabuzz: ${a.name} +${a.games} game`);
     });
 
     /* ---------- YouTube viewers ---------- */

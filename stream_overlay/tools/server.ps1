@@ -100,6 +100,43 @@ $appUrl = "http://127.0.0.1:$port/control.html"
 try { Start-Process 'msedge.exe' -ArgumentList "--app=$appUrl" } catch { try { Start-Process $appUrl } catch { } }
 
 $fails = 0; $lockUntil = [DateTime]::MinValue
+
+# ---------- lagu sedang dimainkan (Spotify / IndoFinity guna Spotify) ----------
+# 1) Windows media session (tunjuk lagu walaupun Spotify diminimize), 2) tajuk tetingkap Spotify "Artis - Lagu"
+$npText = ''; $npAt = [DateTime]::MinValue; $npWinRT = $null
+try {
+  Add-Type -AssemblyName System.Runtime.WindowsRuntime
+  $npAsTask = ([System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1' })[0]
+  [void][Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager, Windows.Media.Control, ContentType = WindowsRuntime]
+  [void][Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties, Windows.Media.Control, ContentType = WindowsRuntime]
+  $npWinRT = $true
+} catch { $npWinRT = $false }
+function NpAwait($op, [Type]$t) {
+  $task = $npAsTask.MakeGenericMethod($t).Invoke($null, @($op))
+  if ($task.Wait(1500)) { return $task.Result } else { return $null }
+}
+function Get-NowPlaying {
+  $t = ''
+  if ($npWinRT) {
+    try {
+      if (-not $script:npMgr) { $script:npMgr = NpAwait ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]) }
+      if ($script:npMgr) {
+        $ses = @($script:npMgr.GetSessions()) | Where-Object { $_.SourceAppUserModelId -match 'spotify' } | Select-Object -First 1
+        if ($ses -and [string]$ses.GetPlaybackInfo().PlaybackStatus -eq 'Playing') {
+          $pr = NpAwait ($ses.TryGetMediaPropertiesAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties])
+          if ($pr -and $pr.Title) { $t = $pr.Title; if ($pr.Artist) { $t = $pr.Artist + ' - ' + $pr.Title } }
+        }
+      }
+    } catch { }
+  }
+  if (-not $t) {
+    try {
+      $w = Get-Process -Name Spotify -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -and $_.MainWindowTitle -notmatch '^Spotify' -and $_.MainWindowTitle -ne 'Drag' } | Select-Object -First 1
+      if ($w) { $t = $w.MainWindowTitle }
+    } catch { }
+  }
+  return $t
+}
 $hookHits = New-Object System.Collections.ArrayList   # 15 cubaan webhook terakhir (untuk App > Status webhook)
 $fwdHeaders = @('x-forwarded-for', 'cf-connecting-ip', 'x-forwarded-host', 'forwarded', 'x-real-ip', 'tailscale-funnel-request')
 
@@ -202,6 +239,10 @@ while ($true) {
           Write-Host ("  Order baru diterima ({0})" -f (Get-Date -Format 'h:mm tt')) -ForegroundColor Green
           $body = ToBytes 'OK'   # isi 'Webhook HTTP Test Response' di Sociabuzz dengan: OK
         }
+      } elseif ($path -eq 'api/nowplaying') {
+        $type = 'application/json'
+        if (((Get-Date) - $npAt).TotalSeconds -ge 2.5) { $npText = Get-NowPlaying; $npAt = Get-Date }
+        $body = ToBytes ('{"t":' + (JsonStr $npText) + '}')
       } elseif ($path -eq 'api/hooklog') {
         $type = 'application/json'
         if (-not $okPin) { $status = '401 Unauthorized'; $body = ToBytes '[]' }

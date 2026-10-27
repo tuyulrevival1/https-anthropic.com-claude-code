@@ -39,7 +39,7 @@
   const defaults = () => ({
     wins: CFG.defaults.wins, losses: CFG.defaults.losses, streak: 0,
     showQueue: true, showBanner: true, playing: [], queue: [], members: {},
-    live: { running: false, start: 0, acc: 0 }, yt: { viewers: null, at: 0 }, rev: 0, updated: 0
+    live: { running: false, start: 0, acc: 0 }, yt: { viewers: null, at: 0 }, song: { on: true, manual: "" }, rev: 0, updated: 0
   });
   // upgrade older saves (queue entries with name/games) to members + balance
   function normalize(s) {
@@ -47,6 +47,7 @@
     s.orders = s.orders || [];
     s.live = Object.assign({ running: false, start: 0, acc: 0 }, s.live || {});
     s.yt = Object.assign({ viewers: null, at: 0 }, s.yt || {});
+    s.song = Object.assign({ on: true, manual: "" }, s.song || {});
     const fix = e => {
       if (e.key) return e;
       const k = keyOf(e.name); if (!k) return null;
@@ -230,6 +231,14 @@
       });
     }).catch(() => {}).finally(() => { ordersBusy = false; });
   }
+
+  /* ---------- song now playing (server reads Spotify on the PC) ---------- */
+  const NP = { text: "", started: false, start() {
+    if (this.started) return; this.started = true;
+    const tick = () => { if (!Store.remote) return; fetch("api/nowplaying", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(j => { if (j && typeof j.t === "string") NP.text = j.t.trim().slice(0, 120); }).catch(() => {}); };
+    setInterval(tick, 3000); setTimeout(tick, 900);
+  } };
+  const songText = st => !st.song || st.song.on === false ? "" : String(st.song.manual || NP.text || "").trim();
 
   const fmtTime = ms => { const x = Math.floor(ms / 1000), h = Math.floor(x / 3600), m = Math.floor(x / 60) % 60, sec = x % 60; return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`; };
 
@@ -501,12 +510,15 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
     // band under the facecam: LIVE · stream timer · clock · YouTube viewers
     // [● LIVE 01:23:45]  (live duration)   ·   [clock 2:04 PM]  (time now)   ·   [YouTube viewers]
     const band = el("div", "ov-band", `<span class="sweep"></span><span class="live"><span class="dot"></span><span>LIVE</span><b class="timer" hidden>00:00:00</b></span>
+<span class="itm np" hidden><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="currentColor" stroke-width="2.6"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="17" cy="16" r="3" fill="currentColor"/></svg><span class="npw"><b class="npt"></b></span></span>
 <span class="itm clock"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg><b>--:--</b><small></small></span>
 <span class="itm yt" hidden><svg viewBox="0 0 24 24"><rect x="1" y="5" width="22" height="14" rx="4" fill="#ff0000"/><path d="M10 9l5 3-5 3z" fill="#fff"/></svg><b></b></span>`);
     band.style.top = L.band + "px"; if (L.band != null) stage.appendChild(band);
     const clockB = band.querySelector(".clock b"), clockAp = band.querySelector(".clock small"), timerEl = band.querySelector(".timer"), timerTxt = timerEl;
     const ytEl = band.querySelector(".yt"), ytTxt = ytEl.querySelector("b");
-    let lastClock = "", lastTimer = "", lastYt = "";
+    const npEl = band.querySelector(".np"), npW = band.querySelector(".npw"), npT = band.querySelector(".npt");
+    let lastClock = "", lastTimer = "", lastYt = "", lastNp = null;
+    NP.start();
 
     // caption under the handcam border
     for (const t of L.tags) {
@@ -583,6 +595,14 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
       const fresh = st.yt && st.yt.viewers != null && nowMs - (st.yt.at || 0) < 180000;
       const yv = fresh ? Number(st.yt.viewers).toLocaleString("en-US") : "";
       if (yv !== lastYt) { ytTxt.textContent = yv; ytEl.hidden = !yv; lastYt = yv; }
+      const np = songText(st);
+      if (np !== lastNp) {
+        lastNp = np; npT.textContent = np; npEl.hidden = !np; npEl.classList.remove("scroll");
+        if (np) requestAnimationFrame(() => {
+          const d = npT.scrollWidth - npW.clientWidth;
+          if (d > 4) { npEl.style.setProperty("--np-d", -(d + 12) + "px"); npEl.style.setProperty("--np-dur", Math.max(6, d / 22 + 4).toFixed(1) + "s"); npEl.classList.add("scroll"); }
+        });
+      }
     });
 
     // automation: start the stream timer when OBS starts streaming (browser source needs
@@ -624,5 +644,5 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
 
   requestAnimationFrame(loop);
   const util = { el, esc, clamp, seg, eOut, eBack, frac, rnd, TAU, fill, priceHL, uid, tickers, now };
-  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util, keyOf, liveElapsed, fmtTime, parseOrder };
+  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util, keyOf, liveElapsed, fmtTime, parseOrder, NP, songText };
 })();

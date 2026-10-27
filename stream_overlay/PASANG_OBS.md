@@ -43,6 +43,7 @@ Susunan skrin (atas ke bawah): facecam › bar LIVE › gameplay › banner › 
 
 **Bar LIVE** di bawah facecam:
 - **● LIVE 01:23:45** = berapa lama live sudah berjalan (timer stream)
+- **♪ Artis - Lagu** = lagu yang sedang dimainkan Spotify di PC (IndoFinity pun guna Spotify). Tajuk panjang bergerak sendiri.
 - **🕒 9:41 PM** = jam sekarang (format 12 jam)
 - **▶ 1,284** = penonton YouTube (kalau diset)
 
@@ -60,7 +61,7 @@ Banner minimal: `http://127.0.0.1:8787/overlay.html?banner=minimal` · tanpa han
 
 | Bahagian | Fungsi |
 |---|---|
-| **Live** | Timer stream: Mula / Jeda / Reset. On/off queue & banner. |
+| **Live** | Timer stream: Mula / Jeda / Reset. On/off queue, banner & lagu. Lagu ikut Spotify sendiri, atau taip tajuk › **Set** (**Auto** untuk ikut Spotify semula). |
 | **Win / Lose** | Tambah / tolak W/L manual, reset. |
 | **Game habis** | Menang / Kalah: tambah W/L **dan** tolak 1 game dari baki semua yang sedang main. Baki habis keluar, queue naik sendiri. |
 | **Sedang main / Queue** | Nama, **ID ML**, **tarikh order**. Naikkan, main sekarang, keluarkan. |
