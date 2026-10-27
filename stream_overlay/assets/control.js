@@ -95,6 +95,10 @@ ${embedded ? "" : `<header class="app-top">
     <h3>Order masuk <span id="ap-oc"></span></h3>
     <ol class="list" id="ap-orders"></ol>
     <p class="muted">Order Sociabuzz masuk sendiri ke sini dan ke queue. Pembeli perlu tulis ID ML dalam mesej, contoh <b>ID 123456789 (1234) 3 game</b>.</p>
+    <div class="hookst" id="ap-hookst"><b>Status webhook</b><span id="ap-hooklast">Masuk dengan PIN / buka START_OVERLAY.bat</span></div>
+    <ol class="list hooklog" id="ap-hooklog"></ol>
+    <div class="row"><button class="btn gold" type="button" id="ap-simorder">Simulasi order</button><button class="btn" type="button" id="ap-testalert">Test alert</button></div>
+    <p class="muted"><b>Simulasi order</b> hantar order palsu (Test SYNO, ID 123456789 (1234), RM10 = 3 game) melalui webhook yang sama dengan Sociabuzz: masuk queue + alert di overlay. Padam VIP "Test SYNO" lepas test. <b>Test alert</b> cuma tunjuk alert di overlay.</p>
   </section>
 
   <section class="card yt">
@@ -196,7 +200,7 @@ ${embedded ? "" : `<header class="app-top">
         : `<li class="empty">Queue kosong.</li>`;
       const ords = (s.orders || []).slice(0, 40);
       $("ap-oc").textContent = ords.length ? `${ords.length}` : "";
-      const srcTag = o => o.src === "sociabuzz" ? `<span class="tag sb">SOCIABUZZ</span>` : o.src === "test" ? `<span class="tag test">TEST</span>` : `<span class="tag man">MANUAL</span>`;
+      const srcTag = o => o.src === "sociabuzz" ? `<span class="tag sb">SOCIABUZZ</span>` : o.src === "test" ? `<span class="tag test">TEST</span>` : o.src === "sim" ? `<span class="tag test">ALERT</span>` : `<span class="tag man">MANUAL</span>`;
       $("ap-orders").innerHTML = ords.length ? ords.map(o => `<li class="${o.warn ? "warn" : ""}">${srcTag(o)}<span class="who"><span class="nm">${esc(o.name)}</span><span class="sub">${o.mlid ? `ID ${esc(o.mlid)} · ` : "tiada ID · "}${fmtDate(o.at)}${o.amount ? ` · ${esc(o.cur || "")} ${o.amount}` : ""}${o.warn ? ` · ${esc(o.warn)}` : ""}</span></span><span class="bal">${o.games ? `+${o.games} game` : "—"}</span></li>`).join("")
         : `<li class="empty">Belum ada order.</li>`;
       // don't wipe what is being typed in the VIP list
@@ -220,7 +224,8 @@ ${inLine(k) ? `<span class="tag">${s.playing.some(p => p.key === k) ? "MAIN" : "
     render(Store.state); Store.on(render);
     Store.on((s, prev) => {
       const a = (s.orders || [])[0], b = prev && (prev.orders || [])[0];
-      if (a && (!b || a.rx !== b.rx) && a.src !== "manual") toast(a.src === "test" ? "Test Sociabuzz diterima ✓" : `Order Sociabuzz: ${a.name} +${a.games} game`);
+      if (a && (!b || a.rx !== b.rx) && a.src !== "manual") if (a && a.src === "sim") return;
+      toast(a.src === "test" ? "Test Sociabuzz diterima ✓" : `Order Sociabuzz: ${a.name} +${a.games} game`);
     });
 
     /* ---------- YouTube viewers ---------- */
@@ -265,9 +270,44 @@ ${inLine(k) ? `<span class="tag">${s.playing.some(p => p.key === k) ? "MAIN" : "
       auth.className = "chip " + (a.ok ? "ok" : "warn");
       Store.canWrite = !!a.ok;
       pinbar.hidden = !!a.ok;
-      renderLinks(a);
+      lastAuth = a;
+      renderLinks(a); hookTick();
       return a;
     }).catch(() => null);
+
+    /* ---------- webhook test & status ---------- */
+    let lastAuth = null;
+    const hookPath = () => { const m = String(lastAuth && lastAuth.hookUrl || "").match(/\/api\/order-hook\/[^/?#]+/); return m ? m[0].slice(1) : ""; };
+    const tm = ms => new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" });
+    const RES = { ok: ["OK ✓", "ok"], key: ["KUNCI SALAH: URL tak lengkap / salah salin", "bad"], get: ["dibuka dalam browser (GET) ✓", "ok"], empty: ["SAMPAI TAPI KOSONG", "bad"] };
+    function hookTick() {
+      if (!lastAuth || !lastAuth.ok) return;
+      fetch("api/hooklog", { headers: { "X-Pin": lsGet(PIN_KEY, "") }, cache: "no-store" }).then(r => r.ok ? r.json() : null).then(list => {
+        if (!Array.isArray(list)) { $("ap-hooklast").textContent = "Server lama: tutup tetingkap hitam & buka semula START_OVERLAY.bat"; return; }
+        const pub = lastAuth.publicUrl;
+        if (!list.length) {
+          $("ap-hooklast").textContent = pub ? "Belum ada apa-apa sampai sejak server dibuka." : "Link kekal belum aktif: Sociabuzz tak boleh sampai. Klik PASANG_LINK_KEKAL.bat.";
+          $("ap-hookst").className = "hookst warn"; $("ap-hooklog").innerHTML = ""; return;
+        }
+        const r0 = RES[list[0].r] || [list[0].r, ""];
+        $("ap-hooklast").textContent = `Terakhir ${tm(list[0].t)} · ${list[0].via} · ${r0[0]}`;
+        $("ap-hookst").className = "hookst " + (r0[1] === "ok" ? "ok" : "warn");
+        $("ap-hooklog").innerHTML = list.slice(0, 8).map(h => { const r = RES[h.r] || [h.r, ""]; return `<li class="${r[1]}"><span class="who"><span class="nm">${esc(tm(h.t))} · ${esc(h.via)}</span><span class="sub">${esc(r[0])} · ${h.n} bait${h.ua ? " · " + esc(h.ua) : ""}</span></span></li>`; }).join("");
+      }).catch(() => {});
+    }
+    setInterval(hookTick, 4000);
+    $("ap-simorder").addEventListener("click", () => {
+      const p = hookPath(); if (!p) { toast("Perlu server & PIN dulu"); return; }
+      const body = { id: "SIM-" + Date.now(), amount: 10, currency: "MYR", supporter: "Test SYNO", email_supporter: "test@syno.local", message: "ID 123456789 (1234) 3 game", created_at: new Date().toISOString() };
+      fetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+        .then(r => { toast(r.ok ? "Order palsu dihantar, tunggu 3 saat…" : "Server tolak (" + r.status + ")"); setTimeout(hookTick, 600); })
+        .catch(() => toast("Server tak jawab"));
+    });
+    $("ap-testalert").addEventListener("click", () => {
+      if (!Store.canWrite) { toast("Perlu PIN dulu"); return; }
+      Store.set(s => Q._log(s, { key: "", name: "Test Alert", mlid: "", games: 3, at: Date.now(), src: "sim" }));
+      toast("Alert dihantar ke overlay");
+    });
     window.addEventListener("ov-remote", e => {
       conn.textContent = e.detail ? "SERVER ✓" : "TANPA SERVER";
       conn.className = "chip " + (e.detail ? "ok" : "warn");

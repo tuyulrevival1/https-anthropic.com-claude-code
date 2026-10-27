@@ -87,3 +87,9 @@
 .app .list .tag.test { color: #8fc2ff; border-color: rgba(143,194,255,.5); }
 .app .list .tag.man { color: var(--c-mut); border-color: var(--c-line); }
 .app .list li.warn { outline: 1px solid rgba(255,207,74,.45); }
+.app .hookst { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; background: #10070a; border-left: 3px solid var(--c-mut); }
+.app .hookst b { font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--c-mut); }
+.app .hookst.ok { border-left-color: var(--c-win); } .app .hookst.ok span { color: var(--c-win); }
+.app .hookst.warn { border-left-color: var(--c-gold); } .app .hookst.warn span { color: var(--c-gold); }
+.app .list.hooklog li { min-height: 0; padding: 4px 8px; } .app .list.hooklog .nm { font-size: 14px; }
+.app .list.hooklog li.bad .sub { color: #ff8a9b; }

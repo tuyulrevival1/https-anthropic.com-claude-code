@@ -121,7 +121,24 @@ Perlu link kekal (bahagian 7) dulu.
 2. Hidupkan **Activate Webhook Integration**.
 3. **Webhook URL**: salin dari App › Link › **Sociabuzz Webhook URL** (contoh `https://synostore.xxxx.ts.net/api/order-hook/abc123…`).
 4. **Webhook Token**: tampal bahagian kunci (selepas `/order-hook/`). **Webhook HTTP Test Response**: `OK`.
-5. Tekan **Test Notification** › App › **Order masuk** keluar **TEST** = berjaya.
+5. Tekan **Test Notification** › App › **Order masuk** keluar **TEST** dan overlay tunjuk alert "TERIMA KASIH … TEST ✓" = berjaya.
+
+### Test langkah demi langkah (kalau tak jadi)
+
+Tengok kotak **Status webhook** dalam App › Order masuk. Ia tunjuk setiap kali sesuatu sampai ke webhook (dikemas kini tiap 4 saat).
+
+1. **Test sistem di PC**: tekan **Simulasi order**. Dalam 3 saat "Test SYNO +3 game" masuk queue dan alert keluar di overlay.
+   Tak jadi? Pastikan overlay atau App terbuka dan tetingkap hitam masih jalan. Tutup tetingkap hitam dan buka semula `START_OVERLAY.bat` (server baru perlu dibuka semula sekali).
+2. **Test link dari internet**: di phone, **matikan Wi-Fi** (guna data), buka Webhook URL dalam Chrome.
+   - Keluar `SYNO order hook OK` dan Status webhook tulis **internet · dibuka dalam browser ✓** = link kekal OK.
+   - Tak boleh buka = link kekal belum hidup: klik `PASANG_LINK_KEKAL.bat` semula (langkah [4] Funnel mesti **Enable**).
+3. **Test dari Sociabuzz**: tekan **Test Notification**.
+   - Status **internet · OK ✓** = Sociabuzz sampai. Order masuk keluar **TEST**.
+   - Status **KUNCI SALAH** = URL dalam Sociabuzz tak lengkap. Salin semula dengan butang ⧉ (jangan taip sendiri).
+   - **Tiada apa-apa muncul** = Sociabuzz tak hantar: semak **Activate Webhook Integration** hidup, tekan **Save** dulu, kemudian Test Notification.
+4. Semua OK? Padam VIP **Test SYNO** dalam VIP & baki.
+
+Tetingkap hitam juga tulis setiap webhook yang sampai (hijau = order, merah = kunci salah).
 
 Bila orang bayar:
 - Nama pembeli + **ID ML dari mesej** masuk ke VIP, baki ditambah, terus masuk queue, dan overlay tunjuk "TERIMA KASIH … +N GAME".
@@ -158,7 +175,7 @@ Boleh juga letak PNG sendiri: `epic.png`, `legend.png`, `mythic.png`, `honor.png
 | Overlay kosong dalam OBS | Tetingkap hitam masih buka? Properties Browser › **Refresh cache of current page**. |
 | App tulis **PERLU PIN** | Masukkan PIN dari tetingkap hitam (`data\admin_pin.txt`). |
 | Link kekal tak keluar | Klik `PASANG_LINK_KEKAL.bat` sekali lagi dan ikut langkah [1]–[4]. |
-| Order Sociabuzz tak masuk | Link kekal hidup? Webhook URL betul? Lihat `data\orders_log.txt`. Overlay atau app mesti terbuka. |
+| Order Sociabuzz tak masuk | Ikut **bahagian 8 › Test langkah demi langkah**. App › Order masuk › Status webhook tunjuk punca. |
 | Timer tak mula sendiri | Overlay › Properties › Page permissions › Read access to OBS status information. Atau tekan **Mula** dalam app. |
 | PC lag | Tambah `?bgfx=0` pada URL overlay. |
 | Ubah harga / teks | `assets\config.js` (Notepad) › save › Refresh overlay & app. |

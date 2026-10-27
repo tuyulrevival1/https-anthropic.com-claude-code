@@ -100,6 +100,7 @@ $appUrl = "http://127.0.0.1:$port/control.html"
 try { Start-Process 'msedge.exe' -ArgumentList "--app=$appUrl" } catch { try { Start-Process $appUrl } catch { } }
 
 $fails = 0; $lockUntil = [DateTime]::MinValue
+$hookHits = New-Object System.Collections.ArrayList   # 15 cubaan webhook terakhir (untuk App > Status webhook)
 $fwdHeaders = @('x-forwarded-for', 'cf-connecting-ip', 'x-forwarded-host', 'forwarded', 'x-real-ip', 'tailscale-funnel-request')
 
 while ($true) {
@@ -122,8 +123,29 @@ while ($true) {
     foreach ($h in $lines[1..($lines.Count - 1)]) { $ix = $h.IndexOf(':'); if ($ix -gt 0) { $hdr[$h.Substring(0, $ix).Trim().ToLower()] = $h.Substring($ix + 1).Trim() } }
     $len = 0; [void][int]::TryParse([string]$hdr['content-length'], [ref]$len); if ($len -gt 1048576) { $len = 1048576 }
     $bodyMs = New-Object System.IO.MemoryStream; $start = $hEnd + 4
-    if ($all.Length -gt $start) { $bodyMs.Write($all, $start, [Math]::Min($all.Length - $start, $len)) }
-    while ($bodyMs.Length -lt $len) { $n = $stream.Read($buf, 0, [Math]::Min($buf.Length, $len - $bodyMs.Length)); if ($n -le 0) { break }; $bodyMs.Write($buf, 0, $n) }
+    if (([string]$hdr['expect']) -match '100-continue' -and $all.Length -le $start) {
+      $cont = [System.Text.Encoding]::ASCII.GetBytes("HTTP/1.1 100 Continue`r`n`r`n"); $stream.Write($cont, 0, $cont.Length); $stream.Flush()
+    }
+    if (([string]$hdr['transfer-encoding']) -match 'chunked') {
+      # body dihantar dalam 'chunk' (tiada Content-Length): baca sampai chunk 0, kemudian cantum
+      $raw = New-Object System.IO.MemoryStream
+      if ($all.Length -gt $start) { $raw.Write($all, $start, $all.Length - $start) }
+      try {
+        while ($raw.Length -lt 1048576 -and -not $latin1.GetString($raw.ToArray()).EndsWith("0`r`n`r`n")) {
+          $n = $stream.Read($buf, 0, $buf.Length); if ($n -le 0) { break }; $raw.Write($buf, 0, $n)
+        }
+      } catch { }
+      $rb = $raw.ToArray(); $pos = 0
+      while ($pos -lt $rb.Length) {
+        $le = $latin1.GetString($rb, $pos, [Math]::Min(32, $rb.Length - $pos)).IndexOf("`r`n"); if ($le -lt 0) { break }
+        $sz = 0; try { $sz = [Convert]::ToInt32((($latin1.GetString($rb, $pos, $le)) -split ';')[0].Trim(), 16) } catch { break }
+        $pos += $le + 2; if ($sz -le 0) { break }
+        $bodyMs.Write($rb, $pos, [Math]::Min($sz, $rb.Length - $pos)); $pos += $sz + 2
+      }
+    } else {
+      if ($all.Length -gt $start) { $bodyMs.Write($all, $start, [Math]::Min($all.Length - $start, $len)) }
+      while ($bodyMs.Length -lt $len) { $n = $stream.Read($buf, 0, [Math]::Min($buf.Length, $len - $bodyMs.Length)); if ($n -le 0) { break }; $bodyMs.Write($buf, 0, $n) }
+    }
     $bodyBytes = $bodyMs.ToArray()
 
     # ---- who is calling? ----
@@ -159,6 +181,15 @@ while ($true) {
         if ($path -like 'api/order-hook/*') { $k = $path.Substring(15) }
         foreach ($hn in @('sb-webhook-token', 'x-sociabuzz-webhook-token', 'x-sociabuzz-token', 'x-webhook-token')) { if (-not $k -and $hdr[$hn]) { $k = $hdr[$hn] } }
         if (-not $k -and ([string]$hdr['authorization']) -match '^Bearer\s+(.+)$') { $k = $matches[1] }
+        $via = 'Wi-Fi / Tailscale'
+        if ($hdr.ContainsKey('tailscale-funnel-request') -or $hdr.ContainsKey('x-forwarded-for')) { $via = 'internet' } elseif ($isLocal) { $via = 'PC ini' }
+        $res = 'ok'
+        if ($method -ne 'POST') { $res = 'get' } elseif ($k -ne $hookKey) { $res = 'key' } elseif ($bodyBytes.Length -eq 0) { $res = 'empty' }
+        $ua = ([string]$hdr['user-agent']); if ($ua.Length -gt 40) { $ua = $ua.Substring(0, 40) }
+        [void]$hookHits.Insert(0, ('{"t":' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() + ',"r":' + (JsonStr $res) + ',"via":' + (JsonStr $via) + ',"n":' + $bodyBytes.Length + ',"ua":' + (JsonStr $ua) + '}'))
+        while ($hookHits.Count -gt 15) { $hookHits.RemoveAt(15) }
+        if ($res -eq 'key') { Write-Host ("  Webhook ditolak: kunci salah ({0}, {1}). Salin semula Webhook URL dari App." -f $via, (Get-Date -Format 'h:mm tt')) -ForegroundColor Red }
+        elseif ($res -eq 'get') { Write-Host ("  Webhook dibuka dalam browser ({0}) - link OK" -f $via) -ForegroundColor Cyan }
         if ($method -ne 'POST') { $body = ToBytes 'SYNO order hook OK' }
         elseif ($k -ne $hookKey) { $status = '403 Forbidden'; $body = ToBytes 'Kunci salah' }
         else {
@@ -171,6 +202,10 @@ while ($true) {
           Write-Host ("  Order baru diterima ({0})" -f (Get-Date -Format 'h:mm tt')) -ForegroundColor Green
           $body = ToBytes 'OK'   # isi 'Webhook HTTP Test Response' di Sociabuzz dengan: OK
         }
+      } elseif ($path -eq 'api/hooklog') {
+        $type = 'application/json'
+        if (-not $okPin) { $status = '401 Unauthorized'; $body = ToBytes '[]' }
+        else { $body = ToBytes ('[' + ($hookHits -join ',') + ']') }
       } elseif ($path -eq 'api/orders') {
         $type = 'application/json'
         if (-not $okPin) { $status = '401 Unauthorized'; $body = ToBytes '[]' }

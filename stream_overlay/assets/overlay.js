@@ -548,10 +548,11 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
       if (api.banner) api.banner.el.style.display = s.showBanner ? "" : "none";
       // thank-you pop when a Sociabuzz order lands
       const o = (s.orders || [])[0], po = prev && (prev.orders || [])[0];
-      if (prev && o && o.src === "sociabuzz" && o.games > 0 && (!po || o.rx !== po.rx)) {
+      const pop = o && ((o.src === "sociabuzz" && o.games > 0) || o.src === "sim" || o.src === "test");
+      if (prev && pop && (!po || o.rx !== po.rx)) {
         const qc = panels.find(p => p.def.type === "queue");
         if (qc) {
-          const al = el("div", "q-alert", `<b>TERIMA KASIH</b><span>${esc(o.name)}</span><i>+${o.games} GAME</i>`);
+          const al = el("div", "q-alert", `<b>TERIMA KASIH</b><span>${esc(o.name)}</span><i>${o.src === "test" ? "TEST ✓" : `+${o.games} GAME`}</i>`);
           qc.e.parentNode.appendChild(al);
           Object.assign(al.style, { left: qc.def.x + "px", top: (qc.def.y - 26) + "px", width: qc.def.w + "px" });
           setTimeout(() => al.remove(), 6000);
