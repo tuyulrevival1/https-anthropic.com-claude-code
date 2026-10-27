@@ -149,3 +149,4 @@
 .app .gsel { font: 600 13px/1 "OV Raj", Rajdhani, sans-serif; color: var(--c-fg); background: #0a0405; border: 1px solid var(--c-line); padding: 6px 4px; border-radius: 0; }
 .app .gsel:focus-visible { outline: 2px solid var(--c-gold); }
 .app .list.members, .app .list.mvplist, .app .list#ap-queue { border-bottom: 1px solid var(--c-line); }
+.app .list li.empty.imp { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; }

@@ -230,6 +230,7 @@ ${embedded ? "" : `<header class="app-top">
         else { b.dataset.armed = "1"; b.textContent = "Pasti?"; setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = "✕"; } }, 2500); }
       }
       else if (a === "akdel") Q.akaunDel(+b.dataset.i);
+      else if (a === "import") doImport();
       else if (a === "addn" || a === "setn") {
         const inp = b.closest("li").querySelector(".gin"), n = parseInt(inp.value, 10);
         if (isNaN(n)) { inp.focus(); toast("Taip nombor dulu"); return; }
@@ -296,7 +297,7 @@ ${inLine(k) ? `<span class="tag">${s.playing.some(p => p.key === k) ? "MAIN" : "
 <button class="btn" data-a="addn" data-k="${esc(k)}">Tambah</button><button class="btn ghost" data-a="setn" data-k="${esc(k)}">Set</button>
 <button class="btn sq ghost" data-a="del" data-k="${esc(k)}" aria-label="Padam ${esc(m.name)}">✕</button></div>
 ${m.miss ? `<div class="mctl"><span class="muted">Hilang ${m.miss} kali</span><button class="btn small ghost" data-a="miss0" data-k="${esc(k)}">Reset hilang</button></div>` : ""}</li>`).join("")
-          : `<li class="empty">${q ? "Tiada nama sepadan." : "Belum ada rekod."}</li>`;
+          : (q ? `<li class="empty">Tiada nama sepadan.</li>` : `<li class="empty imp"><span>Belum ada rekod.${s.docImported ? "" : " Data lama dari dokumen belum masuk."}</span>${s.docImported ? "" : `<button class="btn gold" type="button" data-a="import">Import data doc lama</button><small class="muted">Pilih fail <b>seed_doc.js</b> (dari phone atau PC).</small>`}</li>`);
       }
       // MVP
       const mvBox = $("ap-mvp");
