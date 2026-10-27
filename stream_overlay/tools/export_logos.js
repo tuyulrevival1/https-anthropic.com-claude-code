@@ -8,10 +8,8 @@ const jobs = [
   { q: "kind=mascot&pose=game", w: 1024, h: 1024, file: "logo_mascot.png" },
   { q: "kind=mascot&pose=win", w: 1024, h: 1024, file: "logo_mascot_win.png" },
   { q: "kind=mascot&pose=wink", w: 1024, h: 1024, file: "logo_mascot_wink.png" },
-  { q: "kind=mascot&pose=cheer", w: 1024, h: 1024, file: "logo_mascot_cheer.png" },
   { q: "kind=avatar&pose=game", w: 1024, h: 1024, file: "profile_picture.png" },
   { q: "kind=wordmark", w: 1500, h: 1080, file: "logo_wordmark.png" },
-  { q: "kind=grunge", w: 1600, h: 632, file: "logo_wordmark_grunge.png" }
 ];
 (async () => {
   const b = await chromium.launch();

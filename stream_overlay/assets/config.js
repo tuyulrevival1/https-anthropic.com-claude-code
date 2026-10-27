@@ -4,10 +4,8 @@
 */
 window.OVERLAY_CONFIG = {
   storeName: "SYNOSTORE",
-  status: "SOLO PUSH MMR",
-  server: "SERVER INDO",
   device: "REDMAGIC ASTRA 2",
-  theme: "red",                 // red | violet
+  theme: "red",
 
   // Harga Mabar VIP (keluar dalam kad queue & banner)
   mabar: {
@@ -17,7 +15,6 @@ window.OVERLAY_CONFIG = {
       { qty: "3 GAME", price: "RM10", games: 3 },
       { qty: "IMMORTAL", price: "RM6", games: 1, note: "/ GAME" }
     ],
-    joinHint: 'Komen "VIP" + ID untuk masuk queue',
     maxPlaying: 4 // berapa orang main sekali (max 4, sebab party 5)
   },
 
@@ -27,12 +24,9 @@ window.OVERLAY_CONFIG = {
     { label: "Main akaun", price: "RM40" }
   ],
 
-  // Banner bawah. art: diamond | rank | mabar | link
+  // Banner bawah (gaya "power"). art: diamond | rank | mabar | album | link
   banner: {
     secondsPerMessage: 4.8,
-    // Letak PNG Chou KOF (latar telus) di assets/chou.png.
-    // scale = besarkan, x/y = anjak (px). Kalau fail tiada, logo bulan sabit keluar.
-    character: { src: "assets/chou.png", scale: 1.15, x: 0, y: 8 },
     messages: [
       { kicker: "TOPUP MLBB", main: "TOPUP DIAMOND MURAH", tags: ["LINK DI BIO"], art: "diamond", hook: "MURAH!" },
       { kicker: "SERVIS JOKI", main: "JOKI RANK MURAH", tags: ["& TERPERCAYA"], art: "rank", hook: "MURAH!" },
@@ -42,16 +36,14 @@ window.OVERLAY_CONFIG = {
     ]
   },
 
-  // Jenama / logo (banner gaya "scene" & logo)
+  // Jenama (banner gaya "minimal")
   brand: {
-    name: "SYNO",                 // teks logo grunge
-    monogram: "S",
     tagline: "SYNO STORE",        // teks babak jenama
     sub: "TOPUP · JOKI · MABAR VIP",
     badge: ["INFO LANJUT", "DI BIO"]
   },
 
-  // Banner gaya "scene" (minimal, macam rujukan SOLOZ)
+  // Banner gaya "minimal" (rentak macam rujukan SOLOZ)
   scene: {
     brandSeconds: 4,
     itemSeconds: 4,
@@ -77,5 +69,5 @@ window.OVERLAY_CONFIG = {
   },
 
   // Nilai permulaan (boleh ubah live dalam control.html)
-  defaults: { wins: 4, losses: 2, mmr: 8708, globalRank: 16 }
+  defaults: { wins: 0, losses: 0 }
 };

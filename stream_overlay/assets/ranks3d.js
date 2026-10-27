@@ -7,7 +7,39 @@
 (function () {
   "use strict";
   const O = window.ChouOverlay, CFG = O.CFG;
-  const { seg, eOut, eBack, frac, TAU } = O.util;
+  const { seg, eOut, eBack, frac, TAU, uid } = O.util;
+
+  /* drawn stand-in badges, used only while the original PNG is missing */
+  const TIERS = [
+    { n: "EPIC", a: "#45f0bf", b: "#0a6b56", w: 0, icon: "chev" },
+    { n: "LEGEND", a: "#ffd76a", b: "#b45f00", w: 1, icon: "star" },
+    { n: "MYTHIC", a: "#c995ff", b: "#4a149c", w: 2, icon: "gem" },
+    { n: "HONOR", a: "#8fc2ff", b: "#1b3f8f", w: 2, icon: "star" },
+    { n: "GLORY", a: "#ff96d4", b: "#8f155e", w: 2, icon: "crown" },
+    { n: "IMMORTAL", a: "#ff5874", b: "#5e0016", w: 3, icon: "flame" }
+  ];
+  function badge(T, u, i) {
+    const g = `${u}t${i}`;
+    const wingsL = T.w === 0 ? "" : T.w === 1 ? "M86 74 L52 62 L66 82 L46 92 L86 104Z"
+      : T.w === 2 ? "M86 68 L36 48 L56 72 L28 82 L58 96 L38 108 L86 112Z"
+      : "M86 64 L24 36 L48 64 L16 74 L50 90 L24 104 L58 112 L42 124 L88 118Z";
+    const ic = {
+      chev: `<path d="M114 98 L134 84 L154 98 M114 114 L134 100 L154 114" fill="none" stroke="#fff" stroke-width="7" stroke-linejoin="round"/>`,
+      star: `<polygon points="134,78 140.5,94 158,95 144.5,106 149,123 134,113.5 119,123 123.5,106 110,95 127.5,94" fill="#fff"/>`,
+      gem: `<polygon points="134,78 154,100 134,124 114,100" fill="#fff"/><polygon points="134,78 154,100 134,100" fill="#ead6ff"/><polygon points="114,100 134,100 134,124" fill="#d2b2ff"/>`,
+      crown: `<polygon points="114,116 110,88 124,100 134,82 144,100 158,88 154,116" fill="#ffcf4a" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>`,
+      flame: `<path d="M134 74 C146 88 160 96 154 112 C150 124 140 128 134 128 C126 128 116 122 114 110 C112 98 122 94 124 84 C130 92 128 100 134 102 C136 94 132 84 134 74Z" fill="#ffcf4a" stroke="#fff" stroke-width="3"/><path d="M134 104 C140 110 142 116 138 121 C134 124 128 121 129 115 C130 110 134 109 134 104Z" fill="#ff2350"/>`
+    }[T.icon];
+    return `<g class="tier" data-i="${i}" opacity="0">
+<defs><linearGradient id="${g}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${T.a}"/><stop offset="1" stop-color="${T.b}"/></linearGradient></defs>
+${wingsL ? `<path d="${wingsL}" fill="${T.a}" stroke="#fff" stroke-width="3" stroke-linejoin="round"/><path d="${wingsL}" transform="translate(268 0) scale(-1 1)" fill="${T.a}" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>` : ""}
+<path d="M134 46 L176 60 V102 C176 132 158 150 134 162 C110 150 92 132 92 102 V60 Z" fill="url(#${g})" stroke="#fff" stroke-width="5" stroke-linejoin="round"/>
+<path d="M134 58 L165 68 V102 C165 124 152 138 134 148 C116 138 103 124 103 102 V68 Z" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="2"/>
+${ic}
+<text x="134" y="186" text-anchor="middle" style="font-family:var(--f-disp);font-size:25px;letter-spacing:1px;paint-order:stroke" stroke="#07050c" stroke-width="7" stroke-linejoin="round" fill="${i === 4 ? "#ffcf4a" : "#f3eee8"}">${T.n}</text></g>`;
+  }
+  const rankBadgeSVG = i => `<svg viewBox="34 4 200 200" style="width:100%;height:100%;overflow:visible">${badge(TIERS[i], uid("rb"), i).replace('opacity="0"', 'opacity="1"').replace(/<text[^>]*>[^<]*<\/text>/, "")}</svg>`;
+
   const DEF = [
     { name: "EPIC", img: "assets/ranks/epic.png", glow: "#45f0bf" },
     { name: "LEGEND", img: "assets/ranks/legend.png", glow: "#ffcf4a" },
@@ -19,7 +51,7 @@
   const tiers = () => (CFG.ranks && CFG.ranks.tiers) || DEF;
   const DEPTH = 6; // back layers that give the coin its thickness
   const startOf = i => .3 + i * .45;          // fast pace: a new rank every 0.45 s
-  const FB = { EPIC: 0, LEGEND: 1, MYTHIC: 2, HONOR: 2, GLORY: 3, IMMORTAL: 4 }; // fallback badge per tier
+  const FB = { EPIC: 0, LEGEND: 1, MYTHIC: 2, HONOR: 3, GLORY: 4, IMMORTAL: 5 }; // stand-in badge per tier
 
   function html() {
     const T = tiers();
@@ -42,7 +74,7 @@ ${T.map((t, i) => `<div class="rk-tier" data-i="${i}" style="--g:${t.glow}">
       const i = +tier.dataset.i, imgs = [...tier.querySelectorAll("img")];
       const fallback = () => {
         if (tier.dataset.fb) return; tier.dataset.fb = "1";
-        const nm = (tiers()[i] || {}).name, svg = O.rankBadgeSVG ? O.rankBadgeSVG(FB[nm] != null ? FB[nm] : Math.min(i, 4)) : "";
+        const nm = (tiers()[i] || {}).name, svg = rankBadgeSVG(FB[nm] != null ? FB[nm] : Math.min(i, TIERS.length - 1));
         tier.querySelectorAll(".rk-l").forEach(l => { l.innerHTML = svg; });
       };
       imgs[0].addEventListener("error", fallback);

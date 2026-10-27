@@ -19,7 +19,7 @@ Semua dalam HTML: tak perlu edit video, tak perlu install Python.
 | `obs-overlay.html` | Overlay untuk OBS "Local file" (tanpa server) |
 | `assets/config.js` | **Ubah teks & harga di sini** |
 | `exports/banner_*.mp4` | Banner siap render (loop 24 s) |
-| `logos/` | Logo maskot (3 gaya), wordmark, gambar profil (PNG telus) |
+| `logos/` | Logo maskot (3 gaya), wordmark SYNO STORE, gambar profil (PNG telus) |
 | `data/` | Dibuat automatik: `state.txt` (queue, baki VIP, W/L) & `admin_pin.txt` |
 
 ## Layout
@@ -29,8 +29,8 @@ Koordinat penuh dalam [PASANG_OBS.md](PASANG_OBS.md). `&hand=0` buang handcam ·
 
 ## Banner
 
-- `power` (utama): panel logo dengan sinar berputar, maskot bertukar gaya dengan transisi lancar (main tablet / sorak / wink / GG), wordmark SYNO STORE 3D, teks metalik, lencana hook melantun, medallion krom dengan ikon diamond / rank 3D / VIP / album / link.
-- `slash`, `pro-crimson`, `scene-mascot` (gaya minimal SOLOZ): pilihan lain.
+- `power` (utama): panel logo dengan sinar berputar, maskot bertukar gaya dengan transisi lancar (main tablet / GG / wink), wordmark SYNO STORE 3D, teks metalik, lencana hook melantun, medallion krom dengan ikon diamond / rank 3D / VIP / album / link.
+- `minimal` (gaya SOLOZ): babak jenama › babak servis, maskot besar, teks kabur-pudar.
 
 Mesej, kicker, tag harga dan hook banner diubah dalam `config.js` › `banner.messages`.
 
@@ -48,7 +48,7 @@ Letak PNG asli dalam `assets/ranks/` (`epic`, `legend`, `mythic`, `honor`, `glor
 
 ```bash
 npm i playwright && npx playwright install chromium
-node tools/render_banner.js          # power, slash, pro-crimson
+node tools/render_banner.js          # power + minimal
 node tools/render_banner.js power    # satu gaya
 node tools/export_logos.js           # logos/*.png
 ```

@@ -96,7 +96,7 @@ Hanya ada satu layout. Gameplay 1080×720 (skrin tablet 3:2): kalau capture awak
 |---|---|
 | Biasa | `http://127.0.0.1:8787/overlay.html` |
 | Tanpa handcam | `…/overlay.html?hand=0` |
-| Banner lain | `…/overlay.html?banner=slash` (atau `pro-crimson`, `scene-mascot&accent=crimson`) |
+| Banner minimal | `…/overlay.html?banner=minimal` |
 
 ## 10. Ikon rank asli (joki)
 

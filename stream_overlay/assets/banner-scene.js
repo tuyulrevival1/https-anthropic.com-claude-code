@@ -1,40 +1,33 @@
-/* Minimal "scene" banner: a brand scene (accent wedges, kinetic text, logo,
-   tracking-in tagline, bio badge) then a services scene (big logo + clean
-   two-line text that blur-swaps, animated icon, Link in Bio pill with tap).
-   style: scene-emblem | scene-grunge | scene-mascot      accent: violet | crimson | lime | ice | gold */
+/* "minimal" banner: a brand scene (accent wedges, kinetic text, mascot, tracking-in
+   tagline, bio badge) then a services scene (big mascot + clean two-line text that
+   blur-swaps, premium icon, Link in Bio pill with tap).  accent: crimson (default) | gold */
 (function () {
   "use strict";
   const O = window.ChouOverlay, CFG = O.CFG;
-  const { el, esc, seg, eOut, eBack, frac, TAU, rnd, uid, tickers, now, artSVG, animArt } = O.util;
-  const ACCENTS = { violet: "#a66bff", crimson: "#ff2350", lime: "#b6ff3b", ice: "#52d8ff", gold: "#ffcf4a" };
+  const { el, esc, seg, eOut, eBack, frac, TAU, rnd, tickers, now } = O.util;
+  const ACCENTS = { crimson: "#ff2350", gold: "#ffcf4a" };
   const ease2 = t => t * t * (3 - 2 * t);
   const hl = s => esc(s).replace(/(RM\s?\d+)/g, "<em>$1</em>");
 
   const GRAIN = "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .09 0"/></filter><rect width="240" height="240" filter="url(#n)"/></svg>`);
 
-  function logoBlock(kind, accent, big) {
-    const L = O.logos;
-    if (kind === "grunge") return { html: L.grungeSVG(accent), anim: L.animGrunge };
-    if (kind === "mascot") return { html: O.mascot.svg(), anim: (svg, p, t) => O.mascot.anim(svg, t) };
-    return { html: L.emblemSVG(accent), anim: L.animEmblem };
-  }
+  const mascot = () => ({ html: O.mascot3d.svg(), anim: (svg, pose, t) => O.mascot3d.anim(svg, t, { pose }) });
+  const POSE = { diamond: "game", rank: "win", mabar: "wink", album: "game", link: "wink" };
 
   function mountSceneBanner(root, opts = {}) {
     O.Store.init();
-    const style = opts.style || "scene-emblem";
-    const logoKind = style.split("-")[1] || "emblem";
-    const accName = opts.accent || (CFG.scene && CFG.scene.accent) || "violet";
+    const accName = opts.accent || (CFG.scene && CFG.scene.accent) || "crimson";
     const accent = ACCENTS[accName] || accName;
     const SC = CFG.scene, items = SC.items, NI = items.length, DB = SC.brandSeconds, DI = SC.itemSeconds;
     const LOOP = DB + NI * DI;
-    const B = O.logos.brand(), BR = CFG.brand || {};
+    const BR = CFG.brand || {}, B = { tagline: BR.tagline || CFG.storeName };
     const badge = BR.badge || ["INFO LANJUT", "DI BIO"];
 
-    const bn = el("div", `bn bn-scene lg-${logoKind}`);
+    const bn = el("div", "bn bn-scene lg-mascot");
     bn.style.top = (opts.y || 0) + "px";
     bn.style.setProperty("--acc", accent);
     const kinRow = Array(6).fill(esc(B.tagline.replace(/\s+/g, ""))).join("");
-    const brandLogo = logoBlock(logoKind === "mascot" ? "mascot" : "emblem", accent), svcLogo = logoBlock(logoKind, accent);
+    const brandLogo = mascot(), svcLogo = mascot();
     bn.innerHTML = `<div class="bn-bg"></div><canvas class="sc-smoke" width="270" height="48"></canvas>
 <div class="sc-grain" style="background-image:url('${GRAIN}')"></div>
 <div class="sc-strip a"><div class="sc-kin">${Array.from({ length: 5 }, (_, i) => `<div class="r${i % 2}">${kinRow}</div>`).join("")}</div></div>
@@ -43,7 +36,7 @@
  <div class="sc-btxt"><div class="sc-track">${esc(B.tagline)}</div><div class="sc-sub">${esc(BR.sub || "")}</div></div></div>
 <div class="sc-badge"><span>${esc(badge[0] || "")}</span><span>${esc(badge[1] || "")}</span></div>
 <div class="sc-logo">${svcLogo.html}</div>
-${items.map(it => `<div class="sc-item"><div class="sc-ico">${it.icon === "rank" ? O.ranks.html() : artSVG(it.icon)}</div>
+${items.map(it => `<div class="sc-item"><div class="sc-ico">${it.icon === "rank" ? O.ranks.html() : O.powerIcons.svg(it.icon)}</div>
 <div class="sc-txt"><div class="sc-b">${esc(it.bold)}${it.pill ? `<span class="sc-pill">${esc(it.pill).replace(/(Bio)$/i, "<b>$1</b>")}<i class="sc-hand"><svg viewBox="0 0 24 28"><path d="M8 2.5c1.4 0 2.4 1 2.4 2.4v7.3l1-.3c1.2-.3 2.3.4 2.6 1.5l3.4-.3c1.6-.1 3 1.1 3 2.7v3.6c0 4-3 7.3-7 7.3h-2.3c-2.3 0-4.3-1.3-5.4-3.3L2.3 16c-.6-1.2 0-2.6 1.3-3 1-.3 2 .1 2.5 1l-.5-9.1C5.6 3.5 6.6 2.5 8 2.5z" fill="#fff" stroke="#07050c" stroke-width="1.6"/></svg></i></span>` : ""}</div>
 ${it.light ? `<div class="sc-l">${hl(it.light)}</div>` : ""}</div></div>`).join("")}
 <div class="sc-wiper"><i class="w1"></i><i class="w2"></i></div>
@@ -59,7 +52,6 @@ ${it.light ? `<div class="sc-l">${hl(it.light)}</div>` : ""}</div></div>`).join(
       e, ico: e.querySelector(".sc-ico"), svg: e.querySelector(".sc-ico > *"), b: e.querySelector(".sc-b"), l: e.querySelector(".sc-l"),
       pill: e.querySelector(".sc-pill"), hand: e.querySelector(".sc-hand"), it: items[i]
     }));
-    itemEls.forEach(x => { if (x.it.icon === "diamond") O.diamondPlus.add(x.svg); });
     const w1 = q(".sc-wiper .w1"), w2 = q(".sc-wiper .w2");
     const [ar, ag, ab] = [1, 3, 5].map(i => parseInt(accent.slice(i, i + 2), 16) || 160);
 
@@ -114,7 +106,7 @@ ${it.light ? `<div class="sc-l">${hl(it.light)}</div>` : ""}</div></div>`).join(
         const lp = seg(tl, .05, .9);
         q(".sc-blogo").style.opacity = Math.min(lp * 4, 1 - out).toFixed(3);
         q(".sc-blogo").style.transform = `scale(${(1 - out * .3).toFixed(3)})`;
-        brandLogo.anim(blogoSvg, tl - .05, t);
+        brandLogo.anim(blogoSvg, "game", t);
         const bp = seg(tl, .6, 1.1), bo = eOut(seg(tl, DB - .55, DB - .2));
         badgeEl.style.transform = `translateX(${((1 - eBack(bp)) * 260 + bo * 260).toFixed(1)}px) rotate(${(-4 + Math.sin(t * TAU / 1.6) * 1.5).toFixed(2)}deg)`;
         badgeEl.style.opacity = bp > 0 ? "1" : "0";
@@ -126,8 +118,10 @@ ${it.light ? `<div class="sc-l">${hl(it.light)}</div>` : ""}</div></div>`).join(
         logoEl.style.visibility = "visible";
         const le = eOut(seg(st, 0, .6)), lx = ease2(seg(st, NI * DI - .55, NI * DI - .15));
         logoEl.style.opacity = Math.min(le * 2, 1 - lx).toFixed(3);
-        logoEl.style.transform = `translateY(${((1 - le) * 18 - lx * 18).toFixed(1)}px) scale(${(.92 + .08 * le).toFixed(3)})`;
-        svcLogo.anim(logoSvg, st, t);
+        const ii = Math.min(NI - 1, Math.floor(st / DI)), iu = st - ii * DI;
+        const pop = ii > 0 && iu < .45 ? Math.sin(seg(iu, 0, .45) * Math.PI) : 0; // bounce when the pose changes
+        logoEl.style.transform = `translateY(${((1 - le) * 18 - lx * 18 - pop * 6).toFixed(1)}px) scale(${(.92 + .08 * le + pop * .05).toFixed(3)}, ${(.92 + .08 * le - pop * .03).toFixed(3)})`;
+        svcLogo.anim(logoSvg, POSE[items[ii].icon] || "game", t);
       } else logoEl.style.visibility = "hidden";
 
       itemEls.forEach((x, i) => {
@@ -143,8 +137,7 @@ ${it.light ? `<div class="sc-l">${hl(it.light)}</div>` : ""}</div></div>`).join(
         if (x.l) { const lp = eOut(seg(u, .55, 1.05)); x.l.style.opacity = Math.min(lp, 1 - o).toFixed(3); x.l.style.transform = `translateX(${((1 - lp) * -14).toFixed(1)}px)`; }
         const ip = seg(u, .3, .75);
         x.ico.style.transform = `scale(${(.3 + .7 * eBack(ip)).toFixed(3)}) rotate(${((1 - eOut(ip)) * -20).toFixed(1)}deg)`;
-        if (x.it.icon === "rank") O.ranks.anim(x.svg, u, t);
-        else { animArt(x.svg, x.it.icon, t, LOOP); if (x.it.icon === "diamond") O.diamondPlus.anim(x.svg, t); }
+        O.powerIcons.anim(x.svg, x.it.icon, t, u);
         if (x.pill) {
           const pp = seg(u, .7, 1.15);
           x.pill.style.transform = `perspective(400px) rotateX(${((1 - eOut(pp)) * 90).toFixed(1)}deg)`;

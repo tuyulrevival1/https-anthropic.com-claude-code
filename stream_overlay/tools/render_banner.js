@@ -1,15 +1,14 @@
 /* Render banner jadi video MP4 loop (1080x192, 30fps).
    Perlu: Node.js, playwright (npm i playwright && npx playwright install chromium), ffmpeg.
-   Guna:  node tools/render_banner.js                 -> semua gaya
-          node tools/render_banner.js pro             -> satu gaya
-          node tools/render_banner.js scene-grunge:lime -> gaya minimal + warna aksen
+   Guna:  node tools/render_banner.js           -> power + minimal
+          node tools/render_banner.js power     -> satu gaya
    Output: exports/banner_<gaya>.mp4  */
 const { chromium } = require("playwright");
 const { execFileSync } = require("child_process");
 const fs = require("fs"), path = require("path");
 
 const root = path.resolve(__dirname, "..");
-const styles = process.argv.slice(2).length ? process.argv.slice(2) : ["power", "slash", "pro-crimson"];
+const styles = process.argv.slice(2).length ? process.argv.slice(2) : ["power", "minimal"];
 const FPS = 30;
 
 (async () => {
@@ -23,7 +22,7 @@ const FPS = 30;
     await page.waitForTimeout(500);
     const loop = await page.evaluate(() => {
       const C = ChouOverlay.CFG;
-      if (/^scene/.test(new URLSearchParams(location.search).get("style") || "")) return C.scene.brandSeconds + C.scene.items.length * C.scene.itemSeconds;
+      if (/^(minimal|scene)/.test(new URLSearchParams(location.search).get("style") || "")) return C.scene.brandSeconds + C.scene.items.length * C.scene.itemSeconds;
       return C.banner.messages.length * C.banner.secondsPerMessage;
     });
     const dir = path.join(root, "exports", "frames", tag);

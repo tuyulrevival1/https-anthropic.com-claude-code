@@ -1,5 +1,5 @@
 /* 3D-shaded streamer mascot (no sticker border).
-   Poses: game (tablet + tapping), win (fist up "GG", happy eyes), wink (thumbs-up).
+   Poses: game (tablet back to the viewer, thumbs tapping), win (fist up "GG"), wink (thumbs-up).
    ChouOverlay.mascot3d.svg()                 -> SVG string (viewBox 0 0 200 200)
    ChouOverlay.mascot3d.anim(svg, t, opts)    -> animate; opts.pose fixes a pose,
                                                  otherwise the 24 s carousel is used. */
@@ -26,10 +26,45 @@
   function svg() {
     const u = uid("m3");
     const SKIN = `url(#${u}sk)`;
-    const palm = (cls, x, y, r) => `<g class="${cls}" transform="translate(${x} ${y}) rotate(${r})"><rect x="-12" y="-6" width="24" height="20" rx="9" fill="${SKIN}"/>
-<rect x="-11" y="-21" width="5.6" height="18" rx="2.8" fill="${SKIN}"/><rect x="-4.6" y="-24" width="5.6" height="21" rx="2.8" fill="${SKIN}"/><rect x="1.8" y="-22.5" width="5.6" height="19.5" rx="2.8" fill="${SKIN}"/><rect x="8" y="-17" width="5.2" height="15" rx="2.6" fill="${SKIN}"/>
-<rect x="-19" y="-1" width="10" height="5.6" rx="2.8" fill="${SKIN}" transform="rotate(-30 -14 2)"/><path d="M-6 6 q6 3 12 0" stroke="#c98a63" stroke-width="1.6" fill="none" stroke-linecap="round"/></g>`;
-    const hand = (cls, x, y, extra = "") => `<g class="${cls}" transform="translate(${x} ${y})">${extra}<circle r="11.5" fill="${SKIN}"/><path d="M-4 -7 q5 2 8 0 M-5 -1 q6 2 10 0 M-4 5 q5 2 8 0" stroke="#c98a63" stroke-width="2.2" fill="none" stroke-linecap="round"/></g>`;
+    const SH = "#c98a63";
+    // hand gripping the LEFT edge of a tablet (back of hand + fingertips on the cover, thumb over the top edge)
+    const gripL = cls => `<g class="${cls}">
+  <path d="M43 182 C34 180 30 170 31 160 C32 152 36 147 42 146 L52 147 C49 158 49 170 52 181Z" fill="url(#${u}jk)"/>
+  <path d="M50 147.5 C48 158 48 170 51 180.5" stroke="#ff2346" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <ellipse cx="62" cy="168" rx="9" ry="12" fill="#000" opacity=".28"/>
+  <path d="M51 151 C55 148 62 149 64 152 C66 155 63 157 60 157.5 C64 158.5 65.5 162 63.5 164.5 C66 166 66 170 63 172 C65 174 64.5 178 61 179 C58 181 53 181 51 180Z" fill="${SKIN}"/>
+  <path d="M53 157.6 H60.5 M53 165 H62 M53 172.2 H61" stroke="${SH}" stroke-width="1.1" stroke-linecap="round" opacity=".75"/>
+  <ellipse cx="61.6" cy="153.4" rx="1.9" ry="1.5" fill="#ffe4d2"/><ellipse cx="62.6" cy="161.2" rx="1.9" ry="1.5" fill="#ffe4d2"/><ellipse cx="62.4" cy="168.6" rx="1.9" ry="1.5" fill="#ffe4d2"/><ellipse cx="60.4" cy="176" rx="1.7" ry="1.4" fill="#ffe4d2"/>
+  <path d="M51.5 152 C53 150 56 149.4 58.5 150" stroke="#fff" stroke-opacity=".45" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <g class="${cls}-th"><path d="M47 150 C46 144 50 139.5 57 138.3 C62 137.4 67 137.6 69.5 139.4 C71.4 140.9 70.6 143.4 68 144 C64 145 58 146 53.5 148.5Z" fill="${SKIN}"/>
+   <path d="M63.6 138.6 C66 138.2 68.6 138.7 69.4 140 C69.8 141.3 68.6 142.2 66.6 142.3 C64.8 142.4 63.2 141.6 63 140.4Z" fill="#ffe4d2"/>
+   <path d="M50 145 C53 142.5 56 141.6 59 141.4" stroke="${SH}" stroke-width="1" fill="none" stroke-linecap="round" opacity=".6"/></g>
+ </g>`;
+    // closed fist seen from the front (fingers curled, thumb across)
+    const fist = (x, y, r = 0) => `<g transform="translate(${x} ${y}) rotate(${r})">
+  <rect x="-14" y="-11" width="28" height="25" rx="10" fill="${SKIN}"/>
+  ${[0, 1, 2, 3].map(i => `<rect x="${-13.2 + i * 6.6}" y="-15" width="6.6" height="12" rx="3.3" fill="${SKIN}"/>`).join("")}
+  <path d="M-6.6 -13 V-5 M0 -13.5 V-5 M6.6 -13 V-5" stroke="${SH}" stroke-width="1.1" stroke-linecap="round" opacity=".8"/>
+  <path d="M-14 1 C-10 -1 2 -1 9 1 C12 2 12 6 9 7 C2 8 -10 8 -14 6Z" fill="${SKIN}" stroke="${SH}" stroke-width=".9" stroke-opacity=".55"/>
+  <ellipse cx="7.6" cy="3.8" rx="2.4" ry="2" fill="#ffe4d2"/>
+  <path d="M-12 -9 C-8 -12 4 -12 9 -10" stroke="#fff" stroke-opacity=".4" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+  <rect x="-12" y="12" width="24" height="7" rx="3" fill="#121016"/><rect x="-12" y="12" width="24" height="2" fill="#ff2346"/>
+ </g>`;
+    // thumbs-up seen from the side (fingers curled, thumb straight up)
+    const thumbUp = (x, y) => `<g transform="translate(${x} ${y})">
+  <rect x="-12" y="-6" width="23" height="26" rx="9" fill="${SKIN}"/>
+  ${[0, 1, 2, 3].map(i => `<rect x="-3" y="${-5 + i * 6.2}" width="16" height="6.6" rx="3.3" fill="${SKIN}" stroke="${SH}" stroke-width=".8" stroke-opacity=".5"/>`).join("")}
+  <path d="M-11 -2 C-11 -14 -9 -26 -4 -27 C1 -28 3 -24 3 -18 L2 -4 Z" fill="${SKIN}"/>
+  <path d="M-6.4 -26 C-4.6 -27.4 -1.6 -27.4 0.6 -25.6 C1.4 -23.4 -.2 -21.6 -2.6 -21.6 C-5.2 -21.6 -6.8 -23.6 -6.4 -26Z" fill="#ffe4d2"/>
+  <path d="M-8.6 -16 C-7.4 -20 -6 -22.6 -4.6 -23.6" stroke="#fff" stroke-opacity=".45" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <rect x="-12" y="18" width="23" height="7" rx="3" fill="#121016"/><rect x="-12" y="18" width="23" height="2" fill="#ff2346"/>
+ </g>`;
+    // relaxed hand holding the lowered tablet by its edge
+    const holdLow = (x, y) => `<g transform="translate(${x} ${y}) rotate(-16)">
+  <rect x="-6" y="-12" width="15" height="24" rx="7" fill="${SKIN}"/>
+  ${[0, 1, 2].map(i => `<rect x="-12" y="${-10 + i * 7.2}" width="12" height="6.8" rx="3.4" fill="${SKIN}" stroke="${SH}" stroke-width=".8" stroke-opacity=".5"/>`).join("")}
+  <ellipse cx="-10" cy="-6.6" rx="1.6" ry="1.3" fill="#ffe4d2"/><ellipse cx="-10" cy=".6" rx="1.6" ry="1.3" fill="#ffe4d2"/><ellipse cx="-10" cy="7.8" rx="1.6" ry="1.3" fill="#ffe4d2"/>
+ </g>`;
     return `<svg viewBox="0 0 200 200" class="m3d" aria-hidden="true"><defs>
 <radialGradient id="${u}sk" cx=".38" cy=".32" r=".8"><stop offset="0" stop-color="#ffe3c9"/><stop offset=".55" stop-color="#f4c39b"/><stop offset="1" stop-color="#d6936a"/></radialGradient>
 <radialGradient id="${u}fc" cx=".4" cy=".34" r=".72"><stop offset="0" stop-color="#ffe6cf"/><stop offset=".6" stop-color="#f6c7a0"/><stop offset="1" stop-color="#dc9d74"/></radialGradient>
@@ -116,30 +151,24 @@
   <path d="M-30 -19 H-14 L-26 19 H-30Z" fill="#fff" opacity=".07"/>
  </g>
  <g class="arm-game">
-  <path d="M46 154 C36 166 38 176 48 174" stroke="url(#${u}jk)" stroke-width="22" fill="none" stroke-linecap="round"/>
-  <path d="M154 154 C164 166 162 176 152 174" stroke="url(#${u}jk)" stroke-width="22" fill="none" stroke-linecap="round"/>
-  ${hand("hl", 50, 166)}${hand("hr", 150, 166)}
-  <g class="th-l"><path d="M54 152 C56 142 62 136 70 136 C76 136 78 141 75 145 C72 149 64 150 58 156Z" fill="${SKIN}"/><ellipse cx="71" cy="139.5" rx="3.6" ry="2.4" fill="#ffe1cc" opacity=".95"/></g>
-  <g class="th-r"><path d="M146 152 C144 142 138 136 130 136 C124 136 122 141 125 145 C128 149 136 150 142 156Z" fill="${SKIN}"/><ellipse cx="129" cy="139.5" rx="3.6" ry="2.4" fill="#ffe1cc" opacity=".95"/></g>
-  <g class="m-tapL" opacity="0" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M64 130 l-4 -6 M72 128 v-7 M80 130 l4 -6"/></g>
-  <g class="m-tapR" opacity="0" stroke="#ffd34d" stroke-width="2.2" stroke-linecap="round"><path d="M120 130 l-4 -6 M128 128 v-7 M136 130 l4 -6"/></g>
- </g>
- <g class="arm-cheer" opacity="0">
-  <path d="M50 154 C36 134 30 108 34 84" stroke="url(#${u}jk)" stroke-width="22" fill="none" stroke-linecap="round"/>
-  <path d="M150 154 C164 134 170 108 166 84" stroke="url(#${u}jk)" stroke-width="22" fill="none" stroke-linecap="round"/>
-  ${palm("pl", 34, 70, -14)}${palm("pr", 166, 70, 14)}
+  <path d="M48 150 C36 156 32 164 34 172" stroke="url(#${u}jk)" stroke-width="20" fill="none" stroke-linecap="round"/>
+  <path d="M152 150 C164 156 168 164 166 172" stroke="url(#${u}jk)" stroke-width="20" fill="none" stroke-linecap="round"/>
+  ${gripL("gl")}
+  <g transform="translate(200 0) scale(-1 1)">${gripL("gr")}</g>
+  <g class="m-tapL" opacity="0" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M60 131 l-3 -6 M67 129 v-7 M74 131 l3 -6"/></g>
+  <g class="m-tapR" opacity="0" stroke="#ffd34d" stroke-width="2.2" stroke-linecap="round"><path d="M126 131 l-3 -6 M133 129 v-7 M140 131 l3 -6"/></g>
  </g>
  <g class="arm-win" opacity="0">
   <path d="M48 156 C40 168 46 178 58 180" stroke="url(#${u}jk)" stroke-width="22" fill="none" stroke-linecap="round"/>
   <path d="M152 152 C176 136 186 104 180 76" stroke="url(#${u}jk)" stroke-width="22" fill="none" stroke-linecap="round"/>
-  <g transform="translate(180 60)"><rect x="-13" y="-14" width="26" height="26" rx="10" fill="${SKIN}"/><path d="M-9 -6 h18 M-9 0 h18 M-9 6 h18" stroke="#c98a63" stroke-width="2" stroke-linecap="round"/><rect x="-14" y="-4" width="8" height="14" rx="4" fill="${SKIN}"/></g>
-  ${hand("hw", 64, 180)}
+  ${fist(180, 62, -6)}
+  ${holdLow(64, 180)}
  </g>
  <g class="arm-wink" opacity="0">
   <path d="M48 156 C40 168 46 178 58 180" stroke="url(#${u}jk)" stroke-width="22" fill="none" stroke-linecap="round"/>
   <path d="M154 162 C172 156 180 144 176 132" stroke="url(#${u}jk)" stroke-width="22" fill="none" stroke-linecap="round"/>
-  <g transform="translate(174 122)"><rect x="-12" y="-6" width="24" height="22" rx="9" fill="${SKIN}"/><rect x="-6" y="-24" width="10" height="22" rx="5" fill="${SKIN}"/><path d="M-8 2 h15 M-8 8 h15" stroke="#c98a63" stroke-width="2" stroke-linecap="round"/></g>
-  ${hand("hk", 64, 180)}
+  ${thumbUp(174, 116)}
+  ${holdLow(64, 180)}
  </g>
 </g>
  <g class="m-gg" opacity="0"><text x="182" y="30" text-anchor="middle" style="font-family:var(--f-disp,Impact);font-size:26px;letter-spacing:1px;paint-order:stroke" stroke="#5a0010" stroke-width="6" stroke-linejoin="round" fill="url(#${u}gold)">GG</text></g>
@@ -163,22 +192,16 @@
       else { sx = Math.max(.04, .04 + .96 * eBack(k)); sy = 1 + (1 - k) * .1; hop = Math.sin(k * Math.PI) * 10; }
     }
     const br = 1 + .014 * Math.sin(t * TAU / 3);
-    const winHop = pose === "win" ? Math.abs(Math.sin(t * TAU / 1.2)) * 6 : pose === "cheer" ? Math.abs(Math.sin(t * TAU / .8)) * 4 : 0;
+    const winHop = pose === "win" ? Math.abs(Math.sin(t * TAU / 1.2)) * 6 : 0;
     q(".m-all").setAttribute("transform", `translate(100 200) translate(0 ${(-hop - winHop).toFixed(2)}) scale(${(sx * br).toFixed(4)} ${(sy * (2 - br)).toFixed(4)}) translate(-100 -200)`);
     const nod = Math.sin(t * TAU / 1.5);
-    const tilt = pose === "game" ? nod * 2.4 : pose === "win" ? -4 + nod * 2 : pose === "cheer" ? nod * 3 : 6 + nod * 1.5;
+    const tilt = pose === "game" ? nod * 2.4 : pose === "win" ? -4 + nod * 2 : 6 + nod * 1.5;
     q(".m-head").setAttribute("transform", `rotate(${tilt.toFixed(2)} 100 132) translate(0 ${(pose === "game" ? Math.abs(nod) * 1.4 : 0).toFixed(2)})`);
     // pose parts
     const show = (c, on) => q(c).setAttribute("opacity", on ? "1" : "0");
-    const cheer = pose === "cheer";
-    show(".arm-game", pose === "game"); show(".arm-win", pose === "win"); show(".arm-wink", pose === "wink"); show(".arm-cheer", cheer);
-    show(".e-open", pose === "game"); show(".e-happy", pose === "win" || cheer); show(".e-wink", pose === "wink");
-    show(".mo-focus", pose === "game"); show(".mo-open", pose === "win" || cheer); show(".mo-grin", pose === "wink");
-    if (cheer) {
-      const w = Math.sin(t * TAU / .8);
-      q(".pl").setAttribute("transform", `translate(34 ${(70 + Math.abs(w) * -3).toFixed(2)}) rotate(${(-14 + w * 10).toFixed(2)})`);
-      q(".pr").setAttribute("transform", `translate(166 ${(70 + Math.abs(w) * -3).toFixed(2)}) rotate(${(14 - w * 10).toFixed(2)})`);
-    }
+    show(".arm-game", pose === "game"); show(".arm-win", pose === "win"); show(".arm-wink", pose === "wink");
+    show(".e-open", pose === "game"); show(".e-happy", pose === "win"); show(".e-wink", pose === "wink");
+    show(".mo-focus", pose === "game"); show(".mo-open", pose === "win"); show(".mo-grin", pose === "wink");
     show(".m-gg", pose === "win" && !!opts.gg);
     // brows
     q(".m-brL").setAttribute("d", pose === "game" ? "M67 80 Q77 76 88 82" : "M67 76 Q77 69 88 75");
@@ -186,15 +209,15 @@
     // tablet placement per pose
     const tab = q(".m-tab"), low = q(".m-tablow");
     const game = pose === "game";
-    tab.setAttribute("opacity", game ? "1" : "0"); low.setAttribute("opacity", game || pose === "cheer" ? "0" : "1");
+    tab.setAttribute("opacity", game ? "1" : "0"); low.setAttribute("opacity", game ? "0" : "1");
     const sway = Math.sin(t * TAU * 4) * .5, bob = Math.abs(nod) * 1.2;
     tab.setAttribute("transform", `translate(${sway.toFixed(2)} ${bob.toFixed(2)})`);
     q(".arm-game").setAttribute("transform", `translate(${sway.toFixed(2)} ${bob.toFixed(2)})`);
     if (game) {
       // thumbs press the screen over the top edge, alternating every 0.25 s
       const tp = frac(t / .5), pl = tp < .2 ? Math.sin(tp / .2 * Math.PI) : 0, pr = tp >= .5 && tp < .7 ? Math.sin((tp - .5) / .2 * Math.PI) : 0;
-      q(".th-l").setAttribute("transform", `translate(0 ${(pl * 3).toFixed(2)})`);
-      q(".th-r").setAttribute("transform", `translate(0 ${(pr * 3).toFixed(2)})`);
+      q(".gl-th").setAttribute("transform", `translate(${(pl * .8).toFixed(2)} ${(pl * 2.4).toFixed(2)})`);
+      q(".gr-th").setAttribute("transform", `translate(${(pr * .8).toFixed(2)} ${(pr * 2.4).toFixed(2)})`);
       q(".m-tapL").setAttribute("opacity", (pl * .9).toFixed(3));
       q(".m-tapR").setAttribute("opacity", (pr * .9).toFixed(3));
       q(".m-edgeglow").setAttribute("opacity", (.4 + .3 * Math.max(pl, pr) + .15 * Math.sin(t * TAU / 1.5)).toFixed(3));

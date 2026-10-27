@@ -245,7 +245,7 @@ ${msgs.map(m => `<div class="pw-hook"><span>${esc(fill(m.hook || ""))}</span></d
     const ML = [...bn.querySelectorAll(".pw-ml")], MS = ML.map(l => l.querySelector("svg"));
     const rays = q(".pw-rays"), pring = q(".pw-pring");
     // smooth pose carousel (24 s): tablet tapping with short hype poses, cross-faded
-    const PSCHED = [[0, "game"], [4.8, "cheer"], [7.2, "game"], [12, "wink"], [14.4, "game"], [19.2, "win"], [21.6, "game"]];
+    const PSCHED = [[0, "game"], [4.8, "win"], [7.2, "game"], [12, "wink"], [14.4, "game"], [19.2, "win"], [21.6, "game"]];
     const XF = .24;
     function poseState(tl) {
       let i = 0; for (let k = 0; k < PSCHED.length; k++) if (tl >= PSCHED[k][0]) i = k;

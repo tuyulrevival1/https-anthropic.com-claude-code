@@ -20,13 +20,11 @@
 </style>
 </head>
 <body>
-<!-- ?kind=mascot&pose=game|win|wink | avatar | wordmark | grunge   (dipakai oleh tools/export_logos.js) -->
+<!-- ?kind=mascot&pose=game|win|wink | avatar | wordmark   (dipakai oleh tools/export_logos.js) -->
 <div id="lg"></div>
 <script src="assets/config.js"></script>
 <script src="assets/overlay.js"></script>
-<script src="assets/banner-pro.js"></script>
 <script src="assets/ranks3d.js"></script>
-<script src="assets/logos.js"></script>
 <script src="assets/banner-scene.js"></script>
 <script src="assets/mascot.js"></script>
 <script src="assets/banner-power.js"></script>
@@ -35,8 +33,7 @@
   const kind = p.get("kind") || "mascot", pose = p.get("pose") || "game";
   const box = document.getElementById("lg");
   let svg, anim;
-  if (kind === "grunge") { box.innerHTML = O.logos.grungeSVG(O.ACCENTS.crimson); svg = box.firstElementChild; anim = () => O.logos.animGrunge(svg, 10, 1.1); }
-  else if (kind === "wordmark") { box.innerHTML = O.powerWord.svg(); svg = box.firstElementChild; anim = () => O.powerWord.anim(svg, 1.5); }
+  if (kind === "wordmark") { box.innerHTML = O.powerWord.svg(); svg = box.firstElementChild; anim = () => O.powerWord.anim(svg, 1.5); }
   else if (kind === "avatar") {
     box.innerHTML = `<div class="av"><div class="bg"></div><div class="m">${O.mascot3d.svg()}</div></div>`;
     svg = box.querySelector(".m svg"); anim = () => O.mascot3d.anim(svg, 1.1, { pose });

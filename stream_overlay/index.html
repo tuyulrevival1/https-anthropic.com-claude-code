@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!--ARTIFACT-START-->
-<title>Chou KOF Overlay</title>
+<title>SYNO Stream Overlay</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:ital,wght@0,400..900;1,900&family=Rajdhani:wght@600;700&family=Teko:wght@600&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&text=%E5%85%AB%E7%A8%9A%E5%A5%B3&display=swap">
@@ -33,11 +33,6 @@
   .seg button { font: 700 14px/1 var(--g-hud); letter-spacing: .14em; text-transform: uppercase; color: var(--g-mut); background: none; border: 0; padding: 12px 14px; cursor: pointer; }
   .seg button[aria-pressed="true"] { background: var(--g-red); color: #fff; }
   .ctl { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; max-width: 100%; }
-  .acc { display: flex; align-items: center; gap: 8px; }
-  .acc span { font: 700 12px/1 var(--g-hud); letter-spacing: .24em; text-transform: uppercase; color: var(--g-mut); margin-right: 4px; }
-  .acc button { width: 28px; height: 28px; border-radius: 50%; background: var(--c); border: 3px solid var(--g-bg); box-shadow: 0 0 0 1px var(--g-line); cursor: pointer; }
-  .acc button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--g-fg); }
-  .acc button:focus-visible { outline: 2px solid var(--g-acc); outline-offset: 2px; }
   .logos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 12px; }
   .logo { background: radial-gradient(circle at 50% 40%, #1d1430, #0e0a16); border: 1px solid var(--g-line); padding: 14px; display: flex; flex-direction: column; gap: 8px; align-items: center; min-width: 0; }
   .logo .lbox { width: 100%; aspect-ratio: 1; display: grid; place-items: center; }
@@ -92,9 +87,7 @@
     <div class="ctl">
     <div class="seg" role="group" aria-label="Gaya banner">
       <button type="button" data-style="power" aria-pressed="true">Power (merah)</button>
-      <button type="button" data-style="slash" aria-pressed="false">Crimson Slash</button>
-      <button type="button" data-style="pro-crimson" aria-pressed="false">Premium Merah</button>
-      <button type="button" data-style="scene-mascot" aria-pressed="false">Minimal</button>
+      <button type="button" data-style="minimal" aria-pressed="false">Minimal</button>
     </div>
     </div>
   </header>
@@ -115,12 +108,10 @@
   </section>
 
   <h2>Banner bawah</h2>
-  <p>Kekal dalam jalur 1080×192 sahaja, tak masuk kawasan atas. Gaya <b>Minimal</b> ikut rentak rujukan SOLOZ: babak jenama (jalur aksen menyapu, teks berulang, huruf rapat dari jarak lebar, lencana "info lanjut di bio") kemudian babak servis (logo besar, teks bertukar dengan kabur-pudar, butang Link in Bio diketuk). Banner premium: maskot sticker main tablet di kiri, teks bergerak huruf demi huruf, ikon kanan ikut mesej (diamond berkilat, ikon rank 3D, VIP, link). Empat mesej bertukar setiap 6 saat.</p>
+  <p>Kekal dalam jalur 1080×192 sahaja. <b>Power</b> (utama): panel logo dengan sinar berputar, maskot bertukar gaya dengan lancar, teks metalik huruf demi huruf, lencana hook melantun dan medallion krom (diamond, rank 3D, VIP, album, link). <b>Minimal</b> ikut rentak SOLOZ: babak jenama kemudian babak servis dengan maskot besar dan teks kabur-pudar. Mesej bertukar setiap 4.8 saat.</p>
   <div class="banners">
     <div class="bitem"><b>Power · utama</b><div class="bshot"><div class="bn-host" data-banner="power"></div></div></div>
-    <div class="bitem"><b>Crimson Slash</b><div class="bshot"><div class="bn-host" data-banner="slash"></div></div></div>
-    <div class="bitem"><b>Premium Merah</b><div class="bshot"><div class="bn-host" data-banner="pro-crimson"></div></div></div>
-    <div class="bitem"><b>Minimal (gaya SOLOZ)</b><div class="bshot"><div class="bn-host" data-banner="scene-mascot" data-acc="crimson"></div></div></div>
+    <div class="bitem"><b>Minimal (gaya SOLOZ)</b><div class="bshot"><div class="bn-host" data-banner="minimal"></div></div></div>
   </div>
 
   <p>Ikon rank untuk mesej joki guna <b>logo rank MLBB asli</b> yang awak letak dalam <code>assets/ranks/</code> (epic, legend, mythic, glory, immortal .png). Ikon diputar 3D dengan ketebalan, bayang lantai, glow dan kilauan. Selagi fail tiada, lencana ganti dipaparkan.</p>
@@ -130,7 +121,7 @@
   <div class="logos">
     <div class="logo"><div class="lbox" data-logo="game"></div><b>Maskot · main</b><small>Main tablet, ibu jari tekan skrin.</small></div>
     <div class="logo"><div class="lbox" data-logo="win"></div><b>Maskot · GG</b><small>Gaya menang.</small></div>
-    <div class="logo"><div class="lbox" data-logo="cheer"></div><b>Maskot · sorak</b><small>Angkat dua tangan.</small></div>
+    <div class="logo"><div class="lbox" data-logo="wink"></div><b>Maskot · wink</b><small>Thumbs-up.</small></div>
     <div class="logo"><div class="lbox wide" data-logo="word"></div><b>Wordmark</b><small>SYNO STORE 3D dengan kilauan &amp; glitch.</small></div>
   </div>
 
@@ -139,7 +130,7 @@
   <div class="tips">
     <div class="tip"><h4>Belakang kamera</h4><ul>
       <li><b>Lampu LED strip ungu + merah</b> di dinding belakang atau bawah meja. Latar hitam jadi bergradien dan ikut tema overlay.</li>
-      <li><b>Neon sign / poster</b> logo bulan sabit atau Chou KOF di belakang, biar sikit kabur.</li>
+      <li><b>Neon sign / poster</b> logo SYNO STORE atau maskot di belakang, biar sikit kabur.</li>
       <li><b>Lampu depan (ring light / softbox)</b> serong 45°. Muka terang, latar kekal gelap tapi berwarna.</li>
       <li>Kemas kabel dan barang dalam frame.</li></ul></div>
     <div class="tip"><h4>Video &amp; audio</h4><ul>
@@ -193,9 +184,7 @@
 <script>window.OVERLAY_STORE_KEY = "synoOverlay.preview3";</script>
 <script src="assets/config.js"></script>
 <script src="assets/overlay.js"></script>
-<script src="assets/banner-pro.js"></script>
 <script src="assets/ranks3d.js"></script>
-<script src="assets/logos.js"></script>
 <script src="assets/banner-scene.js"></script>
 <script src="assets/mascot.js"></script>
 <script src="assets/banner-power.js"></script>
@@ -224,18 +213,14 @@
     return o;
   });
   document.querySelectorAll(".bn-host").forEach(host => {
-    O.mountBanner(host, { style: host.dataset.banner, accent: host.dataset.acc });
+    O.mountBanner(host, { style: host.dataset.banner });
     O.fitStage(host, host.parentElement, 1080, 192);
   });
-  let curStyle = "power", curAcc = "crimson";
-  const apply = () => overlays.forEach(o => o.setBanner(curStyle, curAcc));
+  let curStyle = "power";
+  const apply = () => overlays.forEach(o => o.setBanner(curStyle));
   document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => {
     document.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
     curStyle = b.dataset.style; apply();
-  }));
-  document.querySelectorAll(".acc button").forEach(b => b.addEventListener("click", () => {
-    document.querySelectorAll(".acc button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
-    curAcc = b.dataset.acc; if (/^scene/.test(curStyle)) apply();
   }));
   // animated logos (replay the intro every 5 s)
   document.querySelectorAll("[data-logo]").forEach(box => {
