@@ -284,17 +284,16 @@ function Get-IfxTexts {
     $pids = @(Get-Process -Name 'IndoFinity' -ErrorAction SilentlyContinue | ForEach-Object { $_.Id })
     if ($pids.Count -eq 0) { return '[]' }
     $A = [System.Windows.Automation.AutomationElement]
-    $c1 = New-Object System.Windows.Automation.PropertyCondition -ArgumentList $A::ControlTypeProperty, ([System.Windows.Automation.ControlType]::Text)
-    $c2 = New-Object System.Windows.Automation.PropertyCondition -ArgumentList $A::ControlTypeProperty, ([System.Windows.Automation.ControlType]::Hyperlink)
-    $arr = [System.Windows.Automation.Condition[]]@($c1, $c2)
-    $tc = New-Object System.Windows.Automation.OrCondition -ArgumentList (,$arr)
     $wins = $A::RootElement.FindAll([System.Windows.Automation.TreeScope]::Children, [System.Windows.Automation.Condition]::TrueCondition)
     foreach ($w in $wins) {
       if ($pids -notcontains $w.Current.ProcessId) { continue }
-      foreach ($e in $w.FindAll([System.Windows.Automation.TreeScope]::Descendants, $tc)) {
-        $n = CleanTxt ([string]$e.Current.Name)
-        if ($n -and $n.Length -le 200) { [void]$out.Add((JsonStr $n)) }
-        if ($out.Count -ge 300) { break }
+      [void]$out.Add((JsonStr ('[tetingkap] ' + (CleanTxt ([string]$w.Current.Name)))))
+      # semua elemen yang ada nama (teks, link, item senarai, kumpulan) ikut susunan skrin
+      $prev = ''
+      foreach ($e in $w.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition)) {
+        $n = ''; try { $n = CleanTxt ([string]$e.Current.Name) } catch { }
+        if ($n -and $n -ne $prev -and $n.Length -le 200) { [void]$out.Add((JsonStr $n)); $prev = $n }
+        if ($out.Count -ge 400) { break }
       }
     }
   } catch { }

@@ -612,9 +612,12 @@
   function ifxNow(texts) {
     if (!Array.isArray(texts) || !texts.length) return null;
     const songish = t => t.length >= 6 && !/^@/.test(t) && !/^\d{1,2}[:.]\d{2}/.test(t) && !/indofinity|^https?:|^(update|subathon|settings?|pengaturan|song requests?|queue|antrian)\b/i.test(t);
+    texts = texts.map(String).filter(t => !/^\[tetingkap\]/.test(t));
     for (let i = 0; i < texts.length; i++) {
-      const m = String(texts[i]).match(/^@([\w.]{2,32})$/); if (!m) continue;
-      const prev = texts.slice(Math.max(0, i - 3), i).map(String);
+      // "@name" on its own, or inside a longer line ("7clouds · @name", "Request by @name")
+      const m = texts[i].match(/^@([\w.]{2,32})$/) || texts[i].match(/(?:^|[\s·•|(])@([\w.]{2,32})\b/); if (!m) continue;
+      const own = texts[i].replace(/@[\w.]{2,32}.*$/, "").replace(/[\s·•|(-]+$/, "").trim();
+      const prev = texts.slice(Math.max(0, i - 3), i).concat(own && own.length >= 6 && !/^(req|request|by|oleh|dari)\b/i.test(own) ? [own] : []);
       const t = prev.length >= 2 && songish(prev[prev.length - 2]) ? prev[prev.length - 2] : prev.length && songish(prev[prev.length - 1]) ? prev[prev.length - 1] : "";
       if (t) return { title: tidyTitle(t).slice(0, 90), user: m[1] };
     }

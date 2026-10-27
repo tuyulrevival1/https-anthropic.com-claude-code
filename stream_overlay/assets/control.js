@@ -699,7 +699,7 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
       const pk = au ? au.peak : 0, now = st.songNow;
       const head = cfg.detect === false ? "Dimatikan." : now ? `<b class="on">▶ Lagu request sedang main${now.title ? `: ${esc(now.title)}` : ""}${now.user ? ` · req @${esc(now.user)}` : ""}</b>${st.spotAuto ? " · Spotify dijeda" : ""}`
         : au ? "IndoFinity senyap · Spotify main biasa" : `<b class="warn">IndoFinity tak dikesan.</b> Buka app IndoFinity di PC ni.`;
-      const ifx = (j.ifx || []).slice(0, 80);
+      const ifx = (j.ifx || []).slice(0, 400);
       const dbg = `<details class="quick sgifx"${box.querySelector(".sgifx[open]") ? " open" : ""}><summary>Teks dibaca dari IndoFinity (${ifx.length})</summary><code>${ifx.length ? esc(ifx.join("  |  ")) : j.uia === false ? "Windows tak benarkan baca teks app." : "Kosong. Main satu lagu request di IndoFinity, buka tetingkap Song Request."}</code></details>`;
       const html = `<p class="sgst"><span class="nm">🔊 IndoFinity</span> <i class="vu"><i style="width:${Math.min(100, Math.round(pk * 160))}%"></i></i> ${head}</p>${!j.audioOk && !j.winrt ? `<p class="muted">Windows tak benarkan server baca bunyi app. Buka semula START_OVERLAY.bat.</p>` : ""}${dbg}`;
       if (box._h !== html) { box.innerHTML = html; box._h = html; }
