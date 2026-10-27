@@ -49,7 +49,7 @@ Tailscale Funnel memberi link tetap `https://<pc>.<tailnet>.ts.net` untuk `viewe
 
 ## Ikon rank asli
 
-Klik `AMBIL_LOGO_RANK.bat` untuk muat turun ikon asli ke `assets/ranks/` (`epic`, `legend`, `mythic`, `honor`, `glory`, `immortal` .png), atau letak PNG sendiri. Banner putar 3D dengan glow & kilauan.
+Logo asli Epic, Legend, Mythic, Mythical Honor, Mythical Glory dan Mythical Immortal dah dipasang dalam `assets/ranks/` (tanpa nama rank). Banner putar 3D dengan glow & kilauan. Nak tukar: ganti PNG sama nama, guna `rank_tool.html`, atau `AMBIL_LOGO_RANK.bat`.
 
 ## Render semula video banner / logo
 

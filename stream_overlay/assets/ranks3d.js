@@ -44,9 +44,9 @@ ${ic}
     { name: "EPIC", img: "assets/ranks/epic.png", glow: "#45f0bf" },
     { name: "LEGEND", img: "assets/ranks/legend.png", glow: "#ffcf4a" },
     { name: "MYTHIC", img: "assets/ranks/mythic.png", glow: "#c995ff" },
-    { name: "HONOR", img: "assets/ranks/honor.png", glow: "#7fb2ff" },
-    { name: "GLORY", img: "assets/ranks/glory.png", glow: "#ff96d4" },
-    { name: "IMMORTAL", img: "assets/ranks/immortal.png", glow: "#ff5874" }
+    { name: "HONOR", img: "assets/ranks/honor.png", glow: "#4fd8ff" },
+    { name: "GLORY", img: "assets/ranks/glory.png", glow: "#ffb02e" },
+    { name: "IMMORTAL", img: "assets/ranks/immortal.png", glow: "#e7a8ff" }
   ];
   const tiers = () => (CFG.ranks && CFG.ranks.tiers) || DEF;
   const DEPTH = 6; // back layers that give the coin its thickness
