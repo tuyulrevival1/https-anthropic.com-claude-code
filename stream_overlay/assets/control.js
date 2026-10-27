@@ -49,6 +49,12 @@ ${embedded ? "" : `<header class="app-top">
       <label class="tog"><input id="ap-showb" type="checkbox"><span>Banner</span></label>
       <label class="tog"><input id="ap-shows" type="checkbox"><span>Lagu</span></label>
     </div>
+    <div class="row toggles fxrow">
+      <label class="tog"><input id="ap-fx" type="checkbox"><span>Efek menang / kalah</span></label>
+      <label class="tog"><input id="ap-fxs" type="checkbox"><span>Bunyi efek</span></label>
+      <button class="btn small gold" type="button" id="ap-fxwin">Uji MENANG</button>
+      <button class="btn small red" type="button" id="ap-fxlose">Uji KALAH</button>
+    </div>
     <div class="ovparts">
       <b class="ctest-h">Tunjuk di overlay</b>
       ${[["p", "Portrait", [["cam", "Handcam"]]], ["l", "Landscape", [["cam", "Facecam"], ["hand", "Handcam"]]]].map(([o, t, cams]) => `<div class="ovp-col"><span class="ovp-t">${t}</span>${cams.concat([["score", "WIN / LOSE"], ["mabar", "Mabar VIP"], ["banner", "Banner"], ["band", "Bar LIVE"]]).map(([k, n]) => `<label class="tog"><input type="checkbox" class="ovp" data-o="${o}" data-k="${k}" checked><span>${n}</span></label>`).join("")}${o === "l" ? `<p class="muted ovp-obs" id="ap-ovpobs"></p>` : ""}</div>`).join("")}
@@ -396,6 +402,11 @@ ${embedded ? "" : `<header class="app-top">
     }));
     twoStep($("ap-clearq"), () => { Q.clear(); toast("Queue dikosongkan"); });
     $("ap-showq").addEventListener("change", e => Q.patch({ showQueue: e.target.checked }));
+    $("ap-fx").addEventListener("change", e => Q.patch({ fx: e.target.checked }));
+    $("ap-fxs").addEventListener("change", e => Q.patch({ fxSound: e.target.checked }));
+    // test the effect on the overlay without changing W/L
+    $("ap-fxwin").addEventListener("click", () => { Store.set(s => { s.fxTest = { k: "win", at: Date.now() }; }, { noHist: true }); toast("Efek MENANG dihantar ke overlay"); });
+    $("ap-fxlose").addEventListener("click", () => { Store.set(s => { s.fxTest = { k: "lose", at: Date.now() }; }, { noHist: true }); toast("Efek KALAH dihantar ke overlay"); });
     root.querySelectorAll(".ovp").forEach(i => i.addEventListener("change", () => Q.hideSet(i.dataset.o, i.dataset.k, !i.checked)));
     $("ap-open").addEventListener("click", () => { Q.patch({ mabarClosed: false }); toast("Mabar VIP OPEN"); });
     $("ap-close").addEventListener("click", () => { Q.patch({ mabarClosed: true }); toast("Mabar VIP CLOSED"); });
@@ -544,7 +555,7 @@ ${embedded ? "" : `<header class="app-top">
       // where the cameras sit in the landscape column right now (they move up when one is off)
       const lk = O.layoutOf && O.layoutOf("kiri"), sk = lk && O.stackLayout(lk, (s.hide || {}).l || {}, s.showBanner);
       if (sk && $("ap-ovpobs")) { const f = (n, r) => r ? `${n} ${r.x}, ${r.y} · ${r.w}×${r.h}` : ""; $("ap-ovpobs").textContent = ["OBS landscape: Game 384, 0 · 1536×1024", f("Facecam", sk.slots.face), f("Handcam", sk.slots.hand)].filter(Boolean).join(" · "); }
-      $("ap-showq").checked = !!s.showQueue; $("ap-open").setAttribute("aria-pressed", String(!s.mabarClosed)); $("ap-close").setAttribute("aria-pressed", String(!!s.mabarClosed)); $("ap-showb").checked = !!s.showBanner; $("ap-shows").checked = !s.song || s.song.on !== false;
+      $("ap-showq").checked = !!s.showQueue; $("ap-fx").checked = s.fx !== false; $("ap-fxs").checked = !!s.fxSound; $("ap-open").setAttribute("aria-pressed", String(!s.mabarClosed)); $("ap-close").setAttribute("aria-pressed", String(!!s.mabarClosed)); $("ap-showb").checked = !!s.showBanner; $("ap-shows").checked = !s.song || s.song.on !== false;
       if (document.activeElement !== $("ap-song")) $("ap-song").value = (s.song && s.song.manual) || "";
       $("ap-pc").textContent = `${s.playing.length}/${max}`; $("ap-qc").textContent = s.queue.length;
       if (qDrag) { pending.queue = true; } else {

@@ -169,7 +169,7 @@
       return e;
     }
   };
-  const HIST_SKIP = new Set(["rev", "updated", "seenOrders", "orderSeq", "yt", "docImported", "songResumeAt", "songLast", "songNow", "spotAuto"]); // album / akaun changes stay undoable
+  const HIST_SKIP = new Set(["rev", "updated", "seenOrders", "orderSeq", "yt", "docImported", "songResumeAt", "songLast", "songNow", "spotAuto", "fxTest"]); // album / akaun changes stay undoable
 
   /* ---------- queue, VIP balance, W/L, timer ---------- */
   const inLine = (s, k) => s.playing.some(p => p.key === k) || s.queue.some(p => p.key === k);
@@ -1196,6 +1196,13 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
         }
       }
       if (api.banner) api.banner.el.style.display = s.showBanner && !hid.banner ? "" : "none";
+      // WIN / LOSE effects (assets/fx.js): when the count goes up, or the App's test buttons
+      if (prev && window.SynoFX && s.fx !== false) {
+        const t = s.fxTest, pt = prev.fxTest;
+        if (t && (!pt || t.at !== pt.at) && Date.now() - t.at < 8000) SynoFX[t.k === "lose" ? "lose" : "win"](stage, L, s);
+        else if (s.wins > prev.wins) SynoFX.win(stage, L, s);
+        else if (s.losses > prev.losses) SynoFX.lose(stage, L, s);
+      }
       // thank-you pop when a Sociabuzz order lands
       const o = (s.orders || [])[0], po = prev && (prev.orders || [])[0];
       const pop = o && (o.src === "sociabuzz" || o.src === "sim" || o.src === "test");
