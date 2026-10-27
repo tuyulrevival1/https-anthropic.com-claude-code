@@ -286,6 +286,7 @@ ${inLine(k) ? `<span class="tag">${s.playing.some(p => p.key === k) ? "MAIN" : "
         ["LINK KEKAL admin (dari mana-mana, perlu PIN)", pub ? `${pub}/control.html` : "-"],
         ["Sociabuzz Webhook URL", a && a.hookUrl ? (a.hookUrl.startsWith("http") ? a.hookUrl : (pub ? pub + a.hookUrl : "Perlu link kekal dulu")) : "Masuk dengan PIN untuk lihat"],
         ["Overlay OBS", `http://127.0.0.1:8787/overlay.html`],
+        ["Potong logo rank (masukkan gambar semua rank)", `${base}/rank_tool.html`],
         ["Halaman penonton", `${base}/viewer.html`],
         ["App ni dari phone / admin (Wi-Fi sama)", lan ? `${lan}/control.html` : "Buka START_OVERLAY.bat untuk link Wi-Fi"],
         ["Penonton dari phone (Wi-Fi sama)", lan ? `${lan}/viewer.html` : "-"]

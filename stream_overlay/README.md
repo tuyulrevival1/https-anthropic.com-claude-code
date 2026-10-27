@@ -11,6 +11,8 @@ Semua dalam HTML: tak perlu edit video, tak perlu install Python.
 |---|---|
 | `START_OVERLAY.bat` | Hidupkan server kecil (PowerShell Windows) + buka App Kawalan. Biar terbuka masa live. |
 | `BUKA_APP.bat` | Buka semula tetingkap App Kawalan |
+| `PASANG_LINK_KEKAL.bat` | Sekali sahaja: pasang Tailscale & hidupkan link kekal untuk admin / penonton di luar Wi-Fi |
+| `rank_tool.html` | Potong logo rank dari satu gambar (latar putih) dan simpan ke overlay |
 | `AMBIL_LOGO_RANK.bat` | Muat turun logo rank MLBB asli (Epic hingga Immortal) dari wiki |
 | `overlay.html` | Overlay 1080×1920 untuk OBS |
 | `control.html` | **App Kawalan SYNO**: timer, W/L, game habis, queue (ID ML + tarikh), baki VIP, order Sociabuzz, YouTube, link |
@@ -43,7 +45,7 @@ Mesej, kicker, tag harga dan hook banner diubah dalam `config.js` › `banner.me
 
 ## Link kekal & admin luar
 
-Tailscale Funnel memberi link tetap `https://<pc>.<tailnet>.ts.net` untuk `viewer.html` (Linktree / bio) dan `control.html` (admin, perlu PIN). Langkah dalam [PASANG_OBS.md](PASANG_OBS.md) › bahagian 7.
+Tailscale Funnel memberi link tetap `https://<pc>.<tailnet>.ts.net` untuk `viewer.html` (Linktree / bio) dan `control.html` (admin, perlu PIN). Klik `PASANG_LINK_KEKAL.bat` sekali. Langkah dalam [PASANG_OBS.md](PASANG_OBS.md) › bahagian 7.
 
 ## Ikon rank asli
 

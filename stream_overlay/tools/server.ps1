@@ -5,7 +5,7 @@
 #  - /api/order-hook/KUNCI : terima order automatik (Sociabuzz webhook)
 #  - /api/orders     : App/overlay ambil order baru (PC ini / admin sahaja)
 #  - Tulis data dari PC ni bebas; dari phone / admin / internet perlu PIN (data\admin_pin.txt)
-#  - Link kekal (Tailscale Funnel) dihidupkan sendiri kalau Tailscale dipasang
+#  - Link kekal (Tailscale Funnel): sediakan sekali dengan PASANG_LINK_KEKAL.bat
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $port = 8787
@@ -62,15 +62,15 @@ if (-not $publicUrl) {
   $cmd = Get-Command tailscale -ErrorAction SilentlyContinue
   if ($cmd) { $ts = $cmd.Source } elseif (Test-Path "$env:ProgramFiles\Tailscale\tailscale.exe") { $ts = "$env:ProgramFiles\Tailscale\tailscale.exe" }
   if ($ts) {
-    Write-Host "  Menghidupkan link kekal (Tailscale Funnel)..." -ForegroundColor DarkGray
     try {
-      $job = Start-Job -ScriptBlock { param($exe, $p) & $exe funnel --bg $p 2>&1 } -ArgumentList $ts, $port
-      if (-not (Wait-Job $job -Timeout 20)) { Stop-Job $job; Write-Host "  Tailscale minta kebenaran: jalankan 'tailscale funnel $port' sekali dalam PowerShell dan ikut link yang keluar." -ForegroundColor Yellow }
-      else { $out = Receive-Job $job; if ($out -match 'https://\S+') { } }
+      # Funnel dihidupkan sekali oleh PASANG_LINK_KEKAL.bat (--bg, kekal walaupun restart). Di sini cuma semak.
+      $job = Start-Job -ScriptBlock { param($exe) & $exe funnel status 2>&1 | Out-String } -ArgumentList $ts
+      $out = ''; if (Wait-Job $job -Timeout 10) { $out = Receive-Job $job }
       Remove-Job $job -Force -ErrorAction SilentlyContinue
       $st = & $ts status --json | ConvertFrom-Json
-      if ($st.Self.DNSName) { $publicUrl = 'https://' + $st.Self.DNSName.TrimEnd('.') }
-    } catch { Write-Host "  (Tailscale tak dapat dihidupkan: $($_.Exception.Message))" -ForegroundColor DarkYellow }
+      if ($out -match 'https://' -and $out -match "$port" -and $st.Self.DNSName) { $publicUrl = 'https://' + $st.Self.DNSName.TrimEnd('.') }
+      elseif ($st.Self.DNSName) { Write-Host "  Tailscale ada, tapi Funnel belum hidup. Klik PASANG_LINK_KEKAL.bat sekali." -ForegroundColor Yellow }
+    } catch { Write-Host "  (Tailscale tak dapat disemak: $($_.Exception.Message))" -ForegroundColor DarkYellow }
   }
 }
 
@@ -90,7 +90,7 @@ if ($publicUrl) {
   Write-Host "    Sociabuzz webhook : $publicUrl/api/order-hook/$hookKey" -ForegroundColor Magenta
 } else {
   Write-Host ""
-  Write-Host "  Link kekal belum aktif. Lihat PASANG_OBS.md bahagian 'Link kekal'." -ForegroundColor DarkGray
+  Write-Host "  Link kekal belum aktif. Klik PASANG_LINK_KEKAL.bat (sekali sahaja)." -ForegroundColor DarkGray
 }
 Write-Host ""
 Write-Host "  PIN admin     : $pin   (tukar dalam data\admin_pin.txt)" -ForegroundColor Yellow
@@ -181,6 +181,16 @@ while ($true) {
             Remove-Item -LiteralPath $pendingFile -Force
           }
           $body = ToBytes ('[' + ($items -join ',') + ']')
+        }
+      } elseif ($path -eq 'api/rank-upload') {
+        # rank_tool.html simpan logo rank yang dipotong (PNG) ke assets\ranks\
+        $nm = ''; foreach ($pair in $query -split '&') { if ($pair -like 'name=*') { $nm = [Uri]::UnescapeDataString($pair.Substring(5)) } }
+        if ($method -ne 'POST' -or $nm -notin @('epic', 'legend', 'mythic', 'honor', 'glory', 'immortal')) { $status = '400 Bad Request'; $body = ToBytes 'Nama rank salah' }
+        elseif (-not $okPin) { $status = '401 Unauthorized'; $body = ToBytes 'PIN salah' }
+        elseif ($bodyBytes.Length -lt 8 -or $bodyBytes[0] -ne 0x89 -or $bodyBytes[1] -ne 0x50) { $status = '400 Bad Request'; $body = ToBytes 'Bukan PNG' }
+        else {
+          $rdir = Join-Path $root 'assets\ranks'; if (-not (Test-Path -LiteralPath $rdir)) { New-Item -ItemType Directory -Path $rdir | Out-Null }
+          [System.IO.File]::WriteAllBytes((Join-Path $rdir ($nm + '.png')), $bodyBytes); $body = ToBytes 'ok'
         }
       } elseif ($path -eq 'api/auth') {
         $type = 'application/json'

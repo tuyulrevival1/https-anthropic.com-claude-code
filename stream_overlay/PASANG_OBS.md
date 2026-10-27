@@ -72,29 +72,45 @@ Banner minimal: `http://127.0.0.1:8787/overlay.html?banner=minimal` · tanpa han
 
 Nak app dalam OBS juga: **Docks › Custom Browser Docks** › URL `http://127.0.0.1:8787/control.html`.
 
-## 7. Link kekal (penonton & admin dari mana-mana)
+## 7. Link kekal (admin & penonton di luar Wi-Fi)
 
-Guna **Tailscale Funnel** (percuma). Link tak berubah, jadi boleh letak di **Linktree / link di bio** sekali sahaja.
+Guna **Tailscale Funnel** (percuma). Link tak berubah, jadi letak di **Linktree / link di bio** sekali sahaja.
+**Hanya PC stream perlu Tailscale.** Admin dan penonton cuma buka link dalam browser phone, tak perlu install apa-apa.
 
-**Sekali sahaja:**
-1. Muat turun & pasang Tailscale: `https://tailscale.com/download/windows` › log masuk (Google / Microsoft).
-2. (Pilihan) Namakan PC supaya link cantik: `https://login.tailscale.com/admin/machines` › titik tiga di PC awak › **Edit machine name** › contoh `synostore`.
-3. Buka **PowerShell** dan taip:
-   ```
-   tailscale funnel 8787
-   ```
-   Kali pertama ia beri satu link untuk **enable HTTPS / Funnel**. Buka link tu › **Enable**. Bila keluar `Available on the internet: https://synostore.xxxx.ts.net`, tekan **Ctrl+C**.
+### A. Sediakan di PC stream (sekali sahaja, ±5 minit)
 
-**Selepas tu:** `START_OVERLAY.bat` hidupkan link ni sendiri dan tunjuk dalam tetingkap hitam & app:
+1. Klik dua kali **`PASANG_LINK_KEKAL.bat`** (dalam folder `stream_overlay`). Amaran biru: **More info › Run anyway**.
+2. **[1] Semak Tailscale**: kalau belum ada, ia pasang sendiri. Windows tanya "Allow changes?" › **Yes**.
+   (Kalau tak dapat pasang sendiri, halaman `tailscale.com/download/windows` terbuka: muat turun, pasang, kemudian klik semula `PASANG_LINK_KEKAL.bat`.)
+3. **[2] Log masuk**: browser terbuka › log masuk dengan **Google** atau **Microsoft** › tekan **Connect**.
+4. **[3] Nama link**: taip nama pendek, contoh `synostore` › Enter. (Enter terus = guna nama PC.)
+5. **[4] Hidupkan Funnel**: kali pertama keluar mesej *"Funnel is not enabled"* dengan satu link. Buka link tu › tekan **Enable** / **Approve**. Skrip sambung sendiri.
+6. Keluar **SIAP! LINK KEKAL AWAK**:
+   - Penonton: `https://synostore.xxxx.ts.net/viewer.html` (dah disalin, terus **Paste** dalam Linktree)
+   - Admin: `https://synostore.xxxx.ts.net/control.html`
 
-| Untuk | Link |
-|---|---|
-| Penonton (Linktree / bio) | `https://synostore.xxxx.ts.net/viewer.html` |
-| Admin di tempat lain (perlu PIN) | `https://synostore.xxxx.ts.net/control.html` |
+Funnel kekal hidup walaupun PC restart. Tak perlu ulang.
 
-- Link hanya hidup bila PC on dan `START_OVERLAY.bat` sedang jalan.
-- Admin buka link admin › masukkan **PIN** (dalam tetingkap hitam / `data\admin_pin.txt`). Tanpa PIN, orang lain hanya boleh tengok. PIN salah 10 kali = dikunci 10 minit.
-- Guna servis lain (ngrok / Cloudflare)? Tulis link awak dalam `data\public_url.txt`.
+### B. Setiap kali live
+
+1. Klik **`START_OVERLAY.bat`** seperti biasa. Tetingkap hitam tunjuk **LINK KEKAL** dan **PIN admin**.
+2. Link hanya hidup bila **PC on** dan **START_OVERLAY.bat sedang jalan**.
+
+### C. Admin (rumah lain / data phone)
+
+1. Buka link admin `https://synostore.xxxx.ts.net/control.html` dalam Chrome / Safari.
+2. Masukkan **PIN admin** (6 nombor, dari tetingkap hitam atau `data\admin_pin.txt`) › **Masuk**. Chip atas tukar jadi **ADMIN**.
+3. Admin boleh: tambah VIP & baki, susun queue, Menang/Kalah, timer, on/off queue & banner.
+4. Pilihan: Chrome › ⋮ › **Add to Home screen** (iPhone: Share › **Add to Home Screen**) supaya buka macam app.
+
+PIN salah 10 kali = akses admin luar dikunci 10 minit. Tukar PIN: ubah `data\admin_pin.txt`, kemudian buka semula START_OVERLAY.bat.
+
+### D. Penonton
+
+- Letak `https://synostore.xxxx.ts.net/viewer.html` di **Linktree / bio**.
+- Penonton taip nama atau ID ML untuk semak **baki game**, lihat **sedang main**, **queue**, W/L dan harga. Mereka **tak boleh ubah apa-apa**.
+
+Guna servis lain (ngrok / Cloudflare)? Tulis link awak dalam `data\public_url.txt`.
 
 ## 8. Order automatik dari Sociabuzz
 
@@ -123,9 +139,15 @@ Bilangan penonton TikTok tak boleh diambil (TikTok tiada API untuk ni).
 
 ## 10. Logo rank asli (joki)
 
-Klik dua kali **`AMBIL_LOGO_RANK.bat`**. Ia cari dan muat turun ikon asli Epic, Legend, Mythic, Mythical Honor, Mythical Glory dan Mythical Immortal dari wiki Mobile Legends ke `assets\ranks\`. Banner terus animasikan (3D, glow, kilauan).
-- Calon lain disimpan dalam `assets\ranks\pilihan\`. Salah gambar? Salin calon lain dan namakan semula (contoh `epic_2.png` › `epic.png`).
-- Boleh juga letak PNG sendiri dengan nama `epic.png`, `legend.png`, `mythic.png`, `honor.png`, `glory.png`, `immortal.png`.
+**Cara A: dari gambar sendiri (paling tepat).**
+1. Simpan gambar yang ada semua logo rank (latar putih, Warrior hingga Mythical Immortal) dalam PC.
+2. App › Link › **Potong logo rank**, atau buka `http://127.0.0.1:8787/rank_tool.html`.
+3. Pilih / seret gambar tu. Alat ni cari setiap logo, buang latar putih dan namakan Epic, Legend, Mythic, Mythical Honor, Mythical Glory, Mythical Immortal.
+4. Semak nama bawah setiap logo (betulkan kalau salah) › **Simpan ke overlay** › Refresh overlay dalam OBS.
+
+**Cara B: muat turun dari wiki.** Klik **`AMBIL_LOGO_RANK.bat`**. Calon lain dalam `assets\ranks\pilihan\`.
+
+Boleh juga letak PNG sendiri: `epic.png`, `legend.png`, `mythic.png`, `honor.png`, `glory.png`, `immortal.png` dalam `assets\ranks\`.
 
 ---
 
@@ -135,7 +157,7 @@ Klik dua kali **`AMBIL_LOGO_RANK.bat`**. Ia cari dan muat turun ikon asli Epic, 
 |---|---|
 | Overlay kosong dalam OBS | Tetingkap hitam masih buka? Properties Browser › **Refresh cache of current page**. |
 | App tulis **PERLU PIN** | Masukkan PIN dari tetingkap hitam (`data\admin_pin.txt`). |
-| Link kekal tak keluar | Tailscale dah log masuk? Jalankan `tailscale funnel 8787` sekali dan enable Funnel. |
+| Link kekal tak keluar | Klik `PASANG_LINK_KEKAL.bat` sekali lagi dan ikut langkah [1]–[4]. |
 | Order Sociabuzz tak masuk | Link kekal hidup? Webhook URL betul? Lihat `data\orders_log.txt`. Overlay atau app mesti terbuka. |
 | Timer tak mula sendiri | Overlay › Properties › Page permissions › Read access to OBS status information. Atau tekan **Mula** dalam app. |
 | PC lag | Tambah `?bgfx=0` pada URL overlay. |
