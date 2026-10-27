@@ -323,14 +323,17 @@ Setiap kill ada efek sendiri:
      - Dalam App: taip password tu, tekan **↻ Sambung OBS**, pilih **source game** (contoh source capture tablet / phone).
      - Atau pilih **Tetingkap di PC** dan pilih tetingkap mirror / OBS Windowed Projector (jangan minimize).
    - **2 · Kill siapa**: **Kill saya: banner biru + logo hero saya (Chou)**. Suis **Kill biasa = SOLO KILL** hidup.
-     - **Ambil logo Chou (sekali sahaja):** hidupkan **Auto detect kill** dan main sampai anda dapat kill. Gambar banner kill (8 terakhir) muncul dalam kad. Tekan gambar yang ada muka Chou › **✎ Pilih logo hero** › lukis kotak kecil tepat di atas muka Chou dalam banner. Tukar skin = ambil logo semula.
-     - **Ketepatan** 0.62 (asal). Status tunjuk **skor** setiap banner: kill anda patut lebih tinggi, kill orang lain lebih rendah. Turunkan kalau kill anda terlepas, naikkan kalau kill orang lain masuk.
+     - **Ambil logo Chou (sekali sahaja):** hidupkan **Auto detect kill** dan main sampai anda dapat kill. Gambar banner kill (8 terakhir) muncul dalam kad. Tekan gambar yang ada muka Chou di sebelah **pembunuh**, kemudian:
+       - **✎ Lukis kotak BANNER** › seret di sekeliling tulisan DOUBLE KILL / SAVAGE pada gambar tu (kuning),
+       - **✎ Pilih logo hero** › lukis kotak kecil tepat di atas muka Chou (ungu).
+     - Server cari Chou **hanya di sekitar kotak ungu** (tempat pembunuh dalam banner MLBB). Chou yang mati muncul di tempat lain, jadi tak dikira. Tukar skin = ambil logo semula.
+     - **Ketepatan** 0.80 (asal). Masa live, kotak **hijau** tunjuk tempat Chou dikesan dan skornya. Kill anda biasanya 0.85+. Turunkan sikit kalau kill anda terlepas, naikkan kalau efek keluar sendiri.
+     - **KDA sebagai sandaran** (pilihan): hidupkan dan lukis kotak KDA kalau nak tangkap kill yang logonya terlepas.
    - **3 · Kotak bacaan**: tekan **👁 Tunjuk skrin** (gambar game keluar):
-     - tekan **✎ Lukis kotak BANNER** › seret di tempat banner kill keluar, termasuk tulisan DOUBLE KILL **dan nama pemain** (kotak kuning),
-     - pilihan: **✎ Lukis kotak KDA** › seret di atas nombor K/D/A anda (kotak hijau).
+     - kotak boleh disembunyi / ditunjuk dengan suis **Tunjuk kotak: Banner · Chou · KDA**.
    - tanda **Auto detect kill** dan **Suara announcer**.
 4. Kotak **Status** tunjuk:
-   - **Logo hero: skor 0.84 ✓ pembunuh · Banner: biru** bila banner kill anda keluar,
+   - **Chou: skor 0.88 / perlu 0.80 ✓ · Banner: biru** bila banner kill anda keluar,
    - **KDA dibaca: 3/1/4 → kill anda = 3** (kalau kotak KDA dilukis),
    - **Banner dibaca:** teks dari kotak banner,
    - **Terakhir:** efek terakhir yang keluar.

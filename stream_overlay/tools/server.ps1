@@ -434,7 +434,8 @@ namespace SynoCap {
       using (var g = Graphics.FromImage(b)) g.DrawImage(full, new Rectangle(0, 0, cw, ch), new Rectangle(cx, cy, cw, ch), GraphicsUnit.Pixel);
       return b;
     }
-    static float[] GrayScaled(Bitmap src, int sx, int sy, int sw, int sh, int ow, int oh) {
+    // 3 saluran warna (B, G, R) selepas ubah saiz
+    static float[][] RgbScaled(Bitmap src, int sx, int sy, int sw, int sh, int ow, int oh) {
       using (var b = new Bitmap(ow, oh, PixelFormat.Format24bppRgb)) {
         using (var g = Graphics.FromImage(b)) {
           g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBilinear; g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
@@ -442,43 +443,56 @@ namespace SynoCap {
         }
         var bd = b.LockBits(new Rectangle(0, 0, ow, oh), ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
         int stride = bd.Stride; var px = new byte[stride * oh]; Marshal.Copy(bd.Scan0, px, 0, px.Length); b.UnlockBits(bd);
-        var o = new float[ow * oh];
-        for (int y = 0; y < oh; y++) { int r = y * stride; for (int x = 0; x < ow; x++) { int i = r + x * 3; o[y * ow + x] = px[i] * 0.114f + px[i + 1] * 0.587f + px[i + 2] * 0.299f; } }
+        var o = new float[3][]; for (int c = 0; c < 3; c++) o[c] = new float[ow * oh];
+        for (int y = 0; y < oh; y++) { int r = y * stride; for (int x = 0; x < ow; x++) { int i = r + x * 3, j = y * ow + x; o[0][j] = px[i]; o[1][j] = px[i + 1]; o[2][j] = px[i + 2]; } }
         return o;
       }
     }
-    // cari logo hero (tpl) dalam kawasan banner: "skor,x" (skor 0..1 padanan, x = tengah logo, pecahan kawasan)
+    // cari logo hero (tpl) dalam kawasan (pecahan 0..1 skrin). Padanan warna (purata NCC 3 saluran), 3 saiz.
+    // pulang "skor,x,y": skor 0..1, x/y = tengah logo yang dijumpai (pecahan skrin)
     public static string Match(Bitmap full, double fx, double fy, double fw, double fh, Bitmap tpl) {
-      if (full == null || tpl == null) return "-1,0";
+      if (full == null || tpl == null) return "-1,0,0";
       int W = full.Width, H = full.Height;
       int rx = Math.Max(0, Math.Min(W - 10, (int)(W * fx))), ry = Math.Max(0, Math.Min(H - 10, (int)(H * fy)));
       int rw = Math.Max(10, Math.Min(W - rx, (int)(W * fw))), rh = Math.Max(10, Math.Min(H - ry, (int)(H * fh)));
       int tw0 = tpl.Width, th0 = tpl.Height;
       double k = 24.0 / Math.Max(tw0, th0);
       int tw = Math.Max(6, (int)Math.Round(tw0 * k)), th = Math.Max(6, (int)Math.Round(th0 * k)), n = tw * th;
-      float[] T = GrayScaled(tpl, 0, 0, tw0, th0, tw, th);
-      double tm = 0; for (int i = 0; i < n; i++) tm += T[i]; tm /= n;
-      double tv = 0; for (int i = 0; i < n; i++) { double d = T[i] - tm; tv += d * d; T[i] = (float)d; }
-      double ts = Math.Sqrt(tv / n); if (ts < 2) return "-1,0";
-      double best = -1, bx = 0;
-      foreach (double sc in new double[] { 0.88, 1.0, 1.13 }) {
+      float[][] T = RgbScaled(tpl, 0, 0, tw0, th0, tw, th);
+      var ts = new double[3];
+      for (int c = 0; c < 3; c++) {
+        double m = 0; for (int i = 0; i < n; i++) m += T[c][i]; m /= n;
+        double v = 0; for (int i = 0; i < n; i++) { double d = T[c][i] - m; v += d * d; T[c][i] = (float)d; }
+        ts[c] = Math.Max(3.0, Math.Sqrt(v / n));
+      }
+      double best = -1, bx = 0, by = 0;
+      foreach (double sc in new double[] { 0.9, 1.0, 1.1 }) {
         double rk = k / sc;
         int sw = (int)(rw * rk), sh = (int)(rh * rk);
         if (sw <= tw || sh <= th) continue;
-        float[] R = GrayScaled(full, rx, ry, rw, rh, sw, sh);
-        int s1 = sw + 1; var S = new double[s1 * (sh + 1)]; var Q = new double[s1 * (sh + 1)];
-        for (int y = 0; y < sh; y++) { double rs = 0, rq = 0; for (int x = 0; x < sw; x++) { double v = R[y * sw + x]; rs += v; rq += v * v; S[(y + 1) * s1 + x + 1] = S[y * s1 + x + 1] + rs; Q[(y + 1) * s1 + x + 1] = Q[y * s1 + x + 1] + rq; } }
+        float[][] R = RgbScaled(full, rx, ry, rw, rh, sw, sh);
+        int s1 = sw + 1;
+        var S = new double[3][]; var Q = new double[3][];
+        for (int c = 0; c < 3; c++) {
+          S[c] = new double[s1 * (sh + 1)]; Q[c] = new double[s1 * (sh + 1)];
+          for (int y = 0; y < sh; y++) { double rs = 0, rq = 0; for (int x = 0; x < sw; x++) { double v = R[c][y * sw + x]; rs += v; rq += v * v; S[c][(y + 1) * s1 + x + 1] = S[c][y * s1 + x + 1] + rs; Q[c][(y + 1) * s1 + x + 1] = Q[c][y * s1 + x + 1] + rq; } }
+        }
         for (int y = 0; y + th <= sh; y++) for (int x = 0; x + tw <= sw; x++) {
-          int a = y * s1 + x, b2 = y * s1 + x + tw, c = (y + th) * s1 + x, d = (y + th) * s1 + x + tw;
-          double sum = S[d] - S[b2] - S[c] + S[a], sq = Q[d] - Q[b2] - Q[c] + Q[a];
-          double vr = sq / n - (sum / n) * (sum / n); if (vr < 4) continue;
-          double cross = 0;
-          for (int j = 0; j < th; j++) { int ro = (y + j) * sw + x, to = j * tw; for (int i = 0; i < tw; i++) cross += R[ro + i] * T[to + i]; }
-          double ncc = cross / (n * Math.Sqrt(vr) * ts);
-          if (ncc > best) { best = ncc; bx = (x + tw / 2.0) / sw; }
+          int a = y * s1 + x, b2 = y * s1 + x + tw, cc = (y + th) * s1 + x, d = (y + th) * s1 + x + tw;
+          double tot = 0; bool flat = false;
+          for (int c = 0; c < 3; c++) {
+            double sum = S[c][d] - S[c][b2] - S[c][cc] + S[c][a], sq = Q[c][d] - Q[c][b2] - Q[c][cc] + Q[c][a];
+            double vr = sq / n - (sum / n) * (sum / n); if (vr < 9) { flat = true; break; }
+            double cross = 0; float[] Rc = R[c], Tc = T[c];
+            for (int j = 0; j < th; j++) { int ro = (y + j) * sw + x, to = j * tw; for (int i = 0; i < tw; i++) cross += Rc[ro + i] * Tc[to + i]; }
+            tot += cross / (n * Math.Sqrt(vr) * ts[c]);
+          }
+          if (flat) continue;
+          double ncc = tot / 3;
+          if (ncc > best) { best = ncc; bx = (rx + (x + tw / 2.0) / rk) / W; by = (ry + (y + th / 2.0) / rk) / H; }
         }
       }
-      return best.ToString("0.000", CultureInfo.InvariantCulture) + "," + bx.ToString("0.000", CultureInfo.InvariantCulture);
+      return best.ToString("0.000", CultureInfo.InvariantCulture) + "," + bx.ToString("0.0000", CultureInfo.InvariantCulture) + "," + by.ToString("0.0000", CultureInfo.InvariantCulture);
     }
     // gambar kecil (JPEG) untuk pratonton dalam App
     public static byte[] Thumb(Bitmap full, int maxW) {
@@ -578,14 +592,15 @@ try { Add-Type -TypeDefinition $capCs -ReferencedAssemblies System.Drawing -Erro
 $killFile = Join-Path $dataDir 'killfx.json'
 $killOld = Join-Path $dataDir 'killfx.txt'
 # tetapan: src = 'win' (tetingkap) / 'obs' (source dalam OBS). team = 'kda' (kill saya ikut KDA) / 'me' (ikut nama) / 'ally' / 'all'
-$killShared = [hashtable]::Synchronized(@{ on = $false; win = ''; x = 0.2; y = 0.08; w = 0.6; h = 0.32; team = 'hero'; heroMin = 0.62; heroVer = 0; heroFile = (Join-Path $dataDir 'hero.png'); bans = [System.Collections.ArrayList]::Synchronized((New-Object System.Collections.ArrayList)); ign = ''; solo = $true; src = 'win'; obsSrc = ''; obsPort = 4455; obsPass = ''; kx = 0.0; ky = 0.0; kw = 0.0; kh = 0.0; last = '{}'; lastEv = ''; shot = $null; shotWant = [DateTime]::MinValue; events = [System.Collections.ArrayList]::Synchronized((New-Object System.Collections.ArrayList)) })
-$killKeys = @('on', 'win', 'x', 'y', 'w', 'h', 'team', 'ign', 'solo', 'src', 'obsSrc', 'obsPort', 'obsPass', 'kx', 'ky', 'kw', 'kh', 'heroMin')
+$killShared = [hashtable]::Synchronized(@{ on = $false; win = ''; x = 0.2; y = 0.08; w = 0.6; h = 0.32; team = 'hero'; heroMin = 0.8; heroX = 0.0; heroY = 0.0; heroW = 0.0; heroH = 0.0; kdaOn = $false; heroVer = 0; heroFile = (Join-Path $dataDir 'hero.png'); bans = [System.Collections.ArrayList]::Synchronized((New-Object System.Collections.ArrayList)); ign = ''; solo = $true; src = 'win'; obsSrc = ''; obsPort = 4455; obsPass = ''; kx = 0.0; ky = 0.0; kw = 0.0; kh = 0.0; last = '{}'; lastEv = ''; shot = $null; shotWant = [DateTime]::MinValue; events = [System.Collections.ArrayList]::Synchronized((New-Object System.Collections.ArrayList)) })
+$killKeys = @('on', 'win', 'x', 'y', 'w', 'h', 'team', 'ign', 'solo', 'src', 'obsSrc', 'obsPort', 'obsPass', 'kx', 'ky', 'kw', 'kh', 'heroMin', 'heroX', 'heroY', 'heroW', 'heroH', 'kdaOn')
 function KillNum([string]$v, [double]$d) { $o = 0.0; if ([double]::TryParse($v, [Globalization.NumberStyles]::Float, [Globalization.CultureInfo]::InvariantCulture, [ref]$o)) { return [Math]::Max(0.0, [Math]::Min(1.0, $o)) } return $d }
 function KillSet([string]$k, $v) {
   $sv = [string]$v
   switch -exact ($k) {
     'on' { $killShared.on = ($sv -eq '1' -or $sv -eq 'True') }
     'solo' { $killShared.solo = -not ($sv -eq '0' -or $sv -eq 'False') }
+    'kdaOn' { $killShared.kdaOn = ($sv -eq '1' -or $sv -eq 'True') }
     'win' { $killShared.win = ($sv -replace '[\r\n]', ' ').Trim() }
     'ign' { $killShared.ign = ($sv -replace '[\r\n]', ' ').Trim() }
     'obsSrc' { $killShared.obsSrc = ($sv -replace '[\r\n]', ' ').Trim() }
@@ -593,7 +608,7 @@ function KillSet([string]$k, $v) {
     'obsPort' { $pn = 0; if ([int]::TryParse($sv, [ref]$pn) -and $pn -gt 0 -and $pn -lt 65536) { $killShared.obsPort = $pn } }
     'src' { if ($sv -eq 'obs') { $killShared.src = 'obs' } else { $killShared.src = 'win' } }
     'team' { if (@('hero', 'kda', 'me', 'ally', 'all') -contains $sv) { $killShared.team = $sv } }
-    default { if (@('x', 'y', 'w', 'h', 'kx', 'ky', 'kw', 'kh', 'heroMin') -contains $k) { $killShared[$k] = KillNum $sv ([double]$killShared[$k]) } }
+    default { if (@('x', 'y', 'w', 'h', 'kx', 'ky', 'kw', 'kh', 'heroMin', 'heroX', 'heroY', 'heroW', 'heroH') -contains $k) { $killShared[$k] = KillNum $sv ([double]$killShared[$k]) } }
   }
 }
 function Save-KillCfg {
@@ -682,7 +697,7 @@ $lastAt = @{}; $lastAny = [DateTime]::MinValue; $firstAt = [DateTime]::MinValue;
 $obs = $null; $obsNext = [DateTime]::MinValue; $frame = 0; $evId = 0
 $kStable = -1; $dStable = -1; $aStable = -1; $kRead = -2; $kSame = 0; $pendAt = $null; $soloAt = $null; $credit = 0; $creditAt = [DateTime]::MinValue
 $prevFound = ''; $wordType = ''; $wordAt = [DateTime]::MinValue; $kdaTxt = ''
-$heroBmp = $null; $heroVerLoaded = -1; $ownSince = $null; $ownDone = $false
+$heroBmp = $null; $heroVerLoaded = -1; $ownSince = $null; $ownDone = $false; $heroSeen = $false; $heroRiseAt = [DateTime]::MinValue; $heroLastAt = [DateTime]::MinValue
 $ic = [Globalization.CultureInfo]::InvariantCulture
 # jenis kill dari teks banner: padanan tepat menang, kemudian perkataan paling panjang
 function MatchWord([string]$t) {
@@ -726,8 +741,8 @@ while ($true) {
   $frame++
   $info = ''; $txt = ''; $e2 = ''; $res = $null; $imgW = 1.0; $meX = -1.0; $other = $false; $how = ''; $bmp = $null
   $kNow = -1; $dNow = -1; $aNow = -1; $kClean = $false; $png = $null; $pngE = $null; $found = ''
-  $allyCol = $false; $wx = -1.0; $hScore = -1.0; $hX = -1.0; $side = ''
-  $useKda = (-not $previewOnly -and ($mode -eq 'kda' -or $own) -and [double]$K.kw -gt 0.003 -and [double]$K.kh -gt 0.003)
+  $allyCol = $false; $wx = -1.0; $hScore = -1.0; $hX = -1.0; $hY = -1.0; $side = ''
+  $useKda = (-not $previewOnly -and ($mode -eq 'kda' -or ($own -and $K.kdaOn)) -and [double]$K.kw -gt 0.003 -and [double]$K.kh -gt 0.003)
   try {
     if ($srcObs) {
       $how = 'obs'
@@ -771,11 +786,15 @@ while ($true) {
           if ($oE) { $tE = [string]$oE.res.Text; $fE = MatchWord $tE; if ($fE) { $found = $fE; $txt = ($txt + ' | ' + $tE).Trim(' |'); $res = $oE.res; $imgW = $oE.w } }
         }
         if ($found -and $res) { $wx = WordCenter $res $found $imgW }
-        # logo hero saya (Chou) dalam banner
-        if ($mode -eq 'hero' -and $heroBmp -and ($found -or $allyCol)) {
-          $hm = ([SynoCap.Cap]::Match($bmp, [double]$K.x, [double]$K.y, [double]$K.w, [double]$K.h, $heroBmp)).Split(',')
-          $hScore = [double]::Parse($hm[0], $ic); $hX = [double]::Parse($hm[1], $ic)
-        }
+      }
+      # logo hero saya (Chou): dicari hanya di sekitar tempat logo diambil (tempat pembunuh dalam banner MLBB).
+      # Chou yang mati muncul di tempat lain, jadi tak dikira.
+      if (-not $previewOnly -and $mode -eq 'hero' -and $heroBmp) {
+        $hw0 = [double]$K.heroW; $hh0 = [double]$K.heroH
+        if ($hw0 -gt 0.003 -and $hh0 -gt 0.003) { $sx0 = [Math]::Max(0.0, [double]$K.heroX - $hw0 * 1.2); $sy0 = [Math]::Max(0.0, [double]$K.heroY - $hh0 * 0.8); $sw0 = [Math]::Min(1.0 - $sx0, $hw0 * 3.4); $sh0 = [Math]::Min(1.0 - $sy0, $hh0 * 2.6) }
+        else { $sx0 = [double]$K.x; $sy0 = [double]$K.y; $sw0 = [double]$K.w; $sh0 = [double]$K.h }
+        $hm = ([SynoCap.Cap]::Match($bmp, $sx0, $sy0, $sw0, $sh0, $heroBmp)).Split(',')
+        $hScore = [double]::Parse($hm[0], $ic); $hX = [double]::Parse($hm[1], $ic); $hY = [double]::Parse($hm[2], $ic)
       }
       # simpan gambar banner (8 terakhir) supaya App boleh ambil logo hero dari situ
       if ($found -and $found -ne $prevFound) {
@@ -814,9 +833,15 @@ while ($true) {
   }
   # kill saya: banner biru (pasukan kita) DAN (logo hero saya di sebelah pembunuh / nama saya)
   $mine = $false
+  $heroRise = $false
   if ($mode -eq 'hero') {
-    if ($hScore -ge 0) { $side = $(if ($wx -lt 0 -or $hX -le $wx + 0.03) { 'L' } else { 'R' }) }
-    $mine = ($allyCol -and $hScore -ge [double]$K.heroMin -and $side -eq 'L')
+    $heroOn = ($hScore -ge [double]$K.heroMin)
+    # logo baru muncul (tiada sekurang-kurangnya 1.5 saat sebelum ni) = banner baru
+    if ($heroOn) { if (-not $heroSeen) { $heroSeen = $true; $heroRiseAt = $now }; $heroLastAt = $now } elseif ($heroSeen -and ($now - $heroLastAt).TotalSeconds -gt 1.5) { $heroSeen = $false }
+    # baru: logo baru muncul (< 2.5 s), atau tulisan banner baru (DOUBLE -> TRIPLE semasa logo masih di skrin)
+    $freshWord = ($found -and ($found -ne $prevFound -or ($wordType -eq $found -and ($now - $wordAt).TotalSeconds -le 2.5)))
+    $heroRise = ($heroSeen -and (($now - $heroRiseAt).TotalSeconds -le 2.5 -or $freshWord))
+    $mine = ($allyCol -and $heroOn -and $heroRise)
   } elseif ($mode -eq 'me') { $mine = ($meX -ge 0 -and $allyCol) }
   $fire = ''
   $rising = ($found -and $found -ne $prevFound)
@@ -841,6 +866,7 @@ while ($true) {
     }
     # tanda saya tanpa tulisan streak selama 0.45 saat = kill biasa = SOLO KILL
     $soloMark = ($mine -and -not $found -and ($mode -eq 'hero' -or $other))
+    if (-not $fire -and -not $soloMark -and $mode -eq 'hero' -and -not $heroSeen) { $ownDone = $false }
     if ($soloMark) { if (-not $ownSince) { $ownSince = $now } } else { $ownSince = $null; if (-not $mine) { $ownDone = $false } }
     if (-not $fire -and $soloMark -and -not $ownDone -and $K.solo -and ($now - $ownSince).TotalSeconds -ge 0.45 -and ($now - $lastAny).TotalSeconds -ge 2) {
       $fire = 'solo'; $ownDone = $true
@@ -875,7 +901,7 @@ while ($true) {
       $evId++; $K.lastEv = '' + $evId + ',' + $fire + ',' + $hitAt
     }
   }
-  $K.last = '{"on":true,"ocr":true,"how":' + (JsonStr $how) + ',"k":' + $kStable + ',"kda":' + (JsonStr $kdaTxt) + ',"mex":' + [Math]::Round($meX, 2).ToString($ic) + ',"hs":' + [Math]::Round($hScore, 2).ToString($ic) + ',"hx":' + [Math]::Round($hX, 2).ToString($ic) + ',"wx":' + [Math]::Round($wx, 2).ToString($ic) + ',"side":"' + $side + '","ally":' + ([string][bool]$allyCol).ToLower() + ',"hero":' + ([string][bool]$heroBmp).ToLower() + ',"info":' + (JsonStr $info) + ',"text":' + (JsonStr (($txt -replace '[\x00-\x1f]', ' ').Trim())) + ',"hit":' + (JsonStr $hitName) + ',"hitAt":' + $hitAt + ',"err":' + (JsonStr $e2) + '}'
+  $K.last = '{"on":true,"ocr":true,"how":' + (JsonStr $how) + ',"k":' + $kStable + ',"kda":' + (JsonStr $kdaTxt) + ',"mex":' + [Math]::Round($meX, 2).ToString($ic) + ',"hs":' + [Math]::Round($hScore, 2).ToString($ic) + ',"hx":' + [Math]::Round($hX, 4).ToString($ic) + ',"hy":' + [Math]::Round($hY, 4).ToString($ic) + ',"wx":' + [Math]::Round($wx, 2).ToString($ic) + ',"side":"' + $side + '","ally":' + ([string][bool]$allyCol).ToLower() + ',"hero":' + ([string][bool]$heroBmp).ToLower() + ',"info":' + (JsonStr $info) + ',"text":' + (JsonStr (($txt -replace '[\x00-\x1f]', ' ').Trim())) + ',"hit":' + (JsonStr $hitName) + ',"hitAt":' + $hitAt + ',"err":' + (JsonStr $e2) + '}'
   if ($e2 -and -not $res) { Start-Sleep -Milliseconds 700 } else { Start-Sleep -Milliseconds 40 }
 }
 '@)
@@ -896,14 +922,14 @@ function SiteVer {
 }
 # suara announcer: teks setiap kill
 $voiceText = @{ solo = 'Solo kill!'; first = 'First blood!'; double = 'Double kill!'; triple = 'Triple kill!'; maniac = 'Maniac!'; savage = 'Savage!'; shutdown = 'Shut down!'; spree = 'Killing spree!'; monster = 'Monster kill!'; mega = 'Mega kill!'; unstoppable = 'Unstoppable!'; godlike = 'Godlike!'; legendary = 'Legendary!'; rampage = 'Rampage!'; wiped = 'Wiped out!' }
-$voiceVer = 'v3'   # tukar bila gaya suara berubah (fail lama dijana semula)
+$voiceVer = 'v4'   # tukar bila gaya suara berubah (fail lama dijana semula)
 $voiceDefs = @'
 # SSML gaya announcer bersemangat: perkataan awal laju, perkataan akhir dihentak tinggi dan kuat
 function Voice-Ssml([string]$text, [string]$lang) {
   $wds = @($text.Split(' ') | Where-Object { $_ })
   $last = [System.Security.SecurityElement]::Escape($wds[$wds.Count - 1])
-  $lead = ''; if ($wds.Count -gt 1) { $lead = '<prosody rate="fast" pitch="+6%" volume="x-loud">' + [System.Security.SecurityElement]::Escape(($wds[0..($wds.Count - 2)] -join ' ')) + '</prosody> ' }
-  return '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="' + $lang + '">' + $lead + '<prosody rate="+4%" pitch="+16%" volume="x-loud"><emphasis level="strong">' + $last + '</emphasis></prosody></speak>'
+  $lead = ''; if ($wds.Count -gt 1) { $lead = '<prosody rate="fast" pitch="-4%" volume="x-loud">' + [System.Security.SecurityElement]::Escape(($wds[0..($wds.Count - 2)] -join ' ')) + '</prosody> ' }
+  return '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="' + $lang + '">' + $lead + '<prosody rate="medium" pitch="+4%" volume="x-loud"><emphasis level="strong">' + $last + '</emphasis></prosody></speak>'
 }
 function Make-Voice([string]$text, [string]$file) {
   # 1) suara Windows moden (OneCore: Guy / Davis / Mark ...), 2) suara lama System.Speech (David)
@@ -1110,7 +1136,8 @@ while ($true) {
         $ic = [Globalization.CultureInfo]::InvariantCulture
         $kjs = '{"cap":' + ([string]$capOk).ToLower() + ',"run":' + ([string][bool]$killBg).ToLower() + ',"on":' + ([string][bool]$killShared.on).ToLower() + ',"solo":' + ([string][bool]$killShared.solo).ToLower() + ',"obsPassSet":' + ([string][bool]$killShared.obsPass).ToLower() + ',"obsPort":' + [int]$killShared.obsPort
         foreach ($kk in @('win', 'team', 'ign', 'src', 'obsSrc')) { $kjs += ',"' + $kk + '":' + (JsonStr ([string]$killShared[$kk])) }
-        foreach ($kk in @('x', 'y', 'w', 'h', 'kx', 'ky', 'kw', 'kh', 'heroMin')) { $kjs += ',"' + $kk + '":' + ([double]$killShared[$kk]).ToString($ic) }
+        $kjs += ',"kdaOn":' + ([string][bool]$killShared.kdaOn).ToLower()
+        foreach ($kk in @('x', 'y', 'w', 'h', 'kx', 'ky', 'kw', 'kh', 'heroMin', 'heroX', 'heroY', 'heroW', 'heroH')) { $kjs += ',"' + $kk + '":' + ([double]$killShared[$kk]).ToString($ic) }
         $kjs += ',"heroSet":' + ([string](Test-Path -LiteralPath $killShared.heroFile)).ToLower() + ',"heroVer":' + [int]$killShared.heroVer
         $body = ToBytes ($kjs + '}')
       } elseif ($path -eq 'api/killshot') {
@@ -1144,6 +1171,8 @@ while ($true) {
                 $hb = [SynoCap.Cap]::FromBytes($killShared.bans[$bi].img)
                 $hc = [SynoCap.Cap]::CropRaw($hb, (KillNum $kf['x'] 0), (KillNum $kf['y'] 0), (KillNum $kf['w'] 0.05), (KillNum $kf['h'] 0.05))
                 $hc.Save($killShared.heroFile, [System.Drawing.Imaging.ImageFormat]::Png); $hc.Dispose(); $hb.Dispose()
+                foreach ($hk in @('x', 'y', 'w', 'h')) { KillSet ('hero' + $hk.ToUpper()) $kf[$hk] }
+                Save-KillCfg
               }
               $killShared.heroVer = [int]$killShared.heroVer + 1
               $body = ToBytes '{"ok":true}'

@@ -357,3 +357,7 @@
 .app .kban em { position: absolute; left: 0; right: 0; bottom: 0; padding: 2px 4px; font: 700 10px/1.3 var(--f-ui, sans-serif); font-style: normal; color: #fff; background: rgba(0,0,0,.7); text-align: left; }
 .app .khrow2 { align-items: flex-end; gap: 8px; } .app .khmin { width: 190px; flex: none; }
 .app .killfx [data-draw][disabled] { opacity: .4; cursor: not-allowed; }
+.app .kbox.hero { border-color: #c77dff; background: rgba(199,125,255,.15); } .app .kbox.hero em { background: #c77dff; }
+.app .kbox.live { border: 2px dashed #8a8a8a; background: none; } .app .kbox.live em { left: auto; right: -2px; top: auto; bottom: -18px; background: #8a8a8a; }
+.app .kbox.live.ok { border-color: #4fe38a; box-shadow: 0 0 10px #4fe38a; } .app .kbox.live.ok em { background: #4fe38a; }
+.app .killfx .kvis { align-items: center; gap: 10px; margin-top: 6px; font-size: 13px; } .app .killfx .tog.sm { padding: 4px 8px; }
