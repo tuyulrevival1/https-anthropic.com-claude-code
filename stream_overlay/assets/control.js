@@ -111,6 +111,18 @@ ${embedded ? "" : `<header class="app-top">
     <div class="row"><button class="btn" type="button" id="ap-akadd">+ Baris</button><button class="btn ghost" type="button" id="ap-akreset" data-confirm="Tekan lagi: kosongkan semua">Reset jadual</button></div>
   </section>
 
+  <section class="card album">
+    <h3>Komen Album <span id="ap-alc"></span></h3>
+    <form id="ap-aladd" class="addform" autocomplete="off">
+      <div class="two"><label class="fld">Nama<input id="ap-alname" maxlength="24" placeholder="cth Aqil.MY"></label>
+      <label class="fld">ID ML<input id="ap-almlid" maxlength="32" placeholder="cth 123456789 (1234)"></label></div>
+      <label class="fld">Nota (pilihan)<input id="ap-alnote" maxlength="120" placeholder="cth album hero Chou"></label>
+      <div class="row"><button class="btn red" type="submit">Tambah</button><button class="btn ghost" type="button" id="ap-alclear" data-confirm="Tekan lagi: buang yang dah siap">Buang yang dah siap</button></div>
+    </form>
+    <p class="muted">Order Sociabuzz <b>RM${((CFG.sociabuzz && CFG.sociabuzz.services) || []).filter(x => x.type === "album").map(x => x.rm).join(" / ") || 5}</b> (atau mesej sebut "album") masuk sendiri ke sini. Tekan <b>Siap</b> bila dah komen.</p>
+    <ol class="list allist" id="ap-album"></ol>
+  </section>
+
   <section class="card rules">
     <h3>Peraturan</h3>
     <textarea id="ap-rules" class="rules-in" rows="14" aria-label="Peraturan Mabar"></textarea>
@@ -183,7 +195,7 @@ ${embedded ? "" : `<header class="app-top">
     const HIST_FIELDS = {
       live: ["live", "song", "showQueue", "showBanner"], wl: ["wins", "losses", "streak"],
       end: ["wins", "losses", "streak", "playing", "queue", "members"], queue: ["playing", "queue", "members"],
-      vip: ["members", "playing", "queue"], mvp: ["mvp", "mvpRules"], akaun: ["akaun"], rules: ["rules"]
+      vip: ["members", "playing", "queue"], mvp: ["mvp", "mvpRules"], akaun: ["akaun"], album: ["album"], rules: ["rules"]
     };
     layCards().forEach(c => {
       const f = HIST_FIELDS[c.dataset.card], h = c.querySelector("h3"); if (!f || !h) return;
@@ -279,6 +291,7 @@ ${embedded ? "" : `<header class="app-top">
       { id: "live", label: "Live", cards: ["live", "wl", "end", "queue"] },
       { id: "hutang", label: "Hutang Mabar", cards: ["vip"] },
       { id: "mvp", label: "MVP", cards: ["mvp"] },
+      { id: "album", label: "Komen Album", cards: ["album"] },
       { id: "akaun", label: "Slot Akaun", cards: ["akaun"] },
       { id: "rules", label: "Peraturan", cards: ["rules"] },
       { id: "order", label: "Order", cards: ["orders"] },
@@ -394,6 +407,11 @@ ${embedded ? "" : `<header class="app-top">
         if (r) toast(`${r.name}: MVP ${r.cur}${r.cur === 5 || r.cur === 15 ? ` · cukup ${r.cur}, boleh claim!` : ""}${r.free ? " · VVIP free 1 game" : ""}`, 3500);
       }
       else if (a === "import") doImport();
+      else if (a === "altog") Q.albumToggle(id);
+      else if (a === "aldel") {
+        if (b.dataset.armed) Q.albumDel(id);
+        else { b.dataset.armed = "1"; b.textContent = "Pasti?"; setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = "✕"; } }, 2500); }
+      }
       else if (a === "addn" || a === "setn") {
         const inp = b.closest("li").querySelector(".gin"), n = parseInt(inp.value, 10);
         if (isNaN(n)) { inp.focus(); toast("Taip nombor dulu"); return; }
@@ -425,6 +443,8 @@ ${embedded ? "" : `<header class="app-top">
       tabc("live", `${s.playing.length}/${max}${s.queue.length ? ` · Q${s.queue.length}` : ""}`);
       tabc("hutang", Object.values(s.members).filter(m => T(m) > 0).length || "");
       tabc("mvp", (s.mvp || []).length || "");
+      const alWait = (s.album || []).filter(a => !a.done).length;
+      tabc("album", alWait || "");
       const newOrd = (s.orders || []).filter(o => o.rx > appOpen && o.src !== "manual").length;
       tabc("order", newOrd ? `${newOrd} baru` : "");
       $("ap-streak").textContent = s.streak >= 2 ? `Win streak ${s.streak}` : s.streak <= -2 ? `Lose streak ${-s.streak}` : "";
@@ -439,8 +459,9 @@ ${embedded ? "" : `<header class="app-top">
         : `<li class="empty">Queue kosong.</li>`;
       const ords = (s.orders || []).slice(0, 40);
       $("ap-oc").textContent = ords.length ? `${ords.length}` : "";
-      const srcTag = o => o.src === "sociabuzz" ? `<span class="tag sb">SOCIABUZZ</span>` : o.src === "test" ? `<span class="tag test">TEST</span>` : o.src === "sim" ? `<span class="tag test">ALERT</span>` : `<span class="tag man">MANUAL</span>`;
-      $("ap-orders").innerHTML = ords.length ? ords.map(o => `<li class="${o.warn ? "warn" : ""}">${srcTag(o)}<span class="who"><span class="nm">${esc(o.name)}</span><span class="sub">${o.mlid ? `ID ${esc(o.mlid)} · ` : "tiada ID · "}${fmtDate(o.at)}${o.amount ? ` · ${esc(o.cur || "")} ${o.amount}` : ""}${o.warn ? ` · ${esc(o.warn)}` : ""}</span></span><span class="bal">${o.games ? `+${o.games} game${o.vip ? " VVIP" : ""}` : "—"}</span></li>`).join("")
+      const SVL = { album: "KOMEN ALBUM", akaun: "MAIN AKAUN" };
+      const srcTag = o => o.svc && o.src !== "test" ? `<span class="tag sb">${SVL[o.svc] || o.svc}</span>` : o.src === "sociabuzz" ? `<span class="tag sb">SOCIABUZZ</span>` : o.src === "test" ? `<span class="tag test">TEST</span>` : o.src === "sim" ? `<span class="tag test">ALERT</span>` : `<span class="tag man">MANUAL</span>`;
+      $("ap-orders").innerHTML = ords.length ? ords.map(o => `<li class="${o.warn ? "warn" : ""}">${srcTag(o)}<span class="who"><span class="nm">${esc(o.name)}</span><span class="sub">${o.mlid ? `ID ${esc(o.mlid)} · ` : "tiada ID · "}${fmtDate(o.at)}${o.amount ? ` · ${esc(o.cur || "")} ${o.amount}` : ""}${o.warn ? ` · ${esc(o.warn)}` : ""}</span></span><span class="bal">${o.games ? `+${o.games} game${o.vip ? " VVIP" : ""}` : o.svc && o.src !== "test" ? "✓" : "—"}</span>${o.raw ? `<details class="raw"><summary>Data asal</summary><code>${esc(o.raw)}</code></details>` : ""}</li>`).join("")
         : `<li class="empty">Belum ada order.</li>`;
       // text areas: never overwrite while being edited
       if (document.activeElement !== $("ap-rules") && !$("ap-rules").dataset.dirty) $("ap-rules").value = s.rules || "";
@@ -484,6 +505,12 @@ ${m.miss ? `<div class="mctl mc-miss"><span class="muted">Hilang ${m.miss} kali<
 ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-id="${x.id}" data-i="${x.hist.length - 1}">Buang nombor akhir</button>` : ""}<button class="btn sq ghost" data-a="mvdel" data-id="${x.id}" aria-label="Padam">✕</button></div></li>`).join("")
           : `<li class="empty">${q ? "Tiada nama sepadan." : "Belum ada."}</li>`;
       }
+      // komen album
+      const al = s.album || [];
+      $("ap-alc").textContent = al.length ? `${alWait} menunggu · ${al.length - alWait} siap` : "";
+      $("ap-album").innerHTML = al.length ? al.map(a => `<li class="alrow${a.done ? " done" : ""}"><span class="who"><span class="nm">${esc(a.name)}${a.src === "sociabuzz" ? ` <span class="tag sb">SOCIABUZZ</span>` : ""}</span><span class="sub">${a.mlid ? `ID ${esc(a.mlid)} · ` : ""}${fmtDate(a.at)}${a.note ? ` · ${esc(a.note)}` : ""}</span></span>
+<button class="btn small ${a.done ? "ghost" : "gold"}" type="button" data-a="altog" data-id="${a.id}">${a.done ? "✓ Siap" : "Tanda siap"}</button><button class="btn sq ghost" type="button" data-a="aldel" data-id="${a.id}" aria-label="Buang ${esc(a.name)}">✕</button></li>`).join("")
+        : `<li class="empty">Belum ada order komen album.</li>`;
       // slot mainkan akaun
       const akBox = $("ap-akaun");
       if (!force && busyIn(akBox)) pending.akaun = true;
@@ -503,6 +530,13 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
     $("ap-rules").addEventListener("input", e => { e.target.dataset.dirty = "1"; });
     $("ap-rulesave").addEventListener("click", () => { Q.patch({ rules: $("ap-rules").value.trim() }); delete $("ap-rules").dataset.dirty; toast("Peraturan disimpan"); });
     $("ap-akadd").addEventListener("click", () => Q.akaunAdd());
+    $("ap-aladd").addEventListener("submit", e => {
+      e.preventDefault();
+      const n = $("ap-alname").value.trim(); if (!n) { $("ap-alname").focus(); toast("Taip nama dulu"); return; }
+      Q.albumAdd(n, $("ap-almlid").value.trim(), $("ap-alnote").value.trim());
+      $("ap-alname").value = ""; $("ap-almlid").value = ""; $("ap-alnote").value = ""; toast(`${n}: komen album ditambah`);
+    });
+    twoStep($("ap-alclear"), () => { Q.albumClearDone(); toast("Yang dah siap dibuang"); });
     twoStep($("ap-akreset"), () => { Q.akaunReset(); toast("Jadual dikosongkan"); });
     const runImport = seed => { const r = Q.importDoc(seed); toast(`Import: ${r.members} orang, ${r.mvp} MVP`); };
     const doImport = () => window.SYNO_SEED ? runImport(window.SYNO_SEED) : $("ap-impfile").click();
@@ -523,7 +557,7 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
     if (!/^https?:$/.test(location.protocol)) setTimeout(tryAutoImport, 800);
     Store.on((s, prev) => {
       const a = (s.orders || [])[0], b = prev && (prev.orders || [])[0];
-      if (a && (!b || a.rx !== b.rx) && a.src !== "manual" && a.src !== "sim") toast(a.src === "test" ? "Test Sociabuzz diterima ✓ (lihat tab Order)" : `Order Sociabuzz: ${a.name} +${a.games} game`, 5000);
+      if (a && (!b || a.rx !== b.rx) && a.src !== "manual" && a.src !== "sim") toast(a.src === "test" ? "Test Sociabuzz diterima ✓ (lihat tab Order)" : a.warn ? `Order Sociabuzz: ${a.name} · ${a.warn}` : a.svc === "album" ? `Komen album: ${a.name}` : a.svc === "akaun" ? `Mainkan akaun: ${a.name}` : `Order Sociabuzz: ${a.name} +${a.games} game`, 5000);
     });
 
     /* ---------- YouTube viewers ---------- */

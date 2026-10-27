@@ -50,6 +50,7 @@
     s.song = Object.assign({ on: true, manual: "" }, s.song || {});
     Object.values(s.members).forEach(m => { m.bal = m.bal || 0; m.vbal = m.vbal || 0; });
     s.mvp = Array.isArray(s.mvp) ? s.mvp : [];
+    s.album = Array.isArray(s.album) ? s.album : [];
     if (!Array.isArray(s.akaun)) s.akaun = defaultAkaun();
     if (typeof s.rules !== "string") s.rules = CFG.rules || "";
     if (typeof s.mvpRules !== "string") s.mvpRules = CFG.mvpRules || "";
@@ -151,7 +152,7 @@
       return e;
     }
   };
-  const HIST_SKIP = new Set(["rev", "updated", "orders", "seenOrders", "orderSeq", "yt", "docImported"]);
+  const HIST_SKIP = new Set(["rev", "updated", "orders", "seenOrders", "orderSeq", "yt", "docImported"]); // album / akaun changes stay undoable
 
   /* ---------- queue, VIP balance, W/L, timer ---------- */
   const inLine = (s, k) => s.playing.some(p => p.key === k) || s.queue.some(p => p.key === k);
@@ -274,6 +275,23 @@
     mvpToggle(id, i) { Store.set(s => { const x = s.mvp.find(v => v.id === id); if (x && x.hist[i]) x.hist[i].c = !x.hist[i].c; }); },
     mvpDelHist(id, i) { Store.set(s => { const x = s.mvp.find(v => v.id === id); if (x) x.hist.splice(i, 1); }); },
     mvpDel(id) { Store.set(s => { s.mvp = s.mvp.filter(v => v.id !== id); }); },
+    /* ---------- komen album (RM5) ---------- */
+    _albumAdd(s, name, mlid, note, at, src) {
+      s.album = s.album || [];
+      s.album.unshift({ id: uid("a"), name: String(name || "").trim().slice(0, 24) || "Anonim", mlid: String(mlid || "").slice(0, 32), note: String(note || "").slice(0, 120), at: at || Date.now(), done: false, src: src || "manual" });
+      s.album = s.album.slice(0, 300);
+    },
+    albumAdd(name, mlid, note) { Store.set(s => Q._albumAdd(s, name, mlid, note, Date.now(), "manual")); },
+    albumToggle(id) { Store.set(s => { const a = (s.album || []).find(x => x.id === id); if (a) { a.done = !a.done; a.doneAt = a.done ? Date.now() : 0; } }); },
+    albumDel(id) { Store.set(s => { s.album = (s.album || []).filter(x => x.id !== id); }); },
+    albumClearDone() { Store.set(s => { s.album = (s.album || []).filter(x => !x.done); }); },
+    // RM40 order: first empty name in the Slot Mainkan Akaun table (adds a row if full)
+    _akaunBook(s, name, at) {
+      const d = new Date(at || Date.now()), dt = `${d.getDate()}/${d.getMonth() + 1}`;
+      let r = (s.akaun || []).find(x => !String(x.name || "").trim());
+      if (!r) { r = { day: "", name: "", date: "" }; s.akaun.push(r); }
+      r.name = String(name || "").slice(0, 40); r.date = r.date || dt;
+    },
     /* ---------- slot mainkan akaun ---------- */
     akaunSet(i, f, v) { Store.set(s => { if (s.akaun[i]) s.akaun[i][f] = String(v || "").slice(0, 40); }); },
     akaunAdd() { Store.set(s => { s.akaun.push({ day: "", name: "", date: "" }); }); },
@@ -377,8 +395,17 @@
     }
     const at = Date.parse(pick(b, ["created_at", "paid_at", "date"]) || "") || entry.t || Date.now();
     const id = String(pick(b, ["id", "transaction_id", "order_id"]) || `${name}|${amount}|${at}`);
-    const test = /ini hanya test notifikasi/i.test(msg) || String(b.email_supporter || "") === "jessica@example.com";
-    return { id, name, mlid, games, at, amount, cur, msg: msg.slice(0, 120), test, vip };
+    // Sociabuzz test (Webhook page and the Alert page's Test Alert use sample names / messages)
+    const test = /ini hanya test notifikasi|test notifi|nama penyokong|penyokong anda|your supporter|supporter name|message from (your )?supporter/i.test(name + " " + msg)
+      || /@example\.com$/i.test(String(pick(b, ["email_supporter", "email", "buyer_email"]) || ""));
+    // service by exact amount (RM5 = komen album, RM40 = mainkan akaun) or by a word in the message
+    let svc = "";
+    const SV = SB.services || [];
+    const byWord = SV.find(x => new RegExp("\\b" + x.type + "\\b", "i").test(msg) || (x.label && new RegExp(x.label, "i").test(msg)));
+    if (byWord) svc = byWord.type;
+    else if (!/\b(mabar|game|vip|immortal)\b/i.test(msg)) { const ex = SV.find(x => x.rm === Math.round(rm)); if (ex) svc = ex.type; }
+    if (svc) games = 0;
+    return { id, name, mlid, games, at, amount, cur, msg: msg.slice(0, 120), test, vip, svc, raw: text.slice(0, 500) };
   }
   let ordersBusy = false;
   // Orders stay in the server journal with a number; the shared state remembers the last number
@@ -400,10 +427,12 @@
           if (first && e.t && Date.now() - e.t > 864e5) continue;
           const o = parseOrder(e);
           // Sociabuzz sends the same id on every Test Notification: never drop a test as a duplicate
-          if (!o.test && s.seenOrders.includes(o.id)) continue;
+          const info = { amount: o.amount, cur: o.cur, note: o.msg, vip: !!o.vip, raw: o.raw, svc: o.svc };
+          if (!o.test && s.seenOrders.includes(o.id)) { Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz", warn: "Order sama dengan sebelum ni, diabaikan" }, info)); continue; }
           if (!o.test) s.seenOrders.unshift(o.id);
-          const info = { amount: o.amount, cur: o.cur, note: o.msg, vip: !!o.vip };
           if (o.test) { Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "test" }, info)); continue; }
+          if (o.svc === "album") { Q._albumAdd(s, o.name, o.mlid, o.msg.replace(/\b(?:id\s*(?:ml)?\s*[:=]?\s*)?\d{6,12}\s*[(\[]?\s*\d{3,5}\s*[)\]]?/i, "").replace(/\s{2,}/g, " ").trim(), o.at, "sociabuzz"); Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz" }, info)); continue; }
+          if (o.svc === "akaun") { Q._akaunBook(s, o.name, o.at); Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz" }, info)); continue; }
           const k = keyOf(o.name);
           if (o.games > 0 && k) Q._add(s, k, o.name, o.games, SB.autoQueue, o.at, o.mlid, "sociabuzz", info);
           else Q._log(s, Object.assign({ key: k, name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz", warn: "Jumlah tak cukup untuk 1 game" }, info));
@@ -757,7 +786,7 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
       if (prev && pop && (!po || o.rx !== po.rx)) {
         const qc = panels.find(p => p.def.type === "queue");
         if (qc) {
-          const al = el("div", "q-alert", `<b>TERIMA KASIH</b><span>${esc(o.name)}</span><i>${o.src === "test" ? "TEST ✓" : o.games > 0 ? `+${o.games} GAME` : "SOCIABUZZ"}</i>`);
+          const al = el("div", "q-alert", `<b>TERIMA KASIH</b><span>${esc(o.name)}</span><i>${o.src === "test" ? "TEST ✓" : o.svc === "album" ? "KOMEN ALBUM" : o.svc === "akaun" ? "MAIN AKAUN" : o.games > 0 ? `+${o.games} GAME` : "SOCIABUZZ"}</i>`);
           qc.e.parentNode.appendChild(al);
           Object.assign(al.style, { left: qc.def.x + "px", top: (qc.def.y - 26) + "px", width: qc.def.w + "px" });
           setTimeout(() => al.remove(), 6000);

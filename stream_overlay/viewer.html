@@ -39,7 +39,7 @@
   .wl .w b { color: var(--gold); } .wl .l b { color: var(--red); }
   .streak { margin: 0; align-self: flex-start; font: 700 12px/1 var(--hud); letter-spacing: .2em; padding: 7px 10px; }
   .streak.w { background: var(--gold); color: #160a00; } .streak.l { background: var(--red); color: #fff; }
-  .tabs { position: sticky; top: 0; z-index: 3; display: grid; grid-template-columns: 1.15fr 1fr .8fr .95fr 1.35fr; gap: 4px; padding: 6px 0; background: var(--bg); }
+  .tabs { position: sticky; top: 0; z-index: 3; display: grid; grid-template-columns: 1.15fr 1fr .8fr .95fr .95fr 1.35fr; gap: 4px; padding: 6px 0; background: var(--bg); }
   .tabs button { min-width: 0; font: 700 12px/1 var(--hud); letter-spacing: .04em; text-transform: uppercase; color: var(--mut); background: #1a0b10; border: 1px solid var(--line); padding: 12px 2px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tabs button[aria-selected="true"] { color: #fff; background: var(--red); border-color: var(--red); }
   /* doc-style tables */
@@ -73,6 +73,7 @@
   .prices div { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 10px; padding: 10px 12px; background: var(--row); }
   .prices b { font: 400 22px/1 var(--disp); color: var(--gold); font-weight: 400; white-space: nowrap; }
   .foot { color: var(--mut); font-size: 13px; text-align: center; }
+  td .ok { color: #6dffb0; font-weight: 700; } td .wait { color: var(--gold); font-weight: 700; }
   @media (max-width: 420px) { table { font-size: 14px; } td.id { font-size: 15px; } col.c-id { width: 26%; } col.c-dt { width: 22%; } col.c-g { width: 21%; } }
 </style>
 </head>
@@ -95,6 +96,7 @@
     <button role="tab" data-tab="wait">Waiting</button>
     <button role="tab" data-tab="hutang">Hutang</button>
     <button role="tab" data-tab="mvp">MVP</button>
+    <button role="tab" data-tab="album">Album</button>
     <button role="tab" data-tab="akaun">Akaun</button>
     <button role="tab" data-tab="rules">Peraturan</button>
   </nav>
@@ -117,6 +119,12 @@
     <input class="q" id="v-mq" placeholder="Cari nama…" aria-label="Cari dalam senarai MVP">
     <table><colgroup><col style="width:42%"><col></colgroup>
     <thead><tr><th>Nama</th><th>MVP <span style="text-transform:none;letter-spacing:.04em">(hijau = dah claim)</span></th></tr></thead><tbody id="v-mvp"></tbody></table>
+  </section>
+
+  <section class="card" data-panel="album">
+    <h2>Komen album <span id="v-alc"></span></h2>
+    <table><colgroup><col style="width:42%"><col style="width:28%"><col></colgroup>
+    <thead><tr><th>Nama</th><th>Tarikh</th><th>Status</th></tr></thead><tbody id="v-album"></tbody></table>
   </section>
 
   <section class="card" data-panel="akaun">
@@ -200,6 +208,10 @@
     const mq = ($("v-mq").value || "").trim().toLowerCase(), mv = (S.mvp || []).filter(x => !mq || x.name.toLowerCase().includes(mq));
     $("v-mc").textContent = `${(S.mvp || []).length} orang`;
     $("v-mvp").innerHTML = mv.length ? mv.map(x => `<tr class="${raw && x.name.toLowerCase() === raw ? "me" : ""}"><td class="nm">${esc(x.name)}</td><td><div class="chips">${(x.hist || []).map(h => `<span class="${h.c ? "ok" : ""}">${h.n}</span>`).join("")}<b>${x.cur || 0}</b></div></td></tr>`).join("") : `<tr><td colspan="2" class="empty">Tiada.</td></tr>`;
+    // komen album: waiting first, then done
+    const al = (S.album || []).slice().sort((a, b) => (a.done - b.done) || (a.at - b.at));
+    $("v-alc").textContent = al.length ? `${al.filter(a => !a.done).length} menunggu` : "";
+    $("v-album").innerHTML = al.length ? al.map(a => `<tr class="${raw && a.name.toLowerCase() === raw ? "me" : ""}"><td class="nm">${esc(a.name)}</td><td class="dt">${fd(a.at)}</td><td>${a.done ? `<span class="ok">✓ Siap</span>` : `<span class="wait">Menunggu</span>`}</td></tr>`).join("") : `<tr><td colspan="3" class="empty">Tiada order komen album.</td></tr>`;
     // slot mainkan akaun
     const ak = S.akaun || [];
     $("v-akaun").innerHTML = ak.length ? ak.map(r => `<tr><td>${esc(r.day)}</td><td class="nm">${esc(r.name)}</td><td class="dt">${esc(r.date)}</td></tr>`).join("") : `<tr><td colspan="3" class="empty">Tiada slot.</td></tr>`;

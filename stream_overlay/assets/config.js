@@ -32,7 +32,10 @@ window.OVERLAY_CONFIG = {
     packs: [{ rm: 30, games: 9 }, { rm: 20, games: 5 }, { rm: 10, games: 3 }, { rm: 4, games: 1 }], // pakej besar dulu
     immortalPerGame: 6,                                            // kalau mesej sebut "immortal"
     immortalPacks: [{ rm: 15, games: 3 }, { rm: 6, games: 1 }],    // Immortal RM6 / 3 game RM15
-    vvipPacks: [{ rm: 20, games: 3 }, { rm: 8, games: 1 }]         // mesej sebut "vvip" / "fast track": RM8 / 3 game RM20
+    vvipPacks: [{ rm: 20, games: 3 }, { rm: 8, games: 1 }],        // mesej sebut "vvip" / "fast track": RM8 / 3 game RM20
+    // Servis ikut jumlah TEPAT (selepas tukar ke RM). Mesej sebut "album" / "akaun" juga dikira.
+    //  album -> tab Komen Album · akaun -> slot kosong pertama dalam Slot Mainkan Akaun
+    services: [{ rm: 5, type: "album", label: "Komen album" }, { rm: 40, type: "akaun", label: "Mainkan akaun" }]
   },
 
   // Peraturan (nilai permulaan; edit terus dalam App > Peraturan). Baris "# ..." = tajuk.

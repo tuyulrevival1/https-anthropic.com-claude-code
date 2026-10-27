@@ -231,3 +231,12 @@
 .app .hb:disabled { opacity: .3; cursor: default; }
 .app .hb:focus-visible { outline: 2px solid var(--c-gold); }
 .app.editing .card h3 .hist { pointer-events: none; }
+
+/* ---- komen album + raw order data ---- */
+.app .list li.alrow { gap: 8px; }
+.app .list li.alrow.done .nm { text-decoration: line-through; opacity: .6; }
+.app .list.allist { max-height: min(70vh, 720px); }
+.app .list li details.raw { flex-basis: 100%; margin-top: 4px; }
+.app .list li:has(details.raw) { flex-wrap: wrap; }
+.app details.raw summary { cursor: pointer; font-size: 12px; letter-spacing: .12em; color: var(--c-mut); text-transform: uppercase; }
+.app details.raw code { display: block; margin-top: 4px; padding: 6px 8px; background: #0a0405; font: 12px/1.4 ui-monospace, Consolas, monospace; color: #ffb3bf; overflow-wrap: anywhere; white-space: pre-wrap; }

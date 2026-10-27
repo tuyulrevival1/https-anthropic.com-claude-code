@@ -160,7 +160,19 @@ Tetingkap hitam juga tulis setiap webhook yang sampai (hijau = order, merah = ku
 Bila orang bayar:
 - Nama pembeli + **ID ML dari mesej** masuk ke VIP, baki ditambah, terus masuk queue, dan overlay tunjuk "TERIMA KASIH … +N GAME".
 - Minta pembeli tulis dalam mesej: **`ID 123456789 (1234)`** dan (pilihan) **`3 game`** atau **`immortal`**.
-- Bilangan game: dari mesej ("3 game"), atau dikira dari bayaran: RM10 = 3 game, RM4 = 1 game, "immortal" = RM6/game. Ubah dalam `assets\config.js` › `sociabuzz`.
+- **Ikut jumlah bayaran** (Rupiah ditukar ke RM dan dibundarkan):
+
+| Bayar | Masuk ke |
+|---|---|
+| RM4 / RM10 / RM20 / RM30 | Mabar VIP: 1 / 3 / 5 / 9 game, terus masuk queue |
+| RM6 / RM15 + mesej "immortal" | Immortal: 1 / 3 game |
+| RM8 / RM20 + mesej "vvip" | VVIP fast track: 1 / 3 game |
+| **RM5** (atau mesej "album") | Tab **Komen Album** (tekan *Tanda siap* bila dah komen) |
+| **RM40** (atau mesej "akaun") | Slot kosong pertama dalam **Slot Mainkan Akaun** |
+
+  Mesej "3 game" dalam order menang atas kiraan jumlah. Ubah harga dalam `assets\config.js` › `sociabuzz` (packs, services).
+- Butang **Test Alert** di halaman Alert Sociabuzz dan **Test Notification** di halaman Webhook dua-dua keluar sebagai **TEST** dalam tab Order.
+- Setiap order dalam tab Order ada **Data asal** (apa Sociabuzz hantar), untuk semak kalau ada yang pelik.
 - Order masa PC off tak dihantar semula oleh Sociabuzz: semak dashboard Sociabuzz dan tambah manual.
 - Semua order mentah disimpan dalam `data\orders_log.txt`.
 
