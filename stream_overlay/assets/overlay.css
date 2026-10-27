@@ -287,6 +287,12 @@
 .ov-queue.compact .nx .nm { flex: 0 1 auto; font-size: 17px; max-width: 200px; }
 .ov-queue.compact .nx .g { display: none; }
 .ov-queue.compact .nx.more { height: 18px; font-size: 12px; }
+/* compact queue: 1-2 left column, 3-4 right column */
+.ov-queue.compact section:last-child ol.q2 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(2, auto); grid-auto-flow: column; column-gap: 14px; row-gap: 4px; }
+.ov-queue.compact ol.q2 .nx { min-width: 0; }
+.ov-queue.compact ol.q2 .nx .nm { max-width: none; flex: 0 1 auto; }
+.ov-queue.compact ol.q2 .nx .mid { flex: 1 1 0; min-width: 0; }
+.ov-queue .ov-lbl .q-more { font-style: normal; font: 700 12px/1 var(--f-hud); letter-spacing: .16em; color: var(--muted); margin-left: auto; margin-right: 8px; }
 .ov-queue.compact .q-empty { padding: 2px 0; font-size: 15px; }
 
 .ov-music { --cut: 14px; border: 0; padding: 0; border-radius: 0;
@@ -334,3 +340,4 @@
 .ov-songs li .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ov-songs li .u { flex: none; font-size: 14px; color: var(--muted); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ov-songs li.now .t { color: #ffd84f; }
+.ov-queue .ov-lbl .q-more + i { margin-left: 0; }

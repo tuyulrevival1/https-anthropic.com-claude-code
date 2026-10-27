@@ -697,14 +697,15 @@
       if (p) { const m = mem(s, p); slots += `<li class="slot${isNew(p.id)}"><span class="ix">${i + 1}</span>${roleTag(m)}<span class="nm">${esc(m.name)}</span>${m.mlid ? `<span class="mid">${esc(m.mlid)}</span>` : ""}<span class="bal">${p.vip ? "<i class=\"vv\">★</i>" : ""}${tot(m)}<small>G</small></span></li>`; }
       else slots += `<li class="slot is-empty"><span class="ix">${i + 1}</span><span class="nm">SLOT KOSONG</span></li>`;
     }
-    const lim = wide ? 6 : compact ? 2 : 3;
+    const lim = wide ? 6 : compact ? 4 : 3; // compact: 2 columns x 2 rows
     let next = s.queue.slice(0, lim).map((p, i) =>
       `<li class="nx${isNew(p.id)}"><span class="no">${String(i + 1).padStart(2, "0")}</span>${roleTag(mem(s, p))}<span class="nm">${esc(mem(s, p).name)}</span>${mem(s, p).mlid ? `<span class="mid">${esc(mem(s, p).mlid)}</span>` : ""}<span class="g">${p.vip ? "★" : ""}${tot(mem(s, p))}G</span></li>`).join("");
-    if (s.queue.length > lim) next += `<li class="nx more">+${s.queue.length - lim} LAGI</li>`;
-    const nextBlock = s.queue.length ? `<ol>${next}</ol>` : `<p class="q-empty">${full ? "Queue kosong" : "Slot masih ada"}</p>`;
+    const extra = s.queue.length - lim;
+    if (extra > 0 && !compact) next += `<li class="nx more">+${extra} LAGI</li>`;
+    const nextBlock = s.queue.length ? `<ol${compact ? ' class="q2"' : ""}>${next}</ol>` : `<p class="q-empty">${full ? "Queue kosong" : "Slot masih ada"}</p>`;
     return `<div class="q-head"><div><div class="q-open${full ? " full" : ""}">${full ? "PENUH · MASUK QUEUE" : "SLOT DIBUKA"}</div><h3 class="ov-h">${esc(CFG.mabar.title)}</h3></div><div class="q-prices">${chipsHTML()}</div></div>
 <div class="q-cols"><section><h4 class="ov-lbl">Sedang main <i>${s.playing.length}/${max}</i></h4><ol class="slots">${slots}</ol></section>
-<section><h4 class="ov-lbl">Queue <i>${s.queue.length}</i></h4>${nextBlock}</section></div>`;
+<section><h4 class="ov-lbl">Queue ${compact && extra > 0 ? `<em class="q-more">+${extra} lagi</em>` : ""}<i>${s.queue.length}</i></h4>${nextBlock}</section></div>`;
   }
 
   function pricesHTML() {
