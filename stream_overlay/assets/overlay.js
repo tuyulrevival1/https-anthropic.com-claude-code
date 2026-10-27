@@ -747,7 +747,7 @@
   const LAYOUTS = {
     1: {
       name: "Utama",
-      band: 522,
+      band: 510,                     // LIVE bar 40px tall: covers the bottom 12px of the facecam, never the game
       bannerY: 1270,                 // banner terus di bawah gameplay
       energy: [550, 1270],
       slots: [
@@ -766,7 +766,7 @@
     kanan: landSide("kanan"),
     tengah: {
       name: "Landscape tengah", w: 1920, h: 1080, banner: "minimal", noSong: true,
-      band: 1048, bandX: 0, bandW: 1920,
+      band: 1040, bandX: 0, bandW: 1920,
       bannerY: 922, bannerX: 622, bannerScale: .625,
       slots: [
         { id: "game", x: 288, y: 14, w: 1344, h: 896, frame: false },
@@ -787,7 +787,7 @@
     const colX = side === "kiri" ? 0 : 1536, gx = side === "kiri" ? 384 : 0, px = colX + 12;
     return {
       name: "Landscape " + side, w: 1920, h: 1080, banner: "minimal", noSong: true,   // YouTube live: no music
-      band: 1024, bandX: 0, bandW: 1920, bandScale: 2,
+      band: 1024, bandX: 0, bandW: 1920, bandScale: 1.4,
       bannerY: 948, bannerX: px, bannerScale: 360 / 1080,
       slots: [
         { id: "game", x: gx, y: 0, w: 1536, h: 1024, frame: false },
@@ -1007,7 +1007,7 @@ ${num(s.losses, 294, "start", "losses", "l", "#6a0012")}
 <circle cx="254" cy="60" r="19" fill="#07050c" stroke="#f3eee8" stroke-width="2.5"/>
 <text x="253" y="67" text-anchor="middle" style="font-family:var(--f-shout);font-style:italic;font-weight:900;font-size:17px" fill="#f3eee8">VS</text>
 ${streak}
-<text x="494" y="10" text-anchor="end" style="font-family:var(--f-hud);font-weight:700;font-size:12px;letter-spacing:3px" fill="rgba(243,238,232,.65)">WR ${wr}%</text>
+<text x="494" y="10" text-anchor="end" style="font-family:var(--f-hud);font-weight:700;font-size:15px;letter-spacing:3px" fill="rgba(243,238,232,.75)">WR ${wr}%</text>
 </svg>`;
   }
 
@@ -1118,7 +1118,7 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
     const ytEl = band.querySelector(".yt"), ytTxt = ytEl.querySelector("b");
     const npEl = band.querySelector(".np"), npW = band.querySelector(".npw"), npT = band.querySelector(".npt");
     let lastClock = "", lastTimer = "", lastYt = "", lastNp = null, npW_ = 0, npTick = 0;
-    const NP_SPEED = 40; // px per second, right to left
+    const NP_SPEED = 48; // px per second, right to left
     // song ticker driven here (not by CSS), so it keeps moving even when Windows / OBS asks for reduced motion
     tickers.push(t => {
       if (!lastNp || !npT.firstChild) return;

@@ -66,15 +66,15 @@
 
 /* ---------- band between facecam & gameplay ---------- */
 .ov-band {
-  position: absolute; left: 0; width: 1080px; height: 28px; overflow: hidden;
+  position: absolute; left: 0; width: 1080px; height: 40px; overflow: hidden; z-index: 6;
   background: linear-gradient(90deg, #0c0614, #1a0b2a 50%, #0c0614);
   border-top: 2px solid var(--crimson); border-bottom: 1px solid rgba(var(--flame-rgb),.5);
-  display: flex; align-items: center; justify-content: center; gap: 18px;
-  font: 700 17px/1 var(--f-hud); letter-spacing: .22em; text-transform: uppercase;
+  display: flex; align-items: center; justify-content: center; gap: 22px;
+  font: 700 21px/1 var(--f-hud); letter-spacing: .2em; text-transform: uppercase;
 }
-.ov-band .live { background: var(--crimson); color: #fff; padding: 4px 14px 3px; transform: skewX(-14deg); display: inline-flex; gap: 8px; align-items: center; }
+.ov-band .live { background: var(--crimson); color: #fff; padding: 7px 18px 6px; transform: skewX(-14deg); display: inline-flex; gap: 8px; align-items: center; }
 .ov-band .live > * { transform: skewX(14deg); }
-.ov-band .dot { width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: ov-blink 1.2s steps(2, jump-none) infinite; }
+.ov-band .dot { width: 10px; height: 10px; border-radius: 50%; background: #fff; animation: ov-blink 1.2s steps(2, jump-none) infinite; }
 .ov-band .sep { width: 5px; height: 5px; background: var(--flame); transform: rotate(45deg); }
 .ov-band .sweep { position: absolute; top: 0; bottom: 0; width: 160px; left: -200px;
   background: linear-gradient(90deg, transparent, rgba(var(--flame-rgb),.35), transparent); animation: ov-sweep 6s linear infinite; }
@@ -246,17 +246,17 @@
 .ov-band [hidden] { display: none !important; }
 .ov-band .itm { display: inline-flex; align-items: center; gap: 7px; position: relative; padding-left: 16px; }
 .ov-band .itm::before { content: ""; position: absolute; left: 0; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; background: var(--flame); transform: rotate(45deg); }
-.ov-band .itm svg { width: 17px; height: 17px; }
-.ov-band .live .timer { font: 600 21px/1 var(--f-num); letter-spacing: .06em; padding: 3px 0 0 8px; margin-left: 2px; border-left: 1px solid rgba(255,255,255,.45); font-weight: 600; }
+.ov-band .itm svg { width: 22px; height: 22px; }
+.ov-band .live .timer { font: 600 29px/1 var(--f-num); letter-spacing: .06em; padding: 3px 0 0 8px; margin-left: 2px; border-left: 1px solid rgba(255,255,255,.45); font-weight: 600; }
 .ov-band .live .timer.paused { opacity: .6; }
 .ov-band .clock { color: #fff; }
 .ov-band .clock svg { color: var(--flame); margin-top: -2px; }
-.ov-band .clock b { font: 600 22px/1 var(--f-num); letter-spacing: .04em; padding-top: 3px; font-weight: 600; }
-.ov-band .clock small { font: 700 13px/1 var(--f-hud); letter-spacing: .12em; color: var(--muted); padding-top: 1px; }
-.ov-band .yt b { font: 600 22px/1 var(--f-num); letter-spacing: .04em; padding-top: 3px; color: #fff; }
-.ov-band .yt svg { width: 22px; height: 22px; margin-top: -2px; }
+.ov-band .clock b { font: 600 30px/1 var(--f-num); letter-spacing: .04em; padding-top: 3px; font-weight: 600; }
+.ov-band .clock small { font: 700 16px/1 var(--f-hud); letter-spacing: .12em; color: var(--muted); padding-top: 1px; }
+.ov-band .yt b { font: 600 30px/1 var(--f-num); letter-spacing: .04em; padding-top: 3px; color: #fff; }
+.ov-band .yt svg { width: 28px; height: 28px; margin-top: -2px; }
 .ov-caption { position: absolute; display: flex; align-items: center; justify-content: center; gap: 10px;
-  font: 700 15px/1 var(--f-hud); letter-spacing: .32em; color: var(--muted); text-transform: uppercase; white-space: nowrap; }
+  font: 700 19px/1 var(--f-hud); letter-spacing: .26em; color: rgba(243,238,232,.75); text-transform: uppercase; white-space: nowrap; }
 .ov-caption b { color: var(--bone); font-weight: 700; }
 .ov-caption i { flex: 0 1 60px; height: 1px; background: linear-gradient(90deg, transparent, var(--crimson)); }
 .ov-caption i:last-child { background: linear-gradient(90deg, var(--crimson), transparent); }
@@ -315,12 +315,12 @@
 @keyframes q-alert { 0% { transform: translateY(20px) scale(.6); opacity: 0; } 8% { transform: none; opacity: 1; } 88% { transform: none; opacity: 1; } 100% { transform: translateY(-10px); opacity: 0; } }
 
 /* song now playing in the LIVE band */
-.ov-band .np { color: #fff; text-transform: none; letter-spacing: .03em; font: 700 17px/1 var(--f-hud); min-width: 0; }
-.ov-band .np svg { color: var(--flame); flex: none; width: 15px; height: 15px; margin-top: -1px; }
-.ov-band .np .npw { width: 360px; overflow: hidden; white-space: nowrap;
+.ov-band .np { color: #fff; text-transform: none; letter-spacing: .03em; font: 700 22px/1 var(--f-hud); min-width: 0; }
+.ov-band .np svg { color: var(--flame); flex: none; width: 19px; height: 19px; margin-top: -1px; }
+.ov-band .np .npw { width: 430px; overflow: hidden; white-space: nowrap;
   -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent); mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent); }
 .ov-band .np .npt { display: inline-flex; padding-top: 2px; will-change: transform; }
-.ov-band .np .nps { display: inline-block; min-width: 360px; padding-right: 64px; font-weight: 700; }
+.ov-band .np .nps { display: inline-block; min-width: 430px; padding-right: 64px; font-weight: 700; }
 .ov-band .live .timer.paused { opacity: .55; }
 /* VVIP star in the overlay queue */
 .ov-card .bal .vv, .vv { color: #ffd84f; font-style: normal; margin-right: 2px; }
