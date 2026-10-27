@@ -125,6 +125,16 @@ function NpAwait($op, [Type]$t) {
   $task = $npAsTask.MakeGenericMethod($t).Invoke($null, @($op))
   if ($task.Wait(1500)) { return $task.Result } else { return $null }
 }
+function Spotify-Ctl([string]$act) {
+  if (-not $npWinRT) { return 'tiada-winrt' }
+  try {
+    if (-not $script:npMgr) { $script:npMgr = NpAwait ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]) }
+    $ses = @($script:npMgr.GetSessions()) | Where-Object { $_.SourceAppUserModelId -match 'spotify' } | Select-Object -First 1
+    if (-not $ses) { return 'tiada-spotify' }
+    if ($act -eq 'pause') { [void](NpAwait ($ses.TryPauseAsync()) ([bool])) } else { [void](NpAwait ($ses.TryPlayAsync()) ([bool])) }
+    return 'ok'
+  } catch { return 'gagal' }
+}
 function Get-NowPlaying {
   $t = ''
   if ($npWinRT) {
@@ -293,6 +303,29 @@ while ($true) {
         $type = 'application/json'
         if (-not $okPin) { $status = '401 Unauthorized'; $body = ToBytes '[]' }
         else { $body = ToBytes ('[' + ($hookHits -join ',') + ']') }
+      } elseif ($path -eq 'api/song-hook' -or $path -like 'api/song-hook/*') {
+        # IndoFinity (atau tool TikTok lain) hantar song request: /api/song-hook/KUNCI?user={username}&comment={comment}
+        $k = ''; if ($path -like 'api/song-hook/*') { $k = $path.Substring(14) }
+        foreach ($pair in $query -split '&') { if (-not $k -and $pair -like 'key=*') { $k = [Uri]::UnescapeDataString($pair.Substring(4)) } }
+        $k = ([string]$k).Trim().TrimEnd('/').Trim()
+        $via = 'Wi-Fi / Tailscale'; if ($hdr.ContainsKey('tailscale-funnel-request') -or $hdr.ContainsKey('x-forwarded-for')) { $via = 'internet' } elseif ($isLocal) { $via = 'PC ini' }
+        $res = 'song'; if ($k -ne $hookKey) { $res = 'key' }
+        [void]$hookHits.Insert(0, ('{"t":' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() + ',"r":' + (JsonStr $res) + ',"via":' + (JsonStr ($via + ' · lagu')) + ',"n":' + $bodyBytes.Length + ',"ua":' + (JsonStr '') + '}'))
+        while ($hookHits.Count -gt 15) { $hookHits.RemoveAt(15) }
+        if ($k -ne $hookKey) { $status = '403 Forbidden'; $body = ToBytes 'Kunci salah' }
+        else {
+          $orderSeq++
+          $entry = '{"n":' + $orderSeq + ',"k":"song","t":' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() + ',"q":' + (JsonStr $query) + ',"ct":' + (JsonStr ([string]$hdr['content-type'])) + ',"b":"' + [Convert]::ToBase64String($bodyBytes) + '"}'
+          [System.IO.File]::AppendAllText($pendingFile, $entry + "`n")
+          Write-Host ("  Song request diterima #{0} ({1})" -f $orderSeq, (Get-Date -Format 'h:mm tt')) -ForegroundColor Cyan
+          $body = ToBytes 'OK'
+        }
+      } elseif ($path -like 'api/spotify/*') {
+        # jeda / sambung Spotify (PC ini atau admin PIN)
+        $act = $path.Substring(12)
+        if (-not $okPin) { $status = '401 Unauthorized'; $body = ToBytes 'PIN salah' }
+        elseif ($act -notin @('pause', 'play')) { $status = '404 Not Found'; $body = ToBytes 'pause / play sahaja' }
+        else { $body = ToBytes (Spotify-Ctl $act) }
       } elseif ($path -eq 'api/orders') {
         $type = 'application/json'
         if (-not $okPin) { $status = '401 Unauthorized'; $body = ToBytes '[]' }

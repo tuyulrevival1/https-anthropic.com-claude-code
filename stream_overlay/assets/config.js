@@ -24,6 +24,13 @@ window.OVERLAY_CONFIG = {
     vvipMvpFree: true   // VVIP dapat MVP Win: free 1 game (ditambah bila tekan +1 MVP)
   },
 
+  // Song request dari IndoFinity (webhook): masuk senarai lagu overlay + App, Spotify dijeda sendiri.
+  songs: {
+    autoPauseSpotify: true,   // jeda Spotify bila ada request
+    resumeAfterMin: 4,        // sambung Spotify lepas N minit untuk setiap request (0 = sambung sendiri dengan butang)
+    showOnOverlay: 3          // berapa request ditunjuk di overlay (0 = sorok)
+  },
+
   // Order automatik dari Sociabuzz (webhook). Pembeli tulis ID ML dalam mesej,
   // contoh: "ID 123456789 (1234) 3 game". Bilangan game dikira dari mesej atau jumlah bayaran.
   sociabuzz: {

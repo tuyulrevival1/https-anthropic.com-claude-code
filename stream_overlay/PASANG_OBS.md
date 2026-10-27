@@ -73,11 +73,12 @@ Banner minimal: `http://127.0.0.1:8787/overlay.html?banner=minimal` · tanpa han
 | **Peraturan** | Edit peraturan (baris `#` = tajuk) › **Simpan**. Penonton nampak terus. |
 | **Order masuk** | Semua order: SOCIABUZZ (automatik), MANUAL, TEST. |
 | **YouTube** | Penonton live YouTube pada bar LIVE (perlu API key, bahagian 9). |
+| **Lagu** | Song request dari IndoFinity (bahagian 12). **Tanda dah main**, buang, **Jeda / Sambung Spotify**. |
 | **Link** | Link kekal penonton & admin, Sociabuzz Webhook URL, link pantas. |
 
 **Undo / Redo**: butang **↶ / ↷** di tajuk setiap kad (Live, Win/Lose, Game habis, Queue, Hutang Mabar, MVP, Slot Akaun, Peraturan). Setiap kad undo perubahannya sendiri sahaja (contoh undo MVP tak sentuh baki). Tuding pada butang untuk lihat apa yang akan diundo. Papan kekunci: **Ctrl+Z** / **Ctrl+Y**. Sejarah disimpan selagi App tu terbuka.
 
-**Tab** di atas App: Live · Hutang Mabar · MVP · Slot Akaun · Peraturan · Order · Tetapan · Semua (link terus: `control.html#mvp`).
+**Tab** di atas App: Live · Hutang Mabar · MVP · Slot Akaun · Peraturan · Lagu · Order · Tetapan · Semua (link terus: `control.html#mvp`).
 **Susun layout**: tekan **⠿ Susun layout** › tarik **tab di atas** untuk tukar urutan tab, tarik **⠿ Tarik** untuk pindah kad, tarik bucu kanan bawah untuk ubah saiz, atau tekan 1 / 2 / 3 untuk lebar › **✓ Siap**. Disimpan dalam peranti tu (PC dan phone boleh lain). **Reset** = susunan asal.
 
 Nak app dalam OBS juga: **Docks › Custom Browser Docks** › URL `http://127.0.0.1:8787/control.html`.
@@ -236,6 +237,29 @@ Semua link ada dalam App › Link › **Butang Stream Deck** (butang ⧉ untuk s
 Setiap tekan keluar dalam tetingkap hitam ("Stream Deck: end-win") dan App tunjuk notifikasi.
 
 ---
+
+## 12. Song request IndoFinity (TikTok) ke App & overlay
+
+Penonton taip `!play tajuk lagu` (atau `!req`) di TikTok › IndoFinity hantar webhook › lagu masuk **App › Lagu** dan panel **SONG REQUEST** di overlay (bawah kiri). Spotify dijeda sendiri supaya tak bertindih dengan YouTube Music IndoFinity.
+
+1. App › tab **Lagu** › buka **Sambung IndoFinity (webhook)** › salin link:
+   - IndoFinity di PC yang sama: `http://127.0.0.1:8787/api/song-hook/KUNCI`
+   - IndoFinity di luar PC: link public `https://synostore.xxxx.ts.net/api/song-hook/KUNCI`
+2. IndoFinity › **Webhook** › tambah aksi baru:
+   - Trigger: **Chat / Comment** yang mula dengan `!play`, `!req` (tambah `!skip`, `!revoke` kalau nak).
+   - URL: link di atas + `?user={username}&comment={comment}` (guna nama placeholder yang IndoFinity tunjuk).
+   - Method GET atau POST, kedua-dua diterima.
+3. Uji: komen `!play Hindia Evaluasi` di TikTok. Lagu keluar dalam App › Lagu dan di overlay.
+
+**Arahan**: `!play` / `!req` / `!sr` = tambah lagu. `!skip` = lagu paling lama ditanda dah main. `!revoke` = buang request terakhir orang tu.
+
+**Spotify**:
+- **Jeda Spotify bila ada request** (hidup) = Spotify berhenti bila lagu baru masuk.
+- **Sambung Spotify lepas (minit / request)** = Spotify main semula sendiri. Setiap request tambah masa (asal 4 minit). Bila semua lagu ditanda dah main, Spotify sambung terus.
+- Butang **Jeda Spotify** / **Sambung Spotify** untuk kawal sendiri.
+- **Tunjuk di overlay** = panel SONG REQUEST (3 lagu menunggu, yang pertama warna emas). Tutup kalau tak nak.
+
+Lagu tak masuk? App › Order › **Status webhook**: baris `lagu` dengan **KUNCI SALAH** = link tak lengkap; tiada baris = IndoFinity tak hantar. Hantar screenshot setting webhook IndoFinity kalau masih tak jadi.
 
 ## Masalah biasa
 

@@ -123,6 +123,22 @@ ${embedded ? "" : `<header class="app-top">
     <ol class="list allist" id="ap-album"></ol>
   </section>
 
+  <section class="card songs">
+    <h3>Song Request <span id="ap-sgc"></span></h3>
+    <div class="row toggles">
+      <label class="tog"><input id="ap-sgpause" type="checkbox"><span>Jeda Spotify bila ada request</span></label>
+      <label class="tog"><input id="ap-sgshow" type="checkbox"><span>Tunjuk di overlay</span></label>
+      <label class="fld sgmin">Sambung Spotify lepas (minit / request)<input id="ap-sgmin" type="number" min="0" max="30" inputmode="numeric"></label>
+    </div>
+    <div class="row"><button class="btn" type="button" id="ap-sppause">❚❚ Jeda Spotify</button><button class="btn gold" type="button" id="ap-spplay">▶ Sambung Spotify</button><span class="muted" id="ap-spst"></span></div>
+    <ol class="list sglist" id="ap-songs"></ol>
+    <div class="row"><button class="btn ghost" type="button" id="ap-sgclear" data-confirm="Tekan lagi: buang yang dah main">Buang yang dah main</button></div>
+    <details class="quick"><summary>Sambung IndoFinity (webhook)</summary>
+      <p class="muted">IndoFinity › Actions / Webhook › bila arahan chat <b>!play</b> / <b>!req</b> (dan !skip, !revoke kalau mahu) › URL di bawah. Kalau IndoFinity minta letak data, guna <b>user={username}</b> dan <b>comment={comment}</b> (ikut nama placeholder IndoFinity).</p>
+      <div class="links-list" id="ap-sglinks"><p class="muted">Masuk dengan PIN / buka START_OVERLAY.bat untuk lihat link.</p></div>
+    </details>
+  </section>
+
   <section class="card rules">
     <h3>Peraturan</h3>
     <textarea id="ap-rules" class="rules-in" rows="14" aria-label="Peraturan Mabar"></textarea>
@@ -206,7 +222,7 @@ ${embedded ? "" : `<header class="app-top">
     const HIST_FIELDS = {
       live: ["live", "song", "showQueue", "showBanner"], wl: ["wins", "losses", "streak"],
       end: ["wins", "losses", "streak", "playing", "queue", "members"], queue: ["playing", "queue", "members"],
-      vip: ["members", "playing", "queue"], mvp: ["mvp", "mvpRules"], akaun: ["akaun"], album: ["album"], rules: ["rules"], orders: ["orders"]
+      vip: ["members", "playing", "queue"], mvp: ["mvp", "mvpRules"], akaun: ["akaun"], album: ["album"], songs: ["songs", "songCfg"], rules: ["rules"], orders: ["orders"]
     };
     layCards().forEach(c => {
       const f = HIST_FIELDS[c.dataset.card], h = c.querySelector("h3"); if (!f || !h) return;
@@ -303,6 +319,7 @@ ${embedded ? "" : `<header class="app-top">
       { id: "hutang", label: "Hutang Mabar", cards: ["vip"] },
       { id: "mvp", label: "MVP", cards: ["mvp"] },
       { id: "album", label: "Komen Album", cards: ["album"] },
+      { id: "lagu", label: "Lagu", cards: ["songs"] },
       { id: "akaun", label: "Slot Akaun", cards: ["akaun"] },
       { id: "rules", label: "Peraturan", cards: ["rules"] },
       { id: "order", label: "Order", cards: ["orders"] },
@@ -446,6 +463,8 @@ ${embedded ? "" : `<header class="app-top">
         if (r) toast(`${r.name}: MVP ${r.cur}${r.cur === 5 || r.cur === 15 ? ` · cukup ${r.cur}, boleh claim!` : ""}${r.free ? " · VVIP free 1 game" : ""}`, 3500);
       }
       else if (a === "import") doImport();
+      else if (a === "sgdone") Q.songDone(id);
+      else if (a === "sgdel") Q.songDel(id);
       else if (a === "role") Q.setRole(k, b.dataset.r);
       else if (a === "orddel") {
         if (!b.dataset.armed) { b.dataset.armed = "1"; b.textContent = "Pasti?"; setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = "✕"; } }, 2500); return; }
@@ -556,6 +575,16 @@ ${m.miss ? `<div class="mctl mc-miss"><span class="muted">Hilang ${m.miss} kali<
 ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-id="${x.id}" data-i="${x.hist.length - 1}">Buang nombor akhir</button>` : ""}<button class="btn sq ghost" data-a="mvdel" data-id="${x.id}" aria-label="Padam">✕</button></div></li>`).join("")
           : `<li class="empty">${q ? "Tiada nama sepadan." : "Belum ada."}</li>`;
       }
+      // song requests
+      const sg = s.songs || [], sgWait = sg.filter(x => !x.done).length;
+      tabc("lagu", sgWait || "");
+      $("ap-sgc").textContent = sg.length ? `${sgWait} menunggu` : "";
+      const cfg = s.songCfg || {};
+      $("ap-sgpause").checked = cfg.autopause !== false; $("ap-sgshow").checked = cfg.show !== false;
+      if (document.activeElement !== $("ap-sgmin")) $("ap-sgmin").value = cfg.resumeMin != null ? cfg.resumeMin : 4;
+      $("ap-songs").innerHTML = sg.length ? sg.map(x => `<li class="sgrow${x.done ? " done" : ""}"><span class="who"><span class="nm">♪ ${esc(x.title)}</span><span class="sub">@${esc(x.user)} · ${fmtDate(x.at)}</span></span>
+<button class="btn small ${x.done ? "ghost" : "gold"}" type="button" data-a="sgdone" data-id="${x.id}">${x.done ? "✓ Dah main" : "Tanda dah main"}</button><button class="btn sq ghost" type="button" data-a="sgdel" data-id="${x.id}" aria-label="Buang ${esc(x.title)}">✕</button></li>`).join("")
+        : `<li class="empty">Belum ada song request. Sambung IndoFinity di bawah.</li>`;
       // komen album
       const al = s.album || [];
       $("ap-alc").textContent = al.length ? `${alWait} menunggu · ${al.length - alWait} siap` : "";
@@ -626,6 +655,18 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
     $("ap-rules").addEventListener("input", e => { e.target.dataset.dirty = "1"; });
     $("ap-rulesave").addEventListener("click", () => { Q.patch({ rules: $("ap-rules").value.trim() }); delete $("ap-rules").dataset.dirty; toast("Peraturan disimpan"); });
     $("ap-akadd").addEventListener("click", () => Q.akaunAdd());
+    $("ap-sgpause").addEventListener("change", e => Q.songCfg({ autopause: e.target.checked }));
+    $("ap-sgshow").addEventListener("change", e => Q.songCfg({ show: e.target.checked }));
+    $("ap-sgmin").addEventListener("change", e => Q.songCfg({ resumeMin: Math.max(0, Math.min(30, parseInt(e.target.value, 10) || 0)) }));
+    const spMsg = r => r === "ok" ? "" : r === "tiada-spotify" ? " (Spotify tak dibuka?)" : r ? ` (${r})` : " (perlu START_OVERLAY.bat)";
+    $("ap-sppause").addEventListener("click", () => Q.spotify("pause").then(r => toast("Spotify dijeda" + spMsg(r))));
+    $("ap-spplay").addEventListener("click", () => Q.spotify("play").then(r => toast("Spotify disambung" + spMsg(r))));
+    twoStep($("ap-sgclear"), () => { Q.songClearDone(); toast("Lagu yang dah main dibuang"); });
+    setInterval(() => {
+      const at = (Store.state || {}).songResumeAt, el = $("ap-spst"); if (!el) return;
+      if (at && at > Date.now()) { const left = Math.ceil((at - Date.now()) / 1000); el.textContent = `Spotify disambung sendiri dalam ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`; }
+      else el.textContent = "";
+    }, 1000);
     $("ap-aladd").addEventListener("submit", e => {
       e.preventDefault();
       const n = $("ap-alname").value.trim(); if (!n) { $("ap-alname").focus(); toast("Taip nama dulu"); return; }
@@ -701,10 +742,17 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
       Store.canWrite = !!a.ok;
       pinbar.hidden = !!a.ok;
       lastAuth = a;
-      renderLinks(a); hookTick(); checkUpdate();
+      renderLinks(a); hookTick(); checkUpdate(); songLinks(a);
       return a;
     }).catch(() => null);
 
+    function songLinks(a) {
+      const box = $("ap-sglinks"); if (!box || !a || !a.hookUrl) return;
+      const key = (String(a.hookUrl).match(/order-hook\/([^/?#]+)/) || [])[1]; if (!key) return;
+      const rows = [["IndoFinity di PC ni (disyorkan)", `http://127.0.0.1:${a.port || 8787}/api/song-hook/${key}`]];
+      if (a.publicUrl) rows.push(["Kalau IndoFinity hantar dari internet", `${a.publicUrl}/api/song-hook/${key}`]);
+      box.innerHTML = rows.map(([t, u]) => `<div class="lk"><span>${esc(t)}</span><code>${esc(u)}</code><button class="btn sq" type="button" data-copy="${esc(u)}" aria-label="Salin">⧉</button></div>`).join("");
+    }
     /* ---------- new version on GitHub? (PC only; KEMASKINI.bat installs it) ---------- */
     let updChecked = 0;
     function checkUpdate() {
@@ -719,7 +767,7 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
     let lastAuth = null, lastHit = 0;
     const hookPath = () => { const m = String(lastAuth && lastAuth.hookUrl || "").match(/\/api\/order-hook\/[^/?#]+/); return m ? m[0].slice(1) : ""; };
     const tm = ms => new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" });
-    const RES = { ok: ["OK ✓", "ok"], key: ["KUNCI SALAH: URL tak lengkap / salah salin", "bad"], get: ["dibuka dalam browser (GET) ✓", "ok"], empty: ["SAMPAI TAPI KOSONG", "bad"] };
+    const RES = { song: ["SONG REQUEST ✓", "ok"], ok: ["OK ✓", "ok"], key: ["KUNCI SALAH: URL tak lengkap / salah salin", "bad"], get: ["dibuka dalam browser (GET) ✓", "ok"], empty: ["SAMPAI TAPI KOSONG", "bad"] };
     function hookTick() {
       if (!lastAuth || !lastAuth.ok) return;
       fetch("api/hooklog", { headers: { "X-Pin": lsGet(PIN_KEY, "") }, cache: "no-store" }).then(r => r.ok ? r.json() : null).then(list => {

@@ -322,3 +322,15 @@
 /* role badges (EXP / JUNGLE / MID / GOLD / ROAM) */
 .rl { flex: none; display: inline-block; font: 700 11px/1 var(--f-hud); letter-spacing: .06em; padding: 3px 5px 2px; margin-right: 6px; color: #0b0507; border-radius: 2px; transform: skewX(-8deg); }
 .rl-exp { background: #ff7a45; } .rl-jungle { background: #3ddc84; } .rl-mid { background: #b388ff; } .rl-gold { background: #ffcf4a; } .rl-roam { background: #4fc3f7; }
+
+/* song requests (IndoFinity) under the Mabar queue */
+.ov-songs { position: absolute; display: flex; flex-direction: column; gap: 6px; padding: 10px 14px 10px; background: linear-gradient(180deg, rgba(20, 6, 10, .82), rgba(10, 3, 6, .82));
+  border: 1px solid rgba(var(--flame-rgb), .45); clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px); }
+.ov-songs .sr-h { display: flex; align-items: center; gap: 8px; font: 700 13px/1 var(--f-hud); letter-spacing: .24em; color: var(--flame); }
+.ov-songs .sr-h svg { width: 14px; height: 14px; }
+.ov-songs .sr-h i { margin-left: auto; font: 600 18px/1 var(--f-num); font-style: normal; letter-spacing: 0; color: #fff; }
+.ov-songs ol { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.ov-songs li { display: flex; align-items: baseline; gap: 10px; font: 700 18px/1.15 var(--f-hud); color: #f3eee8; min-width: 0; }
+.ov-songs li .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-songs li .u { flex: none; font-size: 14px; color: var(--muted); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-songs li.now .t { color: #ffd84f; }

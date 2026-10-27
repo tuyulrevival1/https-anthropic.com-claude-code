@@ -51,6 +51,8 @@
     Object.values(s.members).forEach(m => { m.bal = m.bal || 0; m.vbal = m.vbal || 0; });
     s.mvp = Array.isArray(s.mvp) ? s.mvp : [];
     s.album = Array.isArray(s.album) ? s.album : [];
+    s.songs = Array.isArray(s.songs) ? s.songs : [];
+    s.songCfg = Object.assign({ autopause: CFG.songs ? CFG.songs.autoPauseSpotify !== false : true, resumeMin: CFG.songs && CFG.songs.resumeAfterMin != null ? CFG.songs.resumeAfterMin : 4, show: true }, s.songCfg || {});
     if (!Array.isArray(s.akaun)) s.akaun = defaultAkaun();
     s.akaun.forEach(r => { const m = String(r.date || "").match(/^(\d{1,2})\/(\d{1,2})$/); if (m) r.date = `${new Date().getFullYear()}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`; });
     if (typeof s.rules !== "string") s.rules = CFG.rules || "";
@@ -154,7 +156,7 @@
       return e;
     }
   };
-  const HIST_SKIP = new Set(["rev", "updated", "seenOrders", "orderSeq", "yt", "docImported"]); // album / akaun changes stay undoable
+  const HIST_SKIP = new Set(["rev", "updated", "seenOrders", "orderSeq", "yt", "docImported", "songResumeAt"]); // album / akaun changes stay undoable
 
   /* ---------- queue, VIP balance, W/L, timer ---------- */
   const inLine = (s, k) => s.playing.some(p => p.key === k) || s.queue.some(p => p.key === k);
@@ -279,6 +281,34 @@
     mvpToggle(id, i) { Store.set(s => { const x = s.mvp.find(v => v.id === id); if (x && x.hist[i]) x.hist[i].c = !x.hist[i].c; }); },
     mvpDelHist(id, i) { Store.set(s => { const x = s.mvp.find(v => v.id === id); if (x) x.hist.splice(i, 1); }); },
     mvpDel(id) { Store.set(s => { s.mvp = s.mvp.filter(v => v.id !== id); }); },
+    /* ---------- song requests ---------- */
+    _song(s, r) {
+      s.songs = s.songs || [];
+      const open = s.songs.filter(x => !x.done);
+      const step = ((s.songCfg || {}).resumeMin || 0) * 60000;
+      if (r.kind === "skip") { const cur = open[open.length - 1]; if (cur) { cur.done = true; cur.doneAt = Date.now(); } Q._songIdle(s); return; }
+      if (r.kind === "revoke") {
+        const mine = open.filter(x => keyOf(x.user) === keyOf(r.user) && (!r.title || x.title.toLowerCase().includes(r.title.toLowerCase())));
+        const last = mine[0];
+        if (last) { s.songs = s.songs.filter(x => x !== last); if (s.songResumeAt) s.songResumeAt = Math.max(Date.now() + 1000, s.songResumeAt - step); }
+        Q._songIdle(s); return;
+      }
+      if (!r.title) return;
+      s.songs.unshift({ id: uid("s"), user: r.user, title: r.title, at: r.at, done: false });
+      s.songs = s.songs.slice(0, 60);
+      const cfg = s.songCfg || {};
+      if (cfg.autopause !== false) {
+        songPause = true;
+        if (cfg.resumeMin > 0) s.songResumeAt = Math.max(Date.now(), s.songResumeAt || 0) + cfg.resumeMin * 60000;
+      }
+    },
+    // no request left waiting: let Spotify come back right away
+    _songIdle(s) { if (s.songResumeAt && !(s.songs || []).some(x => !x.done)) s.songResumeAt = 1; },
+    songDone(id) { Store.set(s => { const x = (s.songs || []).find(v => v.id === id); if (x) { x.done = !x.done; x.doneAt = x.done ? Date.now() : 0; } Q._songIdle(s); }); },
+    songDel(id) { Store.set(s => { s.songs = (s.songs || []).filter(v => v.id !== id); Q._songIdle(s); }); },
+    songClearDone() { Store.set(s => { s.songs = (s.songs || []).filter(v => !v.done); }); },
+    songCfg(patch) { Store.set(s => { s.songCfg = Object.assign({}, s.songCfg || {}, patch); }); },
+    spotify(act) { if (act === "play") Store.set(s => { s.songResumeAt = 0; }, { noHist: true }); return spotify(act); },
     /* ---------- komen album (RM5) ---------- */
     _albumAdd(s, name, mlid, note, at, src) {
       s.album = s.album || [];
@@ -438,9 +468,37 @@
     const asTest = trial && SB.alertTestAsOrder === false;
     return { id, dk, name, mlid, games, at, amount, cur, msg: msg.slice(0, 120), test: test || asTest, trial: trial && !asTest, vip: vip || !!(item && item.vip), svc, item: item ? (item.label || item.match) : "", raw: text.slice(0, 500) };
   }
-  let ordersBusy = false;
+  /* ---------- song requests (IndoFinity webhook) ---------- */
+  function parseSong(entry) {
+    let text = ""; try { text = new TextDecoder().decode(Uint8Array.from(atob(entry.b || ""), c => c.charCodeAt(0))); } catch (e) {}
+    const bag = {};
+    const put = (k, v) => { if (v == null || typeof v === "object") return; const kk = String(k).toLowerCase(); if (bag[kk] == null || bag[kk] === "") bag[kk] = String(v); };
+    try { new URLSearchParams(entry.q || "").forEach((v, k) => put(k, v)); } catch (e) {}
+    let b = null; try { b = JSON.parse(text); } catch (e) { try { b = Object.fromEntries(new URLSearchParams(text)); } catch (e2) {} }
+    const walk = (o, d) => { if (!o || typeof o !== "object" || d > 3) return; for (const [k, v] of Object.entries(o)) { if (v && typeof v === "object") walk(v, d + 1); else put(k, v); } };
+    walk(b, 0);
+    const get = keys => { for (const k of keys) if (bag[k] != null && String(bag[k]).trim() !== "") return String(bag[k]).trim(); return ""; };
+    const user = get(["user", "username", "nickname", "uniqueid", "unique_id", "displayname", "name", "sender"]).replace(/^@/, "").slice(0, 24) || "penonton";
+    const said = get(["comment", "message", "text", "msg", "content", "chat"]) || (b == null && !entry.q ? text : "");
+    let title = get(["song", "title", "track", "query", "lagu"]), kind = "play";
+    const m = said.match(/^\s*[!;.]?\s*(play|req|request|sr)\b\s*(.*)$/i);
+    const rv = said.match(/^\s*[!;.]?\s*(revoke|remove|cancel)\b\s*(.*)$/i);
+    if (/^\s*[!;.]?\s*skip\b/i.test(said) && !title) kind = "skip";
+    else if (rv && !title) { kind = "revoke"; title = rv[2].trim(); }
+    else if (!title && m) title = m[2].trim();
+    else if (!title) title = said.trim();
+    return { user, title: title.slice(0, 90), kind, at: entry.t || Date.now() };
+  }
+  // pause / play Spotify through the PC server (Windows media controls)
+  const spotify = act => { const pin = Store.pin(); return fetch("api/spotify/" + act, { cache: "no-store", headers: pin ? { "X-Pin": pin } : {} }).then(r => r.ok ? r.text() : "").catch(() => ""); };
+
+  let ordersBusy = false, songPause = false;
   // Orders stay in the server journal with a number; the shared state remembers the last number
   // handled (orderSeq), so a page that fails or a lost write never drops an order.
+  setInterval(() => {
+    const st = Store.state; if (!st || !Store.remote || !Store.canWrite) return;
+    if (st.songResumeAt && Date.now() > st.songResumeAt) { Store.set(s => { s.songResumeAt = 0; }, { noHist: true }); spotify("play"); }
+  }, 5000);
   function pullOrders() {
     if (ordersBusy || !Store.remote || !Store.canWrite) return; ordersBusy = true;
     const pin = Store.pin(), after = +Store.state.orderSeq || 0;
@@ -456,6 +514,7 @@
         for (const e of list) {
           if (e.n != null && e.n <= from) continue;             // another page already did it
           if (first && e.t && Date.now() - e.t > 864e5) continue;
+          if (e.k === "song") { Q._song(s, parseSong(e)); continue; }
           let o;
           try { o = parseOrder(e); }
           catch (err) {
@@ -479,6 +538,7 @@
         const top = Math.max(from, res.last || 0, ...list.map(e => +e.n || 0));
         if (!legacy) s.orderSeq = top;
       }, { noHist: true });
+      if (songPause) { songPause = false; spotify("pause"); }
     }).catch(() => {}).finally(() => { ordersBusy = false; });
   }
 
@@ -508,7 +568,8 @@
       ],
       panels: [
         { type: "queue", variant: "compact", x: 24, y: 1474, w: 500, h: 290 },
-        { type: "score", x: 548, y: 1798, w: 508, h: 108 }
+        { type: "score", x: 548, y: 1798, w: 508, h: 108 },
+        { type: "songs", x: 24, y: 1780, w: 500, h: 126 }
       ],
       tags: [{ slot: "hand" }]
     }
@@ -815,6 +876,14 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
         } else if (def.type === "score") {
           e.className = "ov-score"; e.innerHTML = scoreSVG(s);
           if (prev) e.querySelectorAll("[data-k]").forEach(g => { const k = g.dataset.k; if (prev[k] !== s[k]) { g.classList.remove("sb-pop"); void g.getBBox(); g.classList.add("sb-pop"); } });
+        } else if (def.type === "songs") {
+          // song requests (IndoFinity): newest few still waiting; hidden when there are none
+          const n = CFG.songs && CFG.songs.showOnOverlay != null ? CFG.songs.showOnOverlay : 3;
+          const list = (s.songs || []).filter(x => !x.done).slice(0, n).reverse();
+          const show = n > 0 && list.length && !(s.songCfg && s.songCfg.show === false);
+          e.className = "ov-songs"; e.style.display = show ? "" : "none";
+          const html = show ? `<div class="sr-h"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="17" cy="16" r="3" fill="currentColor"/></svg>SONG REQUEST<i>${(s.songs || []).filter(x => !x.done).length}</i></div><ol>${list.map((x, i) => `<li${i === 0 ? ' class="now"' : ""}><span class="t">${esc(x.title)}</span><span class="u">@${esc(x.user)}</span></li>`).join("")}</ol>` : "";
+          if (e._h !== html) { e.innerHTML = html; e._h = html; }
         } else if (def.type === "music") {
           if (!e.firstChild) { e.className = "ov-music"; e.innerHTML = `<div class="mu-tab"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="17" cy="16" r="3" fill="currentColor"/></svg>NOW PLAYING</div>${opts.demo ? `<div class="mu-demo">widget lagu · ${def.w}×${def.h}</div>` : ""}`; }
         }
