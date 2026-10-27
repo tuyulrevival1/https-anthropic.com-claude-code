@@ -327,7 +327,8 @@
     if (!games && rm > 0) {
       const packs = vip ? (SB.vvipPacks || [{ rm: 20, games: 3 }, { rm: 8, games: 1 }])
         : /immortal/i.test(msg) ? (SB.immortalPacks || [{ rm: SB.immortalPerGame, games: 1 }]) : SB.packs;
-      let rest = rm; for (const p of packs) { const n = Math.floor(rest / p.rm + 1e-9); games += n * p.games; rest -= n * p.rm; }
+      // round to whole ringgit first: Rp 35,000 = RM9.80 counts as RM10 (3 game), not 2
+      let rest = Math.round(rm); for (const p of packs) { const n = Math.floor(rest / p.rm + 1e-9); games += n * p.games; rest -= n * p.rm; }
     }
     const at = Date.parse(pick(b, ["created_at", "paid_at", "date"]) || "") || entry.t || Date.now();
     const id = String(pick(b, ["id", "transaction_id", "order_id"]) || `${name}|${amount}|${at}`);

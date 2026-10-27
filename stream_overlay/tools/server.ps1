@@ -220,6 +220,7 @@ while ($true) {
         if ($path -like 'api/order-hook/*') { $k = $path.Substring(15) }
         foreach ($hn in @('sb-webhook-token', 'x-sociabuzz-webhook-token', 'x-sociabuzz-token', 'x-webhook-token')) { if (-not $k -and $hdr[$hn]) { $k = $hdr[$hn] } }
         if (-not $k -and ([string]$hdr['authorization']) -match '^Bearer\s+(.+)$') { $k = $matches[1] }
+        $k = ([string]$k).Trim().TrimEnd('/').Trim()   # URL ditampal dengan '/' atau ruang di hujung
         $via = 'Wi-Fi / Tailscale'
         if ($hdr.ContainsKey('tailscale-funnel-request') -or $hdr.ContainsKey('x-forwarded-for')) { $via = 'internet' } elseif ($isLocal) { $via = 'PC ini' }
         $res = 'ok'
@@ -229,7 +230,7 @@ while ($true) {
         while ($hookHits.Count -gt 15) { $hookHits.RemoveAt(15) }
         if ($res -eq 'key') { Write-Host ("  Webhook ditolak: kunci salah ({0}, {1}). Salin semula Webhook URL dari App." -f $via, (Get-Date -Format 'h:mm tt')) -ForegroundColor Red }
         elseif ($res -eq 'get') { Write-Host ("  Webhook dibuka dalam browser ({0}) - link OK" -f $via) -ForegroundColor Cyan }
-        if ($method -ne 'POST') { $body = ToBytes 'SYNO order hook OK' }
+        if ($method -ne 'POST') { $body = ToBytes 'OK' }   # test dari Sociabuzz / browser: jawapan sama 'OK'
         elseif ($k -ne $hookKey) { $status = '403 Forbidden'; $body = ToBytes 'Kunci salah' }
         else {
           $b64 = [Convert]::ToBase64String($bodyBytes)

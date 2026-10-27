@@ -145,7 +145,7 @@ Tengok kotak **Status webhook** dalam App › Order masuk. Ia tunjuk setiap kali
 1. **Test sistem di PC**: tekan **Simulasi order**. Dalam 3 saat "Test SYNO +3 game" masuk queue dan alert keluar di overlay.
    Tak jadi? Pastikan overlay atau App terbuka dan tetingkap hitam masih jalan. Tutup tetingkap hitam dan buka semula `START_OVERLAY.bat` (server baru perlu dibuka semula sekali).
 2. **Test link dari internet**: di phone, **matikan Wi-Fi** (guna data), buka Webhook URL dalam Chrome.
-   - Keluar `SYNO order hook OK` dan Status webhook tulis **internet · dibuka dalam browser ✓** = link kekal OK.
+   - Keluar `OK` dan Status webhook tulis **internet · dibuka dalam browser ✓** = link kekal OK.
    - Tak boleh buka = link kekal belum hidup: klik `PASANG_LINK_KEKAL.bat` semula (langkah [4] Funnel mesti **Enable**).
 3. **Test dari Sociabuzz**: tekan **Test Notification**.
    - Status **internet · OK ✓** = Sociabuzz sampai. Order masuk keluar **TEST**.
