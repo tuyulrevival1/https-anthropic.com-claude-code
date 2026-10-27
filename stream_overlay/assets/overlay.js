@@ -736,8 +736,8 @@
       bannerY: 948, bannerX: px, bannerScale: 360 / 1080,
       slots: [
         { id: "game", x: gx, y: 0, w: 1536, h: 1024, frame: false },
-        { id: "face", x: px, y: 12, w: 360, h: 252, cut: 16, corners: true, optional: true, toggle: "cam" },
-        { id: "hand", x: px, y: 809, w: 360, h: 203, cut: 16, corners: true, optional: true, toggle: "hand" }
+        { id: "face", x: px, y: 12, w: 360, h: 252, cut: 16, corners: false, optional: true, toggle: "cam" },
+        { id: "hand", x: px, y: 809, w: 360, h: 203, cut: 16, corners: false, optional: true, toggle: "hand" }
       ],
       panels: [
         { type: "queue", variant: "compact tall", x: px, y: 272, w: 360, h: 372, max: 3 },
@@ -824,7 +824,7 @@
       const k = 28, i = 12, x0 = s.x + i, y0 = s.y + i, x1 = s.x + s.w - i, y1 = s.y + s.h - i;
       const cuts = s.cut ? [`M${x1 - k} ${y0}H${x1}V${y0 + k}`, `M${x0} ${y1 - k}V${y1}H${x0 + k}`]
         : [`M${x0} ${y0 + k}V${y0}H${x0 + k}`, `M${x1 - k} ${y0}H${x1}V${y0 + k}`, `M${x1} ${y1 - k}V${y1}H${x1 - k}`, `M${x0 + k} ${y1}H${x0}V${y1 - k}`];
-      if (s.id === "hand" || s.corners) out += cuts.map(p => `<path class="ov-corner" d="${p}"/>`).join("");
+      if ((s.id === "hand" || s.corners) && s.corners !== false) out += cuts.map(p => `<path class="ov-corner" d="${p}"/>`).join("");
     }
     return `<svg class="ov-layer" viewBox="0 0 ${SW} ${SH}" width="${SW}" height="${SH}" aria-hidden="true">
 <defs><filter id="${f}" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur stdDeviation="5"/></filter></defs>${out}</svg>`;
