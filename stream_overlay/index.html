@@ -84,34 +84,22 @@
   <header>
     <div>
       <h1><small>OVERLAY LIVE · PORTRAIT 1080×1920</small>CHOU KOF OVERLAY</h1>
-      <p class="lead">Empat susunan layout, lapan gaya banner bawah (dua premium, tiga ringkas), dan queue Mabar VIP yang dikawal dari panel. Tukar gaya banner di sini, semua preview ikut.</p>
+      <p class="lead">Empat susunan layout, banner merah beranimasi bawah (dua premium, tiga ringkas), dan queue Mabar VIP yang dikawal dari panel. Tukar gaya banner di sini, semua preview ikut.</p>
     </div>
     <div class="ctl">
     <div class="seg" role="group" aria-label="Gaya banner">
-      <button type="button" data-style="scene-grunge" aria-pressed="false">Minimal · Grunge</button>
-      <button type="button" data-style="scene-emblem" aria-pressed="false">Minimal · Emblem</button>
-      <button type="button" data-style="scene-mascot" aria-pressed="false">Minimal · Maskot</button>
-      <button type="button" data-style="pro" aria-pressed="true">Premium Ungu</button>
+      <button type="button" data-style="power" aria-pressed="true">Power (merah)</button>
+      <button type="button" data-style="slash" aria-pressed="false">Crimson Slash</button>
       <button type="button" data-style="pro-crimson" aria-pressed="false">Premium Merah</button>
-      <button type="button" data-style="flame" aria-pressed="false">Flame</button>
-      <button type="button" data-style="slash" aria-pressed="false">Slash</button>
-      <button type="button" data-style="moon" aria-pressed="false">Moon</button>
-    </div>
-    <div class="acc" role="group" aria-label="Warna aksen (gaya Minimal)">
-      <span>Aksen</span>
-      <button type="button" data-acc="violet" aria-pressed="true" style="--c:#a66bff" aria-label="Ungu"></button>
-      <button type="button" data-acc="crimson" aria-pressed="false" style="--c:#ff2350" aria-label="Merah"></button>
-      <button type="button" data-acc="lime" aria-pressed="false" style="--c:#b6ff3b" aria-label="Hijau lime"></button>
-      <button type="button" data-acc="ice" aria-pressed="false" style="--c:#52d8ff" aria-label="Biru ais"></button>
-      <button type="button" data-acc="gold" aria-pressed="false" style="--c:#ffcf4a" aria-label="Emas"></button>
+      <button type="button" data-style="scene-mascot" aria-pressed="false">Minimal</button>
     </div>
     </div>
   </header>
 
   <section class="layouts">
     <div class="lay"><div class="shot" data-layout="4"></div>
-      <h3>Arena <span>LAYOUT 4 · BARU</span></h3>
-      <p>Garis tenaga pada gameplay, papan W/L besar di kanan. Kiri bawah dibiar tenang supaya chat senang dibaca di phone, dengan ruang widget lagu. Welcome boleh on/off.</p>
+      <h3>Arena <span>LAYOUT 4 · UTAMA</span></h3>
+      <p>Bar LIVE dengan timer stream di bawah facecam, banner terus di bawah gameplay, queue Mabar + baki VIP di kiri dengan bingkai lagu, handcam kanan dengan device, W/L kecil.</p>
       <code>overlay.html?layout=4</code></div>
     <div class="lay"><div class="shot" data-layout="1"></div>
       <h3>Klasik <span>LAYOUT 1</span></h3>
@@ -130,25 +118,21 @@
   <h2>Banner bawah</h2>
   <p>Kekal dalam jalur 1080×192 sahaja, tak masuk kawasan atas. Gaya <b>Minimal</b> ikut rentak rujukan SOLOZ: babak jenama (jalur aksen menyapu, teks berulang, huruf rapat dari jarak lebar, lencana "info lanjut di bio") kemudian babak servis (logo besar, teks bertukar dengan kabur-pudar, butang Link in Bio diketuk). Banner premium: maskot sticker main tablet di kiri, teks bergerak huruf demi huruf, ikon kanan ikut mesej (diamond berkilat, ikon rank 3D, VIP, link). Empat mesej bertukar setiap 6 saat.</p>
   <div class="banners">
-    <div class="bitem"><b>Minimal · Grunge · ungu</b><div class="bshot"><div class="bn-host" data-banner="scene-grunge" data-acc="violet"></div></div></div>
-    <div class="bitem"><b>Minimal · Maskot · merah</b><div class="bshot"><div class="bn-host" data-banner="scene-mascot" data-acc="crimson"></div></div></div>
-    <div class="bitem"><b>Minimal · Emblem · lime</b><div class="bshot"><div class="bn-host" data-banner="scene-emblem" data-acc="lime"></div></div></div>
-    <div class="bitem"><b>Premium Ungu</b><div class="bshot"><div class="bn-host" data-banner="pro"></div></div></div>
+    <div class="bitem"><b>Power · utama</b><div class="bshot"><div class="bn-host" data-banner="power"></div></div></div>
+    <div class="bitem"><b>Crimson Slash</b><div class="bshot"><div class="bn-host" data-banner="slash"></div></div></div>
     <div class="bitem"><b>Premium Merah</b><div class="bshot"><div class="bn-host" data-banner="pro-crimson"></div></div></div>
-    <div class="bitem"><b>Gaya lama · Flame</b><div class="bshot"><div class="bn-host" data-banner="flame"></div></div></div>
-    <div class="bitem"><b>Gaya lama · Slash</b><div class="bshot"><div class="bn-host" data-banner="slash"></div></div></div>
-    <div class="bitem"><b>Gaya lama · Moon</b><div class="bshot"><div class="bn-host" data-banner="moon"></div></div></div>
+    <div class="bitem"><b>Minimal (gaya SOLOZ)</b><div class="bshot"><div class="bn-host" data-banner="scene-mascot" data-acc="crimson"></div></div></div>
   </div>
 
   <p>Ikon rank untuk mesej joki guna <b>logo rank MLBB asli</b> yang awak letak dalam <code>assets/ranks/</code> (epic, legend, mythic, glory, immortal .png). Ikon diputar 3D dengan ketebalan, bayang lantai, glow dan kilauan. Selagi fail tiada, lencana ganti dipaparkan.</p>
 
   <h2>Logo</h2>
-  <p>Empat bentuk logo dengan tema yang sama: bulan sabit Yagami, ungu dan merah. Semua beranimasi dalam banner. Versi PNG latar telus ada dalam folder <code>logos/</code> untuk gambar profil, thumbnail dan watermark.</p>
+  <p>Maskot 3D awak dalam tiga gaya (bertukar sendiri dalam banner) dan wordmark SYNO STORE. PNG latar telus ada dalam folder <code>logos/</code> untuk gambar profil, thumbnail dan watermark.</p>
   <div class="logos">
-    <div class="logo"><div class="lbox" data-logo="emblem"></div><b>Emblem</b><small>Monogram S dalam bulan sabit. Untuk ikon kecil &amp; watermark.</small></div>
-    <div class="logo"><div class="lbox wide" data-logo="grunge"></div><b>Wordmark</b><small>Gaya grunge retak. Untuk banner &amp; thumbnail.</small></div>
-    <div class="logo"><div class="lbox" data-logo="mascot"></div><b>Maskot</b><small>Sticker awak main tablet, beranimasi.</small></div>
-    <div class="logo"><div class="lbox" data-logo="avatar"></div><b>Gambar profil</b><small>Maskot dalam bulatan. Untuk TikTok &amp; WhatsApp.</small></div>
+    <div class="logo"><div class="lbox" data-logo="game"></div><b>Maskot · main</b><small>Awak main tablet, beranimasi.</small></div>
+    <div class="logo"><div class="lbox" data-logo="win"></div><b>Maskot · GG</b><small>Gaya menang.</small></div>
+    <div class="logo"><div class="lbox" data-logo="wink"></div><b>Maskot · wink</b><small>Gaya thumbs-up.</small></div>
+    <div class="logo"><div class="lbox wide" data-logo="word"></div><b>Wordmark</b><small>SYNO STORE 3D dengan kilauan &amp; glitch.</small></div>
   </div>
 
   <h2>Naik taraf stream</h2>
@@ -174,8 +158,8 @@
       <li>Logo, warna dan nama sama di profil, banner dan thumbnail.</li></ul></div>
   </div>
 
-  <h2>Cuba queue Mabar VIP</h2>
-  <p>Panel ni sama macam <code>control.html</code>. Tambah nama, tekan Menang atau Kalah, dan tengok preview di atas berubah. Nama dalam preview ni contoh sahaja.</p>
+  <h2>App Kawalan SYNO</h2>
+  <p>Satu app untuk semua: timer live, Win/Lose, game habis, queue Mabar dan baki VIP. Cuba di sini: tambah nama, tekan Menang atau Kalah, dan tengok preview di atas berubah. Nama dalam preview ni contoh sahaja. Penonton pula ada halaman sendiri (<code>viewer.html</code>) untuk semak baki & queue tanpa boleh ubah.</p>
   <div class="tools">
     <button type="button" id="g-sample">Isi contoh</button>
     <button type="button" id="g-empty">Kosongkan</button>
@@ -183,52 +167,31 @@
   <div id="cp"></div>
 
   <h2>Cara pasang dalam OBS</h2>
-  <p>Tak perlu install Python. Cuma OBS Studio (versi 30 ke atas) dan Windows 10/11. Tutorial yang sama ada dalam fail <code>PASANG_OBS.md</code>.</p>
+  <p>Tak perlu install Python. Tutorial penuh ada dalam fail <code>PASANG_OBS.md</code>.</p>
   <div class="steps">
-    <div class="step"><h4>1 · Muat turun</h4><ul>
-      <li>Di PC, log masuk GitHub dan buka: <code>github.com/tuyulrevival1/https-anthropic.com-claude-code/archive/refs/heads/claude/streaming-layout-chou-kof-vie6x8.zip</code></li>
-      <li>Klik kanan ZIP › <b>Extract All</b>.</li>
-      <li>Pindah folder <code>stream_overlay</code> ke tempat tetap, contoh <code>C:\SYNO\stream_overlay</code>.</li></ul></div>
-    <div class="step"><h4>2 · Hidupkan overlay</h4><ul>
-      <li>Klik dua kali <code>START_OVERLAY.bat</code>. Kalau keluar amaran biru: <b>More info › Run anyway</b>.</li>
-      <li>Tetingkap hitam tulis <b>OVERLAY JALAN</b>. Jangan tutup selagi live, minimize sahaja.</li>
-      <li>Tertutup terus? Klik kanan › <b>Run as administrator</b>, atau guna Cara B.</li></ul></div>
-    <div class="step"><h4>3 · OBS portrait</h4><ul>
-      <li>Settings › Video › Base &amp; Output: <b>1080x1920</b>, FPS 30 atau 60 › Apply.</li>
-      <li>Scenes › <b>+</b> › nama <code>LIVE ARENA</code>.</li></ul></div>
-    <div class="step"><h4>4 · Kamera, game &amp; lagu</h4>
+    <div class="step"><h4>1 · Muat turun &amp; hidupkan</h4><ul>
+      <li>Di PC: <code>github.com/tuyulrevival1/https-anthropic.com-claude-code/archive/refs/heads/claude/streaming-layout-chou-kof-vie6x8.zip</code> › Extract.</li>
+      <li>Klik dua kali <code>START_OVERLAY.bat</code> (More info › Run anyway). Firewall: Allow (Private).</li>
+      <li>Tetingkap hitam tunjuk link &amp; <b>PIN admin</b>. App Kawalan terbuka sendiri.</li></ul></div>
+    <div class="step"><h4>2 · OBS (1080×1920)</h4>
       <div class="tbl"><table><thead><tr><th>Source</th><th>x, y</th><th>w × h</th></tr></thead><tbody>
-        <tr><td>Facecam</td><td>0, 0</td><td>1080 × 612</td></tr>
+        <tr><td>Facecam</td><td>0, 0</td><td>1080 × 584</td></tr>
         <tr><td>Gameplay</td><td>0, 612</td><td>1080 × 608</td></tr>
-        <tr><td>Handcam</td><td>716, 398</td><td>340 × 191</td></tr>
-        <tr><td>Widget lagu</td><td>36, 1598</td><td>470 × 110</td></tr></tbody></table></div>
-      <p>Klik kanan source › Transform › <b>Edit Transform</b> (Ctrl+E): Position = x, y · Bounding Box Type = <b>Scale to outer bounds</b> · Bounding Box Size = w × h · tanda <b>Crop to Bounding Box</b>.</p></div>
-    <div class="step"><h4>5 · Overlay</h4><ul>
-      <li><b>+</b> › <b>Browser</b> › nama <code>Overlay</code>.</li>
-      <li>Local file: <b>jangan tanda</b>. URL: <code>http://127.0.0.1:8787/overlay.html?layout=4&amp;banner=pro</code></li>
-      <li>Width 1080, Height 1920, FPS 30 › OK.</li>
-      <li>Klik kanan Overlay › Order › <b>Move to Top</b>. Widget lagu letak atas overlay.</li></ul></div>
-    <div class="step"><h4>6 · Panel kawalan</h4><ul>
-      <li>Menu <b>Docks › Custom Browser Docks</b>.</li>
-      <li>Nama <code>Panel</code>, URL <code>http://127.0.0.1:8787/control.html</code> › Apply.</li>
-      <li>Guna panel untuk Menang/Kalah, queue Mabar VIP, MMR, Global, on/off Welcome.</li></ul></div>
-    <div class="step"><h4>7 · Tukar layout / banner</h4><ul>
-      <li>Ubah hujung URL Overlay: <code>layout=1</code> Klasik, <code>2</code> Mabar, <code>3</code> Solo Push, <code>4</code> Arena. <code>&amp;hand=0</code> buang handcam.</li>
-      <li><code>banner=pro</code>, <code>pro-crimson</code>, <code>scene-grunge</code>, <code>scene-emblem</code>, <code>scene-mascot</code>. Warna: <code>&amp;accent=lime</code>.</li>
-      <li>Tip: satu scene untuk setiap layout, klik scene masa live.</li></ul></div>
-    <div class="step"><h4>Cara B · tanpa server</h4><ul>
-      <li>Browser source › tanda <b>Local file</b> › pilih <code>obs-arena.html</code> (atau obs-klasik / obs-mabar / obs-solo).</li>
-      <li>Tukar W/L: klik kanan source › <b>Interact</b>, tekan <b>W</b> / <b>L</b> (Shift = tolak 1), <b>Q</b> queue, <b>B</b> banner, <b>H</b> Welcome.</li>
-      <li>Panel queue tak sync dalam cara ni.</li></ul></div>
-    <div class="step"><h4>Masalah biasa</h4><ul>
-      <li><b>Overlay kosong</b>: tetingkap hitam masih buka? Properties › Refresh cache of current page.</li>
-      <li><b>Panel tak sync</b>: panel &amp; overlay mesti sama-sama guna <code>127.0.0.1:8787</code>.</li>
-      <li><b>PC lag</b>: tambah <code>&amp;bgfx=0</code> pada URL.</li>
-      <li><b>Ubah harga / teks</b>: buka <code>assets\config.js</code> dengan Notepad, save, Refresh.</li></ul></div>
+        <tr><td>Handcam</td><td>548, 1430</td><td>508 × 286</td></tr>
+        <tr><td>Widget lagu</td><td>36, 1762</td><td>476 × 88</td></tr></tbody></table></div>
+      <p>Edit Transform (Ctrl+E): Scale to outer bounds + Crop to Bounding Box.</p></div>
+    <div class="step"><h4>3 · Overlay</h4><ul>
+      <li>Browser source, URL <code>http://127.0.0.1:8787/overlay.html?layout=4&amp;banner=power</code>, 1080×1920.</li>
+      <li>Page permissions: <b>Read access to OBS status information</b> (timer mula sendiri bila Start Streaming).</li>
+      <li>Move to Top. Widget lagu letak atas overlay.</li></ul></div>
+    <div class="step"><h4>4 · Admin, phone &amp; penonton</h4><ul>
+      <li>Phone / admin (Wi-Fi sama): link dari tetingkap hitam + PIN.</li>
+      <li>Penonton internet: <code>LINK_PENONTON.bat</code> › kongsi <code>https://….trycloudflare.com/viewer.html</code>.</li>
+      <li>YouTube viewers: API key + link live dalam app.</li></ul></div>
   </div>
 </div>
 <!--ARTIFACT-BODY-END-->
-<script>window.OVERLAY_STORE_KEY = "chouOverlay.preview";</script>
+<script>window.OVERLAY_STORE_KEY = "synoOverlay.preview3";</script>
 <script src="assets/config.js"></script>
 <script src="assets/overlay.js"></script>
 <script src="assets/banner-pro.js"></script>
@@ -242,20 +205,22 @@
 (function () {
   const O = window.ChouOverlay;
   const SAMPLE = {
-    playing: [["Aqil.MY", 3, 2], ["Farhan2311", 1, 1], ["NAJWA", 3, 3]],
+    playing: [["Aqil.MY", 2], ["Farhan2311", 1], ["NAJWA", 3]],
     queue: [["Haziq_", 3], ["zul.gg", 1], ["Mira Hanis", 1], ["Danish99", 3], ["KudoX", 1]]
   };
   const seed = () => O.Store.set(s => {
-    let n = 0;
-    s.playing = SAMPLE.playing.map(([name, games, left]) => ({ id: "s" + n++, name, games, left }));
-    s.queue = SAMPLE.queue.map(([name, games]) => ({ id: "s" + n++, name, games, left: games }));
-    s.showQueue = true; s.showBanner = true; s.showWelcome = true; s.wins = 12; s.losses = 5; s.streak = 3;
+    let n = 0; s.members = {};
+    const entry = ([name, bal]) => { const k = O.keyOf(name); s.members[k] = { name, bal }; return { id: "s" + n++, key: k }; };
+    s.playing = SAMPLE.playing.map(entry);
+    s.queue = SAMPLE.queue.map(entry);
+    s.showQueue = true; s.showBanner = true; s.wins = 12; s.losses = 5; s.streak = 3;
+    s.live = { running: true, start: Date.now() - 4523000, acc: 0 };
   });
   O.Store.init();
   if (!O.Store.read()) seed();
 
   const overlays = [...document.querySelectorAll(".shot")].map(box => {
-    const o = O.mount(box, { layout: +box.dataset.layout, banner: "pro", demo: true });
+    const o = O.mount(box, { layout: +box.dataset.layout, banner: "power", demo: true });
     O.fitStage(o.stage, box);
     return o;
   });
@@ -263,7 +228,7 @@
     O.mountBanner(host, { style: host.dataset.banner, accent: host.dataset.acc });
     O.fitStage(host, host.parentElement, 1080, 192);
   });
-  let curStyle = "pro", curAcc = "violet";
+  let curStyle = "power", curAcc = "crimson";
   const apply = () => overlays.forEach(o => o.setBanner(curStyle, curAcc));
   document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => {
     document.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
@@ -276,16 +241,12 @@
   // animated logos (replay the intro every 5 s)
   document.querySelectorAll("[data-logo]").forEach(box => {
     const k = box.dataset.logo;
-    if (k === "grunge") box.innerHTML = O.logos.grungeSVG(O.ACCENTS.violet);
-    else if (k === "emblem") box.innerHTML = O.logos.emblemSVG(O.ACCENTS.violet);
-    else if (k === "mascot") box.innerHTML = O.mascot.svg();
-    else box.innerHTML = `<div style="position:relative;width:86%;aspect-ratio:1;border-radius:50%;border:5px solid #f3eee8;box-shadow:0 0 0 4px #ff2350;background:radial-gradient(circle at 50% 38%,#3a1670,#160a28 62%,#0b0614);overflow:hidden;display:grid;place-items:end center">${O.mascot.svg()}</div>`;
-    const svg = box.querySelector(k === "avatar" ? "div svg" : "svg");
-    if (k === "avatar") Object.assign(svg.style, { width: "82%", height: "88%" });
-    const anim = k === "grunge" ? O.logos.animGrunge : k === "emblem" ? O.logos.animEmblem : (s, p, t) => O.mascot.anim(s, t);
-    O.util.tickers.push(t => anim(svg, t % 5, t));
+    if (k === "word") { box.innerHTML = O.powerWord.svg(); const svg = box.querySelector("svg"); O.util.tickers.push(t => O.powerWord.anim(svg, t)); return; }
+    box.innerHTML = O.mascot3d.svg();
+    const svg = box.querySelector("svg");
+    O.util.tickers.push(t => O.mascot3d.anim(svg, t, { pose: k }));
   });
-  O.mountControl(document.getElementById("cp"));
+  O.mountControl(document.getElementById("cp"), { embedded: true });
   document.getElementById("g-sample").addEventListener("click", seed);
   document.getElementById("g-empty").addEventListener("click", () => O.Q.clear());
 })();

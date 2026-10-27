@@ -1,116 +1,63 @@
-# Chou KOF Overlay – TikTok Live portrait (1080×1920)
+# SYNO Stream Overlay (TikTok / YouTube live portrait 1080×1920)
 
-Overlay live untuk MLBB dengan tema **Chou KOF (Iori)**: hitam, api ungu, merah crimson, bulan sabit.
-Semua dalam HTML, jadi teks, harga dan queue boleh ubah tanpa edit video.
+Overlay live MLBB tema merah, dengan app kawalan untuk timer, Win/Lose, queue Mabar VIP dan baki VIP.
+Semua dalam HTML: tak perlu edit video, tak perlu install Python.
+
+**Cara pasang langkah demi langkah: [PASANG_OBS.md](PASANG_OBS.md)**
+
+## Fail utama
 
 | Fail | Guna |
 |---|---|
-| `overlay.html` | Overlay penuh 1080×1920 (letak paling atas dalam scene) |
-| `banner.html` | Banner bawah sahaja, 1080×192 |
-| `control.html` | Panel kawalan queue Mabar VIP, W/L, MMR |
-| `index.html` | Galeri preview semua variasi + cuba queue |
+| `START_OVERLAY.bat` | Hidupkan server kecil (PowerShell Windows) + buka App Kawalan. Biar terbuka masa live. |
+| `BUKA_APP.bat` | Buka semula tetingkap App Kawalan |
+| `LINK_PENONTON.bat` | Link awam (Cloudflare) untuk penonton & admin luar |
+| `overlay.html` | Overlay 1080×1920 untuk OBS (`?layout=4&banner=power`) |
+| `control.html` | **App Kawalan SYNO**: timer, W/L, game habis, queue, baki VIP, YouTube, link |
+| `viewer.html` | Halaman penonton: semak baki & queue (lihat sahaja) |
+| `banner.html` | Banner sahaja, 1080×192 |
+| `obs-*.html` | Overlay siap set untuk OBS "Local file" (tanpa server) |
 | `assets/config.js` | **Ubah teks & harga di sini** |
-| `exports/banner_*.mp4` | Banner siap render (loop 24 saat) kalau tak nak guna browser source |
+| `exports/banner_*.mp4` | Banner siap render (loop 24 s) |
+| `logos/` | Logo maskot (3 gaya), wordmark, gambar profil (PNG telus) |
+| `data/` | Dibuat automatik: `state.txt` (queue, baki VIP, W/L) & `admin_pin.txt` |
 
-## Variasi
+## Layout
 
-**Layout** (`overlay.html?layout=N`)
-
-1. **Klasik** – facecam atas, game tengah, kad queue kiri bawah + handcam kanan + stats.
-2. **Mabar** – facecam + handcam sebelah-menyebelah di atas, queue besar di bawah. Untuk sesi mabar VIP.
-3. **Solo Push** – game lebih besar, stats W/L besar, tiada queue. Untuk bila skrin dah penuh.
-4. **Arena** (baru) – gameplay diapit garis tenaga beranimasi, papan W/L besar di kanan, kiri bawah dibiar tenang supaya chat TikTok senang dibaca, ruang untuk widget lagu, "Welcome To My Stream" boleh on/off.
-
-**Banner** (`&banner=...`):
-- `scene-grunge`, `scene-emblem`, `scene-mascot` – **Minimal** (rentak macam SOLOZ): babak jenama → babak servis, teks kabur-pudar, butang Link in Bio diketuk.
-  Tambah `&accent=violet | crimson | lime | ice | gold` untuk tukar warna aksen.
-- `pro` – **Premium Ungu** (default): maskot sticker awak main tablet, teks bergerak huruf demi huruf, ikon kanan beranimasi.
-- `pro-crimson` – Premium Merah: susunan sama, plat merah.
-- `flame`, `slash`, `moon` – gaya lama yang lebih ringkas. `none` untuk tutup banner.
-
-Ikon kanan ikut mesej: diamond berkilat (topup), ikon rank 3D (joki), lencana VIP (mabar), link (bio).
-
-### Ikon rank asli (3D)
-
-Letak ikon rank MLBB asli (PNG latar telus) dalam `assets/ranks/`: `epic.png`, `legend.png`, `mythic.png`, `glory.png`, `immortal.png`.
-Banner akan putar setiap ikon secara 3D (ada ketebalan, bayang lantai, glow ikut warna rank, kilauan) dan berhenti di Immortal dengan sinar.
-Selagi fail tiada, lencana lukisan dipakai. Nama fail & warna glow boleh ubah dalam `config.js` → `ranks.tiers`.
-Lepas letak ikon, render semula video: `node tools/render_banner.js`.
-Nama di bawah maskot diambil dari `storeName` (contoh SYNOSTORE → "SYNO" + "STORE").
-
-Contoh: `overlay.html?layout=2&banner=pro-crimson` atau `overlay.html?layout=1&banner=scene-grunge&accent=lime`
-
-**Latar beranimasi**: kawasan gelap overlay ada asap ungu-merah + bara api yang bergerak perlahan (tak tutup kamera). Tutup dengan `&bgfx=0` kalau PC berat.
-
-## Logo
-
-Folder `logos/` (PNG latar telus):
-
-| Fail | Guna |
+| Layout | Untuk |
 |---|---|
-| `logo_emblem.png`, `logo_emblem_crimson.png` | Ikon kecil, watermark, sudut video |
-| `logo_wordmark.png` | Thumbnail, banner, header |
-| `logo_mascot.png` | Sticker, emote, intro |
-| `profile_picture.png` | Gambar profil TikTok / WhatsApp |
+| **4 Arena** (utama) | Facecam › bar LIVE (timer stream, jam, penonton YouTube) › gameplay › banner › queue Mabar + bingkai lagu (kiri), handcam + DEVICE + W/L (kanan) |
+| 1 Klasik · 2 Mabar · 3 Solo Push | Susunan alternatif |
 
-Tukar nama/huruf logo dalam `config.js` → `brand`, kemudian `node tools/export_logos.js`.
+`&hand=0` buang handcam · `&bgfx=0` matikan asap latar (PC lag).
 
-## Pasang dalam OBS / TikTok Live Studio
+## Banner
 
-**Tutorial penuh langkah demi langkah: [PASANG_OBS.md](PASANG_OBS.md)** (tak perlu install Python).
+- `power` (utama): maskot 3D bertukar gaya (main / GG / wink), wordmark SYNO STORE 3D, teks metalik, lencana hook melantun, medallion krom dengan ikon diamond / rank 3D / VIP / album / link.
+- `slash`, `pro-crimson`, `scene-mascot` (gaya minimal SOLOZ): pilihan lain.
 
-1. Klik dua kali `START_OVERLAY.bat` (guna PowerShell bawaan Windows, tiada install). Biar tetingkap hitam tu terbuka masa live.
-2. Tambah **Browser source**: URL `http://127.0.0.1:8787/overlay.html?layout=1&banner=pro`, lebar 1080, tinggi 1920.
-3. Letak source overlay **paling atas**. Kamera & game letak di bawah, ikut kotak ni:
+Mesej, kicker, tag harga dan hook banner diubah dalam `config.js` › `banner.messages`.
 
-| Layout | Facecam (x, y, w, h) | Game | Handcam |
-|---|---|---|---|
-| 4 Arena | 0, 0, 1080, 612 | 0, 612, 1080, 608 | 716, 398, 340, 191 (lagu: 36, 1598, 470, 110) |
-| 1 Klasik | 0, 0, 1080, 560 | 0, 588, 1080, 608 | 540, 1216, 504, 284 |
-| 2 Mabar | 0, 0, 652, 470 | 0, 498, 1080, 608 | 666, 14, 400, 225 |
-| 3 Solo Push | 0, 0, 1080, 520 | 0, 548, 1080, 760 | 540, 1326, 504, 284 |
+## Queue Mabar & baki VIP
 
-   Layout 3: besarkan game ke 1351×760 dan crop tepi kiri/kanan.
-   Tip OBS: klik kanan source › Transform › Edit Transform, taip nilai x/y/w/h terus.
-4. Panel queue: OBS › **Docks › Custom Browser Docks**, URL `http://127.0.0.1:8787/control.html`.
-   Panel dan overlay mesti guna alamat `127.0.0.1:8787` yang sama supaya data sync.
+- Baki dikira dalam **game**. Top up dalam app: +1 game RM4, +3 game RM10, +1 Immortal RM6, atau nombor sendiri.
+- **Menang / Kalah** dalam app: tambah W/L, setiap yang sedang main tolak 1 game. Baki habis keluar, queue naik sendiri.
+- Admin di phone / PC lain: link Wi-Fi + PIN. Penonton: `viewer.html` (tak boleh ubah).
 
-Buat satu scene untuk setiap layout (contoh "Mabar", "Solo Push") dan tukar scene ikut sesi.
+## Ikon rank asli
 
-## Queue Mabar VIP
+Letak PNG asli dalam `assets/ranks/` (`epic`, `legend`, `mythic`, `honor`, `glory`, `immortal` .png). Banner putar 3D dengan glow & kilauan. Tanpa fail, lencana ganti dipakai.
 
-- **Tambah**: taip nama/ID, pilih pakej (1 game RM4 / 3 game RM10), tekan Tambah. Kalau slot kosong, terus masuk "Sedang main".
-- **Menang / Kalah**: tambah W/L + semua yang sedang main tolak 1 game. Yang habis pakej keluar, queue naik sendiri.
-- **Tunjuk queue** off: kad queue bertukar jadi senarai harga (Mabar + Komen album + Main akaun). Guna bila skrin dah sesak.
-- Maksimum orang main sekali: `mabar.maxPlaying` dalam config (default 4).
-
-## Watak Chou KOF dalam banner gaya lama
-
-(Banner premium guna maskot kartun.) Untuk gaya `flame`/`slash`/`moon`, letak PNG Chou KOF (latar telus) sebagai `assets/chou.png`. Watak keluar di kiri banner dengan rim merah, aura ungu dan gerakan kecil.
-Laraskan dalam `config.js` → `banner.character` (`scale`, `x`, `y`). Kalau tiada fail, logo bulan sabit + "CHOU" dipakai.
-
-Lepas tambah watak, render semula video banner:
+## Render semula video banner / logo
 
 ```bash
 npm i playwright && npx playwright install chromium
-node tools/render_banner.js          # semua gaya -> exports/banner_*.mp4
-node tools/render_banner.js pro      # satu gaya sahaja
+node tools/render_banner.js          # power, slash, pro-crimson
+node tools/render_banner.js power    # satu gaya
+node tools/export_logos.js           # logos/*.png
 ```
 
-## Ubah teks
+## Nota
 
-Semua dalam `assets/config.js`: nama kedai, harga mabar, servis lain, mesej banner, device, nilai W/L/MMR permulaan.
-`{store}` dalam mesej akan ditukar jadi nama kedai.
-
-## Naik taraf stream (ringkas)
-
-1. **Belakang kamera**: LED strip ungu + merah di dinding belakang, neon/poster logo sedikit kabur, lampu depan serong 45°. Latar hitam jadi bergradien ikut tema.
-2. **Video**: kanvas 1080×1920, 30/60 fps, bitrate tertinggi yang TikTok benarkan; kunci fokus, exposure & white balance facecam.
-3. **Audio**: noise suppression + compressor; muzik latar jauh lebih perlahan dari suara.
-4. **Hook**: tajuk live jelas ("SOLO PUSH GLOBAL · MABAR VIP RM4"), sebut nama penonton, ajak komen "VIP", guna LIVE Goal, tukar layout ikut sesi.
-5. **Konsisten**: jadual tetap, post klip savage sebelum live, logo & warna sama di semua tempat.
-
-## Nota TikTok
-
-Pada sesetengah telefon, TikTok potong sikit tepi kiri/kanan video dan letak kotak komen di bahagian bawah.
-Sebab tu teks penting dalam panel dijauhkan dari tepi.
+- Bilangan penonton TikTok tak boleh diambil secara automatik (tiada API); YouTube boleh (API key percuma).
+- TikTok potong sikit tepi kiri/kanan pada sesetengah phone dan letak chat di kiri bawah; panel dijauhkan dari tepi.

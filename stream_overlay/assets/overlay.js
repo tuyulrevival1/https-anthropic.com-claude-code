@@ -61,7 +61,7 @@
     const L = s.live || {}; return Math.max(0, (L.acc || 0) + (L.running ? nowMs - (L.start || nowMs) : 0));
   };
   const Store = {
-    state: null, subs: [], bc: null, remote: false, pendingUntil: 0,
+    state: null, subs: [], bc: null, remote: false, pendingUntil: 0, canWrite: true,
     read() { try { const r = localStorage.getItem(KEY); if (r) return normalize(Object.assign(defaults(), JSON.parse(r))); } catch (e) {} return null; },
     init() {
       if (this.state) return;
@@ -91,11 +91,18 @@
     push(s) {
       const pin = this.pin();
       fetch("api/state", { method: "POST", headers: pin ? { "X-Pin": pin } : {}, body: encodeURIComponent(JSON.stringify(s)) })
-        .then(r => window.dispatchEvent(new CustomEvent("ov-auth", { detail: r.status !== 401 })))
+        .then(r => {
+          if (r.status === 401) { // rejected: drop the local change and reload the real state
+            this.canWrite = false; this.pendingUntil = 0;
+            fetch("api/state", { cache: "no-store" }).then(x => x.text()).then(t => this.onRemote(t, true)).catch(() => {});
+          }
+          window.dispatchEvent(new CustomEvent("ov-auth", { detail: r.status !== 401 }));
+        })
         .catch(() => {});
     },
     apply(s) { if (!s || s.rev === this.state.rev) return; const prev = this.state; this.state = s; this.subs.forEach(f => f(s, prev)); },
     set(mut) {
+      if (this.remote && !this.canWrite) { window.dispatchEvent(new CustomEvent("ov-auth", { detail: false })); return; }
       const s = JSON.parse(JSON.stringify(this.state)); mut(s);
       s.rev = Date.now() + Math.random(); s.updated = Date.now();
       const prev = this.state; this.state = s;

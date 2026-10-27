@@ -423,7 +423,7 @@
   -webkit-mask-image: radial-gradient(circle, #000 20%, transparent 62%); mask-image: radial-gradient(circle, #000 20%, transparent 62%); }
 .rk3d .rk-ring { position: absolute; left: 50%; top: 46%; width: 86%; aspect-ratio: 1; border-radius: 50%; border: 3px solid var(--rg, #ff5874);
   box-shadow: 0 0 18px var(--rg, #ff5874), inset 0 0 12px var(--rg, #ff5874); opacity: 0; pointer-events: none; }
-.rk3d .rk-tier { position: absolute; inset: 0; perspective: 520px; visibility: hidden; }
+.rk3d .rk-tier { position: absolute; inset: 0; perspective: 520px; display: none; }
 .rk3d .rk-glow { position: absolute; left: 50%; top: 46%; width: 92%; aspect-ratio: 1;
   background: radial-gradient(circle, color-mix(in srgb, var(--g) 70%, transparent) 0%, color-mix(in srgb, var(--g) 22%, transparent) 38%, transparent 66%); }
 .rk3d .rk-shadow { position: absolute; left: 50%; bottom: 3%; width: 54%; height: 12%; border-radius: 50%;

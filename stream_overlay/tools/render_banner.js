@@ -9,7 +9,7 @@ const { execFileSync } = require("child_process");
 const fs = require("fs"), path = require("path");
 
 const root = path.resolve(__dirname, "..");
-const styles = process.argv.slice(2).length ? process.argv.slice(2) : ["scene-grunge", "scene-mascot:crimson", "scene-emblem:lime", "pro", "pro-crimson", "flame", "slash", "moon"];
+const styles = process.argv.slice(2).length ? process.argv.slice(2) : ["power", "slash", "pro-crimson"];
 const FPS = 30;
 
 (async () => {

@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0507">
+<title>SYNO · Queue & Baki VIP</title>
+<link rel="icon" href="logos/profile_picture.png">
+<link rel="stylesheet" href="assets/overlay.css">
+<style>
+  /* Viewer page: read only. Layout: header, balance lookup, now playing, queue, prices. */
+  :root { --bg: #0b0507; --card: #170a0e; --line: rgba(255, 90, 110, .22); --fg: #f6eff0; --mut: rgba(246, 239, 240, .62); --red: #ff2346; --gold: #ffcf4a;
+    --disp: "OV Anton", Anton, Impact, sans-serif; --hud: "OV Raj", Rajdhani, "Segoe UI", system-ui, sans-serif; --num: "OV Teko", Teko, monospace; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: radial-gradient(120% 60% at 50% 0%, #2a0810, var(--bg) 60%) fixed, var(--bg); color: var(--fg); font: 600 16px/1.45 var(--hud); }
+  .wrap { max-width: 640px; margin: 0 auto; padding-block: 20px 48px; padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); display: flex; flex-direction: column; gap: 14px; }
+  header { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+  h1 { margin: 0; font: 400 40px/.95 var(--disp); transform: skewX(-8deg); letter-spacing: .01em; }
+  h1 small { display: block; font: 700 12px/1 var(--hud); letter-spacing: .34em; color: #ff8a9b; transform: none; margin-bottom: 8px; }
+  h1 b { font-weight: 400; color: var(--red); }
+  .live { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; background: var(--red); font: 700 14px/1 var(--hud); letter-spacing: .14em; }
+  .live.off { background: #2a1118; color: var(--mut); }
+  .live i { width: 8px; height: 8px; border-radius: 50%; background: #fff; }
+  .live b { font: 600 20px/1 var(--num); letter-spacing: .04em; padding-top: 2px; }
+  .card { background: linear-gradient(170deg, #1f0d13, var(--card)); border: 1px solid var(--line); border-top: 3px solid var(--red); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+  h2 { margin: 0; font: 700 13px/1 var(--hud); letter-spacing: .26em; text-transform: uppercase; color: #ff8a9b; display: flex; justify-content: space-between; }
+  h2 span { color: var(--fg); }
+  .look { display: flex; gap: 8px; }
+  .look input { flex: 1; min-width: 0; font: inherit; color: var(--fg); background: #0a0405; border: 1px solid var(--line); padding: 12px; }
+  .look input:focus-visible { outline: 2px solid var(--gold); }
+  .res { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; background: #10070a; border-left: 3px solid var(--gold); }
+  .res b { font: 600 44px/1 var(--num); color: var(--gold); }
+  .res small { color: var(--mut); }
+  ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  li { display: flex; align-items: center; gap: 10px; background: #10070a; padding: 9px 12px; }
+  li .no { font: 600 22px/1 var(--num); color: #ff8a9b; width: 26px; padding-top: 2px; }
+  li .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 18px; }
+  li .bal { font-size: 13px; color: var(--gold); white-space: nowrap; }
+  li.me { outline: 2px solid var(--gold); }
+  li.empty { color: var(--mut); font-weight: 500; }
+  .wl { display: flex; gap: 10px; }
+  .wl div { flex: 1; text-align: center; padding: 8px; background: #10070a; }
+  .wl small { display: block; font-size: 12px; letter-spacing: .3em; color: var(--mut); }
+  .wl b { font: 600 40px/1 var(--num); }
+  .wl .w b { color: var(--gold); } .wl .l b { color: var(--red); }
+  .prices { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; }
+  .prices div { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 12px; background: #10070a; }
+  .prices b { font: 400 24px/1 var(--disp); color: var(--gold); font-weight: 400; white-space: nowrap; }
+  .foot { color: var(--mut); font-size: 13px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><small>MABAR VIP · QUEUE</small><span id="v-store">SYNO</span><b>STORE</b></h1>
+    <span class="live off" id="v-live"><i></i><span>OFFLINE</span><b></b></span>
+  </header>
+
+  <section class="card">
+    <h2>Semak baki game anda</h2>
+    <form class="look" id="v-form" autocomplete="off"><input id="v-name" placeholder="Taip nama / ID ML anda" aria-label="Nama atau ID ML"></form>
+    <div class="res" id="v-res" hidden></div>
+  </section>
+
+  <section class="card">
+    <h2>Sedang main <span id="v-pc"></span></h2>
+    <ol id="v-play"></ol>
+  </section>
+
+  <section class="card">
+    <h2>Queue <span id="v-qc"></span></h2>
+    <ol id="v-queue"></ol>
+  </section>
+
+  <section class="card">
+    <h2>Win / Lose hari ni</h2>
+    <div class="wl"><div class="w"><small>WIN</small><b id="v-w">0</b></div><div class="l"><small>LOSE</small><b id="v-l">0</b></div></div>
+  </section>
+
+  <section class="card">
+    <h2>Harga Mabar VIP</h2>
+    <div class="prices" id="v-prices"></div>
+  </section>
+  <p class="foot">Halaman ni dikemas kini sendiri. Nak top up / masuk queue? Komen masa live.</p>
+</div>
+<script src="assets/config.js"></script>
+<script>
+(function () {
+  "use strict";
+  const CFG = window.OVERLAY_CONFIG;
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const $ = id => document.getElementById(id);
+  const name = (CFG.brand && CFG.brand.name) || CFG.storeName.replace(/STORE$/i, "");
+  $("v-store").textContent = name;
+  $("v-prices").innerHTML = CFG.mabar.prices.map(p => `<div><span>${esc(p.qty)}</span><b>${esc(p.price)}${p.note ? `<small style="font:600 13px var(--hud);color:var(--mut)"> ${esc(p.note)}</small>` : ""}</b></div>`).join("");
+  let S = null, me = "";
+  try { me = localStorage.getItem("syno.viewer.me") || ""; } catch (e) {}
+  $("v-name").value = me;
+  const pad = n => String(n).padStart(2, "0");
+  const fmt = ms => { const x = Math.floor(ms / 1000); return `${pad(Math.floor(x / 3600))}:${pad(Math.floor(x / 60) % 60)}:${pad(x % 60)}`; };
+
+  function render() {
+    if (!S) return;
+    const members = S.members || {}, mem = p => members[p.key] || { name: p.key, bal: 0 }, max = CFG.mabar.maxPlaying;
+    const k = me.trim().toLowerCase();
+    $("v-pc").textContent = `${(S.playing || []).length}/${max}`; $("v-qc").textContent = (S.queue || []).length;
+    $("v-play").innerHTML = (S.playing || []).length ? S.playing.map(p => `<li class="${p.key === k ? "me" : ""}"><span class="nm">${esc(mem(p).name)}</span><span class="bal">baki ${mem(p).bal} game</span></li>`).join("") : `<li class="empty">Belum ada yang main.</li>`;
+    $("v-queue").innerHTML = (S.queue || []).length ? S.queue.map((p, i) => `<li class="${p.key === k ? "me" : ""}"><span class="no">${i + 1}</span><span class="nm">${esc(mem(p).name)}</span><span class="bal">baki ${mem(p).bal} game</span></li>`).join("") : `<li class="empty">Queue kosong.</li>`;
+    $("v-w").textContent = S.wins || 0; $("v-l").textContent = S.losses || 0;
+    const res = $("v-res");
+    if (k) {
+      const m = members[k], pos = (S.queue || []).findIndex(p => p.key === k), playing = (S.playing || []).some(p => p.key === k);
+      res.hidden = false;
+      res.innerHTML = m ? `<div><div style="font-size:18px">${esc(m.name)}</div><small>${playing ? "Sedang main sekarang" : pos >= 0 ? `Dalam queue · nombor ${pos + 1}` : "Tiada dalam queue"}</small></div><div style="text-align:right"><b>${m.bal}</b><br><small>baki game</small></div>`
+        : `<div><div style="font-size:18px">${esc(me)}</div><small>Tiada rekod VIP dengan nama ni. Semak ejaan atau tanya admin.</small></div>`;
+    } else res.hidden = true;
+  }
+  function tickLive() {
+    if (!S || !S.live) return;
+    const L = S.live, ms = Math.max(0, (L.acc || 0) + (L.running ? Date.now() - (L.start || Date.now()) : 0));
+    const live = $("v-live");
+    live.className = "live" + (L.running ? "" : " off");
+    live.querySelector("span").textContent = L.running ? "LIVE" : "OFFLINE";
+    live.querySelector("b").textContent = L.running ? fmt(ms) : "";
+  }
+  function load() {
+    if (/^https?:$/.test(location.protocol)) {
+      fetch("api/state", { cache: "no-store" }).then(r => r.ok ? r.text() : "").then(t => { if (t && t.trim()) { try { S = JSON.parse(decodeURIComponent(t)); render(); } catch (e) {} } }).catch(() => {});
+    } else { try { S = JSON.parse(localStorage.getItem("chouOverlay.v1") || "null"); render(); } catch (e) {} }
+  }
+  $("v-form").addEventListener("submit", e => { e.preventDefault(); me = $("v-name").value; try { localStorage.setItem("syno.viewer.me", me); } catch (e) {} render(); });
+  $("v-name").addEventListener("input", () => { me = $("v-name").value; try { localStorage.setItem("syno.viewer.me", me); } catch (e) {} render(); });
+  load(); setInterval(load, 4000); setInterval(tickLive, 1000);
+})();
+</script>
+</body>
+</html>

@@ -16,11 +16,11 @@
   ?layout=2  Mabar       (facecam + handcam atas, queue besar bawah)
   ?layout=3  Solo Push   (game besar, stats besar, tiada queue)
   ?layout=4  Arena       (garis tenaga pada gameplay, papan W/L besar, ruang chat & lagu) &hand=0 buang handcam
-  &banner=pro | pro-crimson | flame | slash | moon | none
+  &banner=power | slash | pro-crimson | scene-grunge | scene-mascot | none
   &demo      tunjuk gambar contoh dalam lubang kamera (untuk preview sahaja)
 -->
 <div id="root"></div>
-<script>window.OVERLAY_PRESET = {"layout": 3, "banner": "pro"}; /* ubah di sini kalau nak */</script>
+<script>window.OVERLAY_PRESET = {"layout": 3, "banner": "power"}; /* ubah di sini kalau nak */</script>
 <script src="assets/config.js"></script>
 <script src="assets/overlay.js"></script>
 <script src="assets/banner-pro.js"></script>
@@ -35,7 +35,7 @@
   new URLSearchParams(location.search).forEach((v, k) => { P[k] = v; });
   const root = document.getElementById("root");
   const o = ChouOverlay.mount(root, {
-    layout: +P.layout || 1, banner: P.banner || "pro", accent: P.accent || undefined,
+    layout: +P.layout || 4, banner: P.banner || "power", accent: P.accent || undefined,
     bgfx: String(P.bgfx) !== "0", hand: String(P.hand) !== "0", demo: "demo" in P
   });
   ChouOverlay.fitStage(o.stage, root);

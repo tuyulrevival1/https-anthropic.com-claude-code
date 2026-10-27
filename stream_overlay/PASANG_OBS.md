@@ -1,123 +1,121 @@
-# Cara pasang overlay dalam OBS (langkah demi langkah)
+# Cara pasang overlay + App Kawalan SYNO dalam OBS
 
-Tak perlu install Python atau apa-apa program lain. Cuma perlu **OBS Studio** (versi 30 ke atas) dan Windows 10/11.
+Tak perlu install Python. Cuma perlu **OBS Studio** (versi 30 ke atas) dan Windows 10/11.
 
 ---
 
-## 1. Muat turun fail overlay
+## 1. Muat turun fail
 
-1. Buka link ni di PC (log masuk GitHub dulu):
+1. Di PC, log masuk GitHub dan buka:
    `https://github.com/tuyulrevival1/https-anthropic.com-claude-code/archive/refs/heads/claude/streaming-layout-chou-kof-vie6x8.zip`
-2. Fail ZIP akan dimuat turun. Klik kanan ZIP › **Extract All…** › Extract.
+2. Klik kanan ZIP › **Extract All…**.
 3. Pindahkan folder **`stream_overlay`** ke tempat tetap, contoh `C:\SYNO\stream_overlay`.
-   Jangan letak dalam folder Downloads yang selalu dipadam.
 
-## 2. Hidupkan overlay (setiap kali nak live)
+## 2. Hidupkan (setiap kali nak live)
 
-1. Buka folder `stream_overlay`, klik dua kali **`START_OVERLAY.bat`**.
-2. Kalau keluar amaran biru Windows: klik **More info** › **Run anyway**.
-3. Tetingkap hitam keluar dengan tulisan hijau **OVERLAY JALAN: http://127.0.0.1:8787/**, dan browser buka halaman preview.
-4. **Jangan tutup tetingkap hitam tu** selagi live. Minimize sahaja.
+1. Klik dua kali **`START_OVERLAY.bat`**. Kalau keluar amaran biru Windows: **More info › Run anyway**.
+2. Kalau Windows Firewall tanya, pilih **Private networks** › **Allow** (supaya phone/admin boleh kawal).
+3. Tetingkap hitam keluar dan tunjuk:
+   - link overlay, link app, link phone/admin
+   - **PIN admin** (4 nombor). Simpan PIN ni; admin di peranti lain perlukannya.
+4. **App Kawalan SYNO** terbuka sendiri sebagai tetingkap app. Tertutup? Klik dua kali `BUKA_APP.bat`.
+5. **Jangan tutup tetingkap hitam** selagi live. Minimize sahaja.
 
-> Kalau tetingkap tu tertutup terus: klik kanan `START_OVERLAY.bat` › **Run as administrator**.
-> Kalau tetap tak jalan, guna **Cara B** di bawah (tanpa server).
+## 3. OBS portrait
 
-## 3. Set OBS ke portrait 1080×1920
+OBS › **Settings** › **Video**: Base dan Output **1080x1920**, FPS 30 (atau 60) › Apply.
 
-1. OBS › **Settings** › **Video**
-   - Base (Canvas) Resolution: **1080x1920** (taip sendiri)
-   - Output (Scaled) Resolution: **1080x1920**
-   - Common FPS Values: **30** (atau 60 kalau PC kuat)
-2. Klik **Apply** › **OK**.
+## 4. Scene "LIVE ARENA"
 
-## 4. Buat scene Arena
+Tambah source ikut urutan (yang dulu duduk paling bawah):
 
-Dalam kotak **Scenes**, klik **+** › nama `LIVE ARENA`.
+| # | Source | Position (x, y) | Saiz (w × h) |
+|---|---|---|---|
+| 1 | Facecam (Video Capture Device) | 0, 0 | 1080 × 584 |
+| 2 | Gameplay (capture card / scrcpy / Window Capture) | 0, 612 | 1080 × 608 |
+| 3 | Handcam (Video Capture Device) | 548, 1430 | 508 × 286 |
+| 4 | **Overlay** (Browser, langkah 5) | 0, 0 | 1080 × 1920 |
+| 5 | Widget lagu (letak **atas** overlay) | 36, 1762 | 476 × 88 |
 
-Tambah source ikut urutan ni (yang ditambah dulu duduk paling bawah):
+Cara letak tepat: klik kanan source › Transform › **Edit Transform** (Ctrl+E):
+Position = x, y · Bounding Box Type = **Scale to outer bounds** · Bounding Box Size = w × h · tanda **Crop to Bounding Box**.
 
-| # | Source | Cara tambah | Kedudukan (x, y) | Saiz (w × h) |
-|---|---|---|---|---|
-| 1 | Facecam | **+** › Video Capture Device › pilih kamera muka | 0, 0 | 1080 × 612 |
-| 2 | Gameplay | capture card / scrcpy / Window Capture yang awak guna sekarang | 0, 612 | 1080 × 608 |
-| 3 | Handcam | **+** › Video Capture Device › kamera tangan | 716, 398 | 340 × 191 |
-| 4 | **Overlay** | **+** › **Browser** (lihat langkah 5) | 0, 0 | 1080 × 1920 |
-| 5 | Lagu (widget muzik) | source lagu awak sekarang | 36, 1598 | 470 × 110 |
+Susunan skrin Arena (atas ke bawah): facecam › bar LIVE (timer + jam + penonton YouTube) › gameplay › banner › queue Mabar (kiri) + handcam & W/L (kanan) › bingkai lagu (kiri bawah).
 
-**Cara letak kedudukan & saiz tepat** (untuk source 1, 2, 3, 5):
-1. Klik kanan source › **Transform** › **Edit Transform…** (atau tekan Ctrl+E).
-2. **Position**: taip x dan y dari jadual.
-3. **Bounding Box Type**: pilih **Scale to outer bounds**.
-4. **Bounding Box Size**: taip w dan h dari jadual.
-5. Tanda **Crop to Bounding Box** (kalau ada), supaya lebihan dipotong kemas.
-6. Tutup.
+## 5. Overlay (Browser source)
 
-## 5. Tambah overlay (Browser source)
+1. **+** › **Browser** › nama `Overlay`.
+2. Local file: **jangan tanda**. URL: `http://127.0.0.1:8787/overlay.html?layout=4&banner=power`
+3. Width `1080`, Height `1920`, FPS `30`.
+4. **Page permissions**: pilih **Read access to OBS status information** (atau lebih tinggi). Ini buat timer live mula sendiri bila tekan **Start Streaming**.
+5. OK › klik kanan Overlay › Order › **Move to Top** (widget lagu kekal di atasnya).
 
-1. **+** › **Browser** › nama `Overlay` › OK.
-2. Dalam tetingkap properties:
-   - **Local file**: JANGAN tanda
-   - **URL**: `http://127.0.0.1:8787/overlay.html?layout=4&banner=pro`
-   - **Width**: `1080`  **Height**: `1920`
-   - **FPS**: `30`
-   - Tanda **Shutdown source when not visible**: TIDAK
-3. Klik **OK**.
-4. Klik kanan `Overlay` › **Order** › **Move to Top**, supaya overlay duduk atas kamera.
-   Pastikan widget lagu duduk paling atas sekali (atas overlay).
+## 6. App Kawalan SYNO
 
-## 6. Panel kawalan (queue, Win/Lose, Welcome)
+Semua dikawal dari satu app:
 
-1. OBS menu atas › **Docks** › **Custom Browser Docks…**
-2. Dock Name: `Panel`  URL: `http://127.0.0.1:8787/control.html` › **Apply** › **Close**.
-3. Panel muncul dalam OBS. Seret dan letak di tepi.
+| Bahagian | Fungsi |
+|---|---|
+| **Live** | Timer stream: Mula / Jeda / Reset. On/off queue & banner. |
+| **Win / Lose** | Tambah / tolak W/L manual, reset. |
+| **Game habis** | Menang / Kalah: tambah W/L **dan** tolak 1 game dari baki semua yang sedang main. Baki habis keluar, queue naik sendiri. |
+| **Sedang main / Queue** | Susun queue, naikkan, main sekarang, keluarkan. |
+| **VIP & baki** | Taip nama › tekan pakej (+1 game RM4, +3 game RM10, +1 Immortal RM6) atau nombor sendiri. Baki boleh +/−. Cari nama. |
+| **YouTube** | Tunjuk bilangan penonton live YouTube pada bar LIVE (perlu API key, lihat bawah). |
+| **Link** | Link overlay, penonton, phone/admin, dan link pantas. |
 
-Dalam panel:
-- **Menang / Kalah**: tambah W/L dan tolak 1 game untuk pemain Mabar VIP.
-- **Tambah pemain**: masukkan nama + pakej (1 game RM4 / 3 game RM10).
-- **Tunjuk queue / banner / Welcome**: on/off terus dalam stream.
-- **MMR & Global**: taip nombor baru, tekan Enter.
+Nak app dalam OBS juga: **Docks › Custom Browser Docks** › URL `http://127.0.0.1:8787/control.html`.
 
-## 7. Tukar layout & banner
+### Admin / phone (Wi-Fi sama)
+- Buka link **Phone / admin** dari tetingkap hitam, contoh `http://192.168.1.20:8787/control.html`.
+- Masukkan **PIN admin**. Tanpa PIN, peranti lain hanya boleh tengok.
 
-Tukar **URL** dalam source `Overlay` (klik dua kali source):
+### Link pantas (Stream Deck / bookmark)
+`http://127.0.0.1:8787/control.html?do=win` (juga `lose`, `end-win`, `end-lose`, `timer-start`, `timer-pause`, `queue-off` …). Senarai penuh dalam app › Link.
+
+## 7. Halaman penonton (baki & queue)
+
+- Penonton buka **`viewer.html`**: semak baki game sendiri (taip nama), lihat sedang main & queue, W/L, harga. **Tak boleh ubah apa-apa.**
+- Wi-Fi sama: `http://<IP PC>:8787/viewer.html`.
+- **Untuk penonton di internet**: klik dua kali **`LINK_PENONTON.bat`** › tekan `Y` untuk muat turun Cloudflare (sekali sahaja) › salin link `https://xxxx.trycloudflare.com`, tambah `/viewer.html`, pin dalam bio / komen.
+  Admin luar boleh guna `https://xxxx.trycloudflare.com/control.html` + PIN. Link bertukar setiap kali dibuka.
+
+## 8. YouTube live viewers
+
+1. Buat API key percuma: console.cloud.google.com › projek baru › **Enable "YouTube Data API v3"** › Credentials › **Create API key**.
+2. Dalam app › YouTube: tampal API key dan **link live** YouTube (atau Channel ID) › **Simpan & mula**.
+3. Biar app terbuka masa live; bilangan penonton dikemas kini setiap 30 saat.
+
+Bilangan penonton TikTok tak boleh diambil (TikTok tiada API untuk ni).
+
+## 9. Tukar layout / banner
 
 | Layout | URL |
 |---|---|
-| Arena (baru, W/L besar) | `http://127.0.0.1:8787/overlay.html?layout=4&banner=pro` |
-| Arena tanpa handcam | `http://127.0.0.1:8787/overlay.html?layout=4&hand=0&banner=pro` |
-| Klasik | `http://127.0.0.1:8787/overlay.html?layout=1&banner=pro` |
-| Mabar (queue besar) | `http://127.0.0.1:8787/overlay.html?layout=2&banner=pro` |
-| Solo Push | `http://127.0.0.1:8787/overlay.html?layout=3&banner=pro` |
+| Arena (utama) | `http://127.0.0.1:8787/overlay.html?layout=4&banner=power` |
+| Arena tanpa handcam | `…?layout=4&hand=0&banner=power` |
+| Klasik / Mabar / Solo Push | `…?layout=1`, `…?layout=2`, `…?layout=3` |
 
-Gaya banner (ganti hujung `banner=`): `pro`, `pro-crimson`, `scene-grunge`, `scene-emblem`, `scene-mascot`.
-Warna banner minimal: tambah `&accent=lime` (atau `crimson`, `ice`, `gold`, `violet`).
+Banner: `power` (merah, utama), `slash`, `pro-crimson`, `scene-grunge`, `scene-mascot` (tambah `&accent=crimson`).
 
-Tip: buat satu scene untuk setiap layout (copy scene, tukar URL), lepas tu tinggal klik scene masa live.
+## 10. Ikon rank asli (joki)
 
-## 8. Live ke TikTok
-
-- **Ada stream key TikTok** (LIVE Center): OBS › Settings › **Stream** › Service: **Custom…** › tampal **Server URL** dan **Stream Key** dari TikTok › OK › **Start Streaming**.
-- **Tiada stream key / guna TikTok LIVE Studio**: kalau Studio tiada pilihan Browser/Link source, guna video banner MP4 dalam folder `exports/` (letak di bawah sekali, y = 1728).
+Letak PNG asli latar telus dalam `assets\ranks\`: `epic.png`, `legend.png`, `mythic.png`, `honor.png`, `glory.png`, `immortal.png`. Banner animasikan sendiri (3D, glow, kilauan).
 
 ---
-
-## Cara B: tanpa server (kalau START_OVERLAY.bat tak jalan)
-
-1. **+** › **Browser** › tanda **Local file** › **Browse** › pilih `stream_overlay\obs-arena.html`
-   (atau `obs-klasik.html`, `obs-mabar.html`, `obs-solo.html`).
-2. Width `1080`, Height `1920`, OK.
-3. Untuk tukar Win/Lose tanpa panel: klik kanan source `Overlay` › **Interact**, lepas tu tekan:
-   - `W` = +1 win, `L` = +1 lose, `Shift+W` / `Shift+L` = tolak 1
-   - `Q` = on/off queue, `B` = on/off banner, `H` = on/off Welcome
-4. Panel queue (control.html) tak sync dalam cara ni. Untuk queue Mabar VIP, guna cara utama (server).
 
 ## Masalah biasa
 
 | Masalah | Penyelesaian |
 |---|---|
-| Overlay kosong / putih dalam OBS | Pastikan tetingkap hitam overlay masih buka. Dalam properties Browser, klik **Refresh cache of current page**. |
-| Panel tekan tapi overlay tak berubah | Panel dan overlay mesti guna alamat sama `http://127.0.0.1:8787/`. Jangan campur dengan `localhost` atau fail. |
-| Kamera tak muat kotak | Semak Edit Transform: Bounding Box Type = Scale to outer bounds, saiz ikut jadual. |
-| PC lag | Tambah `&bgfx=0` hujung URL overlay (matikan asap latar). Set FPS browser source ke 30. |
-| Ubah teks / harga | Buka `assets\config.js` dengan Notepad, ubah, save, kemudian Refresh browser source. |
-| Ikon rank asli | Letak `epic.png`, `legend.png`, `mythic.png`, `glory.png`, `immortal.png` dalam `assets\ranks\`. |
+| Overlay kosong dalam OBS | Tetingkap hitam masih buka? Properties Browser › **Refresh cache of current page**. |
+| Phone tak boleh buka link | Phone & PC mesti Wi-Fi sama. Benarkan Firewall (Private). Guna IP yang ditunjuk tetingkap hitam. |
+| App tulis **PERLU PIN** | Masukkan PIN dari tetingkap hitam (`data\admin_pin.txt`). |
+| Timer tak mula sendiri | Overlay › Properties › Page permissions › Read access to OBS status information. Atau tekan **Mula** dalam app. |
+| PC lag | Tambah `&bgfx=0` pada URL overlay. |
+| Ubah harga / teks | `assets\config.js` (Notepad) › save › Refresh overlay & app. |
+| Data VIP | Disimpan dalam `data\state.txt`. Salin fail ni untuk backup. |
+
+## Cara B: tanpa server
+
+Browser source › tanda **Local file** › `obs-arena.html`. Tukar W/L: klik kanan source › **Interact**, tekan `W` / `L` (Shift = tolak). Queue, baki VIP, app & halaman penonton hanya jalan dengan START_OVERLAY.bat.

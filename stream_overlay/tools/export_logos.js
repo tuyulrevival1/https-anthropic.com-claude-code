@@ -5,17 +5,18 @@ const fs = require("fs"), path = require("path");
 const root = path.resolve(__dirname, "..");
 const out = path.join(root, "logos"); fs.mkdirSync(out, { recursive: true });
 const jobs = [
-  { kind: "emblem", w: 1024, h: 1024, file: "logo_emblem.png" },
-  { kind: "emblem", accent: "crimson", w: 1024, h: 1024, file: "logo_emblem_crimson.png" },
-  { kind: "grunge", w: 1600, h: 632, file: "logo_wordmark.png" },
-  { kind: "mascot", w: 1024, h: 1024, file: "logo_mascot.png" },
-  { kind: "avatar", w: 1024, h: 1024, file: "profile_picture.png" }
+  { q: "kind=mascot&pose=game", w: 1024, h: 1024, file: "logo_mascot.png" },
+  { q: "kind=mascot&pose=win", w: 1024, h: 1024, file: "logo_mascot_win.png" },
+  { q: "kind=mascot&pose=wink", w: 1024, h: 1024, file: "logo_mascot_wink.png" },
+  { q: "kind=avatar&pose=game", w: 1024, h: 1024, file: "profile_picture.png" },
+  { q: "kind=wordmark", w: 1500, h: 1080, file: "logo_wordmark.png" },
+  { q: "kind=grunge", w: 1600, h: 632, file: "logo_wordmark_grunge.png" }
 ];
 (async () => {
   const b = await chromium.launch();
   for (const j of jobs) {
     const p = await b.newPage({ viewport: { width: j.w, height: j.h } });
-    await p.goto(`file://${path.join(root, "logo.html")}?kind=${j.kind}&accent=${j.accent || "violet"}`);
+    await p.goto(`file://${path.join(root, "logo.html")}?${j.q}`);
     await p.evaluate(() => document.fonts.ready);
     await p.waitForTimeout(300);
     await p.evaluate(() => { window.__pose(); });

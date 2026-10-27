@@ -1,0 +1,9 @@
+{
+  "name": "SYNO Control",
+  "short_name": "SYNO",
+  "start_url": "control.html",
+  "display": "standalone",
+  "background_color": "#0b0507",
+  "theme_color": "#ff2346",
+  "icons": [{ "src": "logos/profile_picture.png", "sizes": "1024x1024", "type": "image/png" }]
+}

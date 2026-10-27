@@ -6,18 +6,21 @@
 <link rel="stylesheet" href="assets/overlay.css">
 <style>
   html, body { margin: 0; background: transparent; }
-  #lg { --f-disp: "OV Anton", "Anton", Impact, sans-serif; --f-hud: "OV Raj", "Rajdhani", sans-serif; }
+  #lg { --f-disp: "OV Anton", "Anton", Impact, sans-serif; --f-hud: "OV Raj", "Rajdhani", sans-serif;
+    --f-clean: "OV MontUp", "Montserrat", sans-serif; --f-shout: "OV Mont", "Montserrat", sans-serif; }
   #lg { position: relative; width: 100vw; height: 100vh; display: grid; place-items: center; }
-  #lg > svg, #lg .av svg { width: 100%; height: 100%; overflow: visible; }
+  #lg > svg { width: 92%; height: 92%; overflow: visible; }
   .av { position: relative; width: 100%; height: 100%; }
-  .av .bg { position: absolute; inset: 4%; border-radius: 50%; border: 2.4vmin solid #f3eee8;
-    background: radial-gradient(circle at 50% 38%, #3a1670 0%, #160a28 62%, #0b0614 100%); box-shadow: 0 0 0 1.4vmin #ff2350; overflow: hidden; }
-  .av .moon { position: absolute; inset: 10%; opacity: .5; }
-  .av .m { position: absolute; left: 13%; top: 10%; width: 74%; height: 80%; }
+  .av .bg { position: absolute; inset: 5%; border-radius: 50%; overflow: hidden;
+    background: radial-gradient(circle at 50% 36%, #ff3653 0%, #b0001f 46%, #3a0009 78%, #12030a 100%);
+    box-shadow: 0 0 0 1.6vmin #0a0205, 0 0 0 2.6vmin #ffcf4a, 0 2vmin 4vmin rgba(0,0,0,.5); }
+  .av .bg::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 1px 1px, rgba(40,0,8,.35) 1.2px, transparent 1.7px) 0 0 / 2.2vmin 2.2vmin; }
+  .av .m { position: absolute; left: 12%; top: 12%; width: 76%; height: 80%; }
+  .av .m svg { width: 100%; height: 100%; overflow: visible; }
 </style>
 </head>
 <body>
-<!-- ?kind=emblem | grunge | mascot | avatar  &accent=violet|crimson|lime|ice|gold  (dipakai oleh tools/export_logos.js) -->
+<!-- ?kind=mascot&pose=game|win|wink | avatar | wordmark | grunge   (dipakai oleh tools/export_logos.js) -->
 <div id="lg"></div>
 <script src="assets/config.js"></script>
 <script src="assets/overlay.js"></script>
@@ -25,22 +28,21 @@
 <script src="assets/ranks3d.js"></script>
 <script src="assets/logos.js"></script>
 <script src="assets/banner-scene.js"></script>
+<script src="assets/mascot.js"></script>
+<script src="assets/banner-power.js"></script>
 <script>
   const O = ChouOverlay, p = new URLSearchParams(location.search);
-  const kind = p.get("kind") || "emblem", acc = O.ACCENTS[p.get("accent") || "violet"];
+  const kind = p.get("kind") || "mascot", pose = p.get("pose") || "game";
   const box = document.getElementById("lg");
   let svg, anim;
-  if (kind === "grunge") { box.innerHTML = O.logos.grungeSVG(acc); anim = O.logos.animGrunge; }
-  else if (kind === "mascot") { box.innerHTML = O.mascot.svg(); anim = (s, q, t) => O.mascot.anim(s, t); }
+  if (kind === "grunge") { box.innerHTML = O.logos.grungeSVG(O.ACCENTS.crimson); svg = box.firstElementChild; anim = () => O.logos.animGrunge(svg, 10, 1.1); }
+  else if (kind === "wordmark") { box.innerHTML = O.powerWord.svg(); svg = box.firstElementChild; anim = () => O.powerWord.anim(svg, 1.5); }
   else if (kind === "avatar") {
-    box.innerHTML = `<div class="av"><div class="bg"><svg class="moon" viewBox="0 0 200 200"><mask id="mm"><rect width="200" height="200" fill="#fff"/><circle cx="128" cy="78" r="70" fill="#000"/></mask><circle cx="100" cy="100" r="86" fill="${acc}" mask="url(#mm)"/></svg></div><div class="m">${O.mascot.svg()}</div></div>`;
-    anim = (s, q, t) => O.mascot.anim(s, t);
-  } else { box.innerHTML = O.logos.emblemSVG(acc); anim = O.logos.animEmblem; }
-  svg = box.querySelector(kind === "avatar" ? ".m svg" : "svg");
-  const pose = +(p.get("t") || 1.1);
-  window.__pose = () => anim(svg, 10, pose);
+    box.innerHTML = `<div class="av"><div class="bg"></div><div class="m">${O.mascot3d.svg()}</div></div>`;
+    svg = box.querySelector(".m svg"); anim = () => O.mascot3d.anim(svg, 1.1, { pose });
+  } else { box.innerHTML = O.mascot3d.svg(); svg = box.firstElementChild; anim = () => O.mascot3d.anim(svg, 1.1, { pose, gg: true }); }
+  window.__pose = anim;
   document.fonts.ready.then(() => window.__pose());
-  O.tickers = null;
 </script>
 </body>
 </html>

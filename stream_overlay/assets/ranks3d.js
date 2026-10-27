@@ -62,8 +62,8 @@ ${T.map((t, i) => `<div class="rk-tier" data-i="${i}" style="--g:${t.glow}">
     const curT = tiers()[cur] || {};
     root.style.setProperty("--rg", curT.glow || "#ff5874");
     tiersEl.forEach((el, i) => {
-      if (i !== cur) { if (el.style.visibility !== "hidden") el.style.visibility = "hidden"; return; }
-      el.style.visibility = "visible";
+      if (i !== cur) { if (el.style.display !== "none") el.style.display = "none"; return; }
+      el.style.display = "block";
       const st = startOf(i), p = seg(u, st, st + .36);
       const flip = (1 - eOut(p)) * -110;                       // flips in on Y
       const swing = Math.sin((t + i) * TAU / 3.2) * (i === last ? 16 : 10) * eOut(p);
