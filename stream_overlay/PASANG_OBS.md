@@ -1,6 +1,6 @@
-# Cara pasang overlay + App Kawalan SYNO dalam OBS
+# Cara pasang overlay + App Kawalan SYNO
 
-Tak perlu install Python. Cuma perlu **OBS Studio** (versi 30 ke atas) dan Windows 10/11.
+Perlu: **Windows 10/11** dan **OBS Studio** (versi 30 ke atas). Tak perlu install Python.
 
 ---
 
@@ -11,28 +11,28 @@ Tak perlu install Python. Cuma perlu **OBS Studio** (versi 30 ke atas) dan Windo
 2. Klik kanan ZIP › **Extract All…**.
 3. Pindahkan folder **`stream_overlay`** ke tempat tetap, contoh `C:\SYNO\stream_overlay`.
 
+Kalau ada versi lama, salin folder `data\` dari folder lama ke folder baru supaya baki VIP dan PIN kekal.
+
 ## 2. Hidupkan (setiap kali nak live)
 
-1. Klik dua kali **`START_OVERLAY.bat`**. Kalau keluar amaran biru Windows: **More info › Run anyway**.
-2. Kalau Windows Firewall tanya, pilih **Private networks** › **Allow** (supaya phone/admin boleh kawal).
-3. Tetingkap hitam keluar dan tunjuk:
-   - link overlay, link app, link phone/admin
-   - **PIN admin** (4 nombor). Simpan PIN ni; admin di peranti lain perlukannya.
-4. **App Kawalan SYNO** terbuka sendiri sebagai tetingkap app. Tertutup? Klik dua kali `BUKA_APP.bat`.
+1. Klik dua kali **`START_OVERLAY.bat`**. Amaran biru Windows: **More info › Run anyway**.
+2. Windows Firewall tanya: pilih **Private networks** › **Allow**.
+3. Tetingkap hitam tunjuk link, **link kekal** (kalau dah set, lihat bahagian 7) dan **PIN admin** (6 nombor).
+4. **App Kawalan SYNO** terbuka sendiri. Tertutup? Klik `BUKA_APP.bat`.
 5. **Jangan tutup tetingkap hitam** selagi live. Minimize sahaja.
 
 ## 3. OBS portrait
 
 OBS › **Settings** › **Video**: Base dan Output **1080x1920**, FPS 30 (atau 60) › Apply.
 
-## 4. Scene "LIVE"
+## 4. Scene LIVE
 
 Tambah source ikut urutan (yang dulu duduk paling bawah):
 
 | # | Source | Position (x, y) | Saiz (w × h) |
 |---|---|---|---|
 | 1 | Facecam (Video Capture Device) | 0, 0 | 1080 × 522 |
-| 2 | Gameplay (capture card / scrcpy / Window Capture) | 0, 550 | 1080 × 720 |
+| 2 | Gameplay (capture / scrcpy / Window Capture) | 0, 550 | 1080 × 720 |
 | 3 | Handcam (Video Capture Device) | 548, 1474 | 508 × 286 |
 | 4 | **Overlay** (Browser, langkah 5) | 0, 0 | 1080 × 1920 |
 | 5 | Widget lagu (letak **atas** overlay) | 36, 1806 | 476 × 88 |
@@ -40,67 +40,92 @@ Tambah source ikut urutan (yang dulu duduk paling bawah):
 Cara letak tepat: klik kanan source › Transform › **Edit Transform** (Ctrl+E):
 Position = x, y · Bounding Box Type = **Scale to outer bounds** · Bounding Box Size = w × h · tanda **Crop to Bounding Box**.
 
-Susunan skrin (atas ke bawah): facecam › bar LIVE (timer + jam + penonton YouTube) › gameplay › banner › queue Mabar (kiri) + handcam & W/L (kanan) › bingkai lagu (kiri bawah).
+Susunan skrin (atas ke bawah): facecam › bar LIVE › gameplay › banner › queue Mabar + lagu (kiri), handcam + DEVICE + W/L (kanan).
+
+**Bar LIVE** di bawah facecam:
+- **● LIVE 01:23:45** = berapa lama live sudah berjalan (timer stream)
+- **🕒 9:41 PM** = jam sekarang (format 12 jam)
+- **▶ 1,284** = penonton YouTube (kalau diset)
 
 ## 5. Overlay (Browser source)
 
 1. **+** › **Browser** › nama `Overlay`.
 2. Local file: **jangan tanda**. URL: `http://127.0.0.1:8787/overlay.html`
 3. Width `1080`, Height `1920`, FPS `30`.
-4. **Page permissions**: pilih **Read access to OBS status information** (atau lebih tinggi). Ini buat timer live mula sendiri bila tekan **Start Streaming**.
+4. **Page permissions**: **Read access to OBS status information** (atau lebih tinggi). Timer live mula sendiri bila tekan **Start Streaming**.
 5. OK › klik kanan Overlay › Order › **Move to Top** (widget lagu kekal di atasnya).
 
-## 6. App Kawalan SYNO
+Banner minimal: `http://127.0.0.1:8787/overlay.html?banner=minimal` · tanpa handcam: `?hand=0` · PC lag: `?bgfx=0`.
 
-Semua dikawal dari satu app:
+## 6. App Kawalan SYNO
 
 | Bahagian | Fungsi |
 |---|---|
 | **Live** | Timer stream: Mula / Jeda / Reset. On/off queue & banner. |
 | **Win / Lose** | Tambah / tolak W/L manual, reset. |
 | **Game habis** | Menang / Kalah: tambah W/L **dan** tolak 1 game dari baki semua yang sedang main. Baki habis keluar, queue naik sendiri. |
-| **Sedang main / Queue** | Susun queue, naikkan, main sekarang, keluarkan. |
-| **VIP & baki** | Taip nama › tekan pakej (+1 game RM4, +3 game RM10, +1 Immortal RM6) atau nombor sendiri. Baki boleh +/−. Cari nama. |
-| **YouTube** | Tunjuk bilangan penonton live YouTube pada bar LIVE (perlu API key, lihat bawah). |
-| **Link** | Link overlay, penonton, phone/admin, dan link pantas. |
+| **Sedang main / Queue** | Nama, **ID ML**, **tarikh order**. Naikkan, main sekarang, keluarkan. |
+| **VIP & baki** | Isi **Nama**, **ID ML**, **Bilangan game** (taip sendiri, contoh 7), **Tarikh order** › **Tambah VIP**. Butang "Isi cepat" hanya isikan nombor pakej. Setiap VIP ada kotak nombor: **Tambah** (tambah game; nombor negatif untuk tolak) atau **Set baki** (tukar baki terus). ID ML boleh diedit terus. Cari ikut nama atau ID. |
+| **Order masuk** | Semua order: SOCIABUZZ (automatik), MANUAL, TEST. |
+| **YouTube** | Penonton live YouTube pada bar LIVE (perlu API key, bahagian 9). |
+| **Link** | Link kekal penonton & admin, Sociabuzz Webhook URL, link pantas. |
 
 Nak app dalam OBS juga: **Docks › Custom Browser Docks** › URL `http://127.0.0.1:8787/control.html`.
 
-### Admin / phone (Wi-Fi sama)
-- Buka link **Phone / admin** dari tetingkap hitam, contoh `http://192.168.1.20:8787/control.html`.
-- Masukkan **PIN admin**. Tanpa PIN, peranti lain hanya boleh tengok.
+## 7. Link kekal (penonton & admin dari mana-mana)
 
-### Link pantas (Stream Deck / bookmark)
-`http://127.0.0.1:8787/control.html?do=win` (juga `lose`, `end-win`, `end-lose`, `timer-start`, `timer-pause`, `queue-off` …). Senarai penuh dalam app › Link.
+Guna **Tailscale Funnel** (percuma). Link tak berubah, jadi boleh letak di **Linktree / link di bio** sekali sahaja.
 
-## 7. Halaman penonton (baki & queue)
+**Sekali sahaja:**
+1. Muat turun & pasang Tailscale: `https://tailscale.com/download/windows` › log masuk (Google / Microsoft).
+2. (Pilihan) Namakan PC supaya link cantik: `https://login.tailscale.com/admin/machines` › titik tiga di PC awak › **Edit machine name** › contoh `synostore`.
+3. Buka **PowerShell** dan taip:
+   ```
+   tailscale funnel 8787
+   ```
+   Kali pertama ia beri satu link untuk **enable HTTPS / Funnel**. Buka link tu › **Enable**. Bila keluar `Available on the internet: https://synostore.xxxx.ts.net`, tekan **Ctrl+C**.
 
-- Penonton buka **`viewer.html`**: semak baki game sendiri (taip nama), lihat sedang main & queue, W/L, harga. **Tak boleh ubah apa-apa.**
-- Wi-Fi sama: `http://<IP PC>:8787/viewer.html`.
-- **Untuk penonton di internet**: klik dua kali **`LINK_PENONTON.bat`** › tekan `Y` untuk muat turun Cloudflare (sekali sahaja) › salin link `https://xxxx.trycloudflare.com`, tambah `/viewer.html`, pin dalam bio / komen.
-  Admin luar boleh guna `https://xxxx.trycloudflare.com/control.html` + PIN. Link bertukar setiap kali dibuka.
+**Selepas tu:** `START_OVERLAY.bat` hidupkan link ni sendiri dan tunjuk dalam tetingkap hitam & app:
 
-## 8. YouTube live viewers
+| Untuk | Link |
+|---|---|
+| Penonton (Linktree / bio) | `https://synostore.xxxx.ts.net/viewer.html` |
+| Admin di tempat lain (perlu PIN) | `https://synostore.xxxx.ts.net/control.html` |
 
-1. Buat API key percuma: console.cloud.google.com › projek baru › **Enable "YouTube Data API v3"** › Credentials › **Create API key**.
-2. Dalam app › YouTube: tampal API key dan **link live** YouTube (atau Channel ID) › **Simpan & mula**.
-3. Biar app terbuka masa live; bilangan penonton dikemas kini setiap 30 saat.
+- Link hanya hidup bila PC on dan `START_OVERLAY.bat` sedang jalan.
+- Admin buka link admin › masukkan **PIN** (dalam tetingkap hitam / `data\admin_pin.txt`). Tanpa PIN, orang lain hanya boleh tengok. PIN salah 10 kali = dikunci 10 minit.
+- Guna servis lain (ngrok / Cloudflare)? Tulis link awak dalam `data\public_url.txt`.
+
+## 8. Order automatik dari Sociabuzz
+
+Perlu link kekal (bahagian 7) dulu.
+
+1. Sociabuzz › **TRIBE** › **Edit & Settings** › **Integrations** › **Webhook**
+   (untuk produk: **Edit Shop** › **Integrations** › **Webhook**).
+2. Hidupkan **Activate Webhook Integration**.
+3. **Webhook URL**: salin dari App › Link › **Sociabuzz Webhook URL** (contoh `https://synostore.xxxx.ts.net/api/order-hook/abc123…`).
+4. **Webhook Token**: tampal bahagian kunci (selepas `/order-hook/`). **Webhook HTTP Test Response**: `OK`.
+5. Tekan **Test Notification** › App › **Order masuk** keluar **TEST** = berjaya.
+
+Bila orang bayar:
+- Nama pembeli + **ID ML dari mesej** masuk ke VIP, baki ditambah, terus masuk queue, dan overlay tunjuk "TERIMA KASIH … +N GAME".
+- Minta pembeli tulis dalam mesej: **`ID 123456789 (1234)`** dan (pilihan) **`3 game`** atau **`immortal`**.
+- Bilangan game: dari mesej ("3 game"), atau dikira dari bayaran: RM10 = 3 game, RM4 = 1 game, "immortal" = RM6/game. Ubah dalam `assets\config.js` › `sociabuzz`.
+- Order masa PC off tak dihantar semula oleh Sociabuzz: semak dashboard Sociabuzz dan tambah manual.
+- Semua order mentah disimpan dalam `data\orders_log.txt`.
+
+## 9. YouTube live viewers
+
+1. console.cloud.google.com › projek baru › **Enable "YouTube Data API v3"** › Credentials › **Create API key**.
+2. App › YouTube: tampal API key dan link live YouTube (atau Channel ID) › **Simpan & mula**.
 
 Bilangan penonton TikTok tak boleh diambil (TikTok tiada API untuk ni).
 
-## 9. Tukar banner
+## 10. Logo rank asli (joki)
 
-Hanya ada satu layout. Gameplay 1080×720 (skrin tablet 3:2): kalau capture awak 16:9, pilih **Scale to outer bounds** + **Crop to Bounding Box** supaya penuh tanpa jalur hitam.
-
-| Pilihan | URL |
-|---|---|
-| Biasa | `http://127.0.0.1:8787/overlay.html` |
-| Tanpa handcam | `…/overlay.html?hand=0` |
-| Banner minimal | `…/overlay.html?banner=minimal` |
-
-## 10. Ikon rank asli (joki)
-
-Letak PNG asli latar telus dalam `assets\ranks\`: `epic.png`, `legend.png`, `mythic.png`, `honor.png`, `glory.png`, `immortal.png`. Banner animasikan sendiri (3D, glow, kilauan).
+Klik dua kali **`AMBIL_LOGO_RANK.bat`**. Ia cari dan muat turun ikon asli Epic, Legend, Mythic, Mythical Honor, Mythical Glory dan Mythical Immortal dari wiki Mobile Legends ke `assets\ranks\`. Banner terus animasikan (3D, glow, kilauan).
+- Calon lain disimpan dalam `assets\ranks\pilihan\`. Salah gambar? Salin calon lain dan namakan semula (contoh `epic_2.png` › `epic.png`).
+- Boleh juga letak PNG sendiri dengan nama `epic.png`, `legend.png`, `mythic.png`, `honor.png`, `glory.png`, `immortal.png`.
 
 ---
 
@@ -109,13 +134,10 @@ Letak PNG asli latar telus dalam `assets\ranks\`: `epic.png`, `legend.png`, `myt
 | Masalah | Penyelesaian |
 |---|---|
 | Overlay kosong dalam OBS | Tetingkap hitam masih buka? Properties Browser › **Refresh cache of current page**. |
-| Phone tak boleh buka link | Phone & PC mesti Wi-Fi sama. Benarkan Firewall (Private). Guna IP yang ditunjuk tetingkap hitam. |
 | App tulis **PERLU PIN** | Masukkan PIN dari tetingkap hitam (`data\admin_pin.txt`). |
+| Link kekal tak keluar | Tailscale dah log masuk? Jalankan `tailscale funnel 8787` sekali dan enable Funnel. |
+| Order Sociabuzz tak masuk | Link kekal hidup? Webhook URL betul? Lihat `data\orders_log.txt`. Overlay atau app mesti terbuka. |
 | Timer tak mula sendiri | Overlay › Properties › Page permissions › Read access to OBS status information. Atau tekan **Mula** dalam app. |
-| PC lag | Tambah `&bgfx=0` pada URL overlay. |
+| PC lag | Tambah `?bgfx=0` pada URL overlay. |
 | Ubah harga / teks | `assets\config.js` (Notepad) › save › Refresh overlay & app. |
-| Data VIP | Disimpan dalam `data\state.txt`. Salin fail ni untuk backup. |
-
-## Cara B: tanpa server
-
-Browser source › tanda **Local file** › `obs-overlay.html`. Tukar W/L: klik kanan source › **Interact**, tekan `W` / `L` (Shift = tolak). Queue, baki VIP, app & halaman penonton hanya jalan dengan START_OVERLAY.bat.
+| Backup data | Salin folder `data\` (baki VIP, queue, order, PIN). |

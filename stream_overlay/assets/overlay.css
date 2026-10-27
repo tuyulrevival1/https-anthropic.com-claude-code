@@ -76,7 +76,6 @@
 .ov-band .live > * { transform: skewX(14deg); }
 .ov-band .dot { width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: ov-blink 1.2s steps(2, jump-none) infinite; }
 .ov-band .sep { width: 5px; height: 5px; background: var(--flame); transform: rotate(45deg); }
-.ov-band .clock { font: 600 22px/1 var(--f-num); letter-spacing: .08em; color: var(--flame); padding-top: 3px; }
 .ov-band .sweep { position: absolute; top: 0; bottom: 0; width: 160px; left: -200px;
   background: linear-gradient(90deg, transparent, rgba(var(--flame-rgb),.35), transparent); animation: ov-sweep 6s linear infinite; }
 @keyframes ov-sweep { 0% { transform: translateX(0); } 60%, 100% { transform: translateX(1480px); } }
@@ -248,9 +247,12 @@
 .ov-band .itm { display: inline-flex; align-items: center; gap: 7px; position: relative; padding-left: 16px; }
 .ov-band .itm::before { content: ""; position: absolute; left: 0; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; background: var(--flame); transform: rotate(45deg); }
 .ov-band .itm svg { width: 17px; height: 17px; }
-.ov-band .timer { color: #fff; font: 600 22px/1 var(--f-num); letter-spacing: .06em; padding-top: 3px; }
-.ov-band .timer svg { color: var(--crimson); margin-top: -3px; }
-.ov-band .timer.paused { color: var(--muted); }
+.ov-band .live .timer { font: 600 21px/1 var(--f-num); letter-spacing: .06em; padding: 3px 0 0 8px; margin-left: 2px; border-left: 1px solid rgba(255,255,255,.45); font-weight: 600; }
+.ov-band .live .timer.paused { opacity: .6; }
+.ov-band .clock { color: #fff; }
+.ov-band .clock svg { color: var(--flame); margin-top: -2px; }
+.ov-band .clock b { font: 600 22px/1 var(--f-num); letter-spacing: .04em; padding-top: 3px; font-weight: 600; }
+.ov-band .clock small { font: 700 13px/1 var(--f-hud); letter-spacing: .12em; color: var(--muted); padding-top: 1px; }
 .ov-band .yt b { font: 600 22px/1 var(--f-num); letter-spacing: .04em; padding-top: 3px; color: #fff; }
 .ov-band .yt svg { width: 22px; height: 22px; margin-top: -2px; }
 .ov-caption { position: absolute; display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -261,27 +263,30 @@
 .ov-queue .bal { font: 600 22px/1 var(--f-num); color: var(--gold); padding-top: 3px; white-space: nowrap; }
 .ov-queue .bal small { font-size: 14px; margin-left: 2px; color: var(--muted); }
 
-.ov-queue.compact { --cut: 16px; padding: 16px 18px 12px; gap: 10px; }
+.ov-queue.compact { --cut: 16px; padding: 12px 16px 10px; gap: 6px; }
 .ov-queue.compact .q-head { align-items: center; }
-.ov-queue.compact .ov-h { font-size: 40px; }
+.ov-queue.compact .ov-h { font-size: 34px; }
 .ov-queue.compact .q-open { font-size: 12px; margin-bottom: 4px; }
 .ov-queue.compact .q-prices { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; gap: 5px; max-width: 260px; }
 .ov-queue.compact .ov-chip { font-size: 14px; padding: 4px 8px 2px; }
 .ov-queue.compact .ov-chip b { font-size: 18px; }
-.ov-queue.compact .q-cols { gap: 8px; }
-.ov-queue.compact section { gap: 6px; }
+.ov-queue.compact .q-cols { gap: 5px; }
+.ov-queue.compact section { gap: 3px; }
 .ov-queue.compact .ov-lbl { font-size: 13px; }
-.ov-queue.compact ol.slots { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
-.ov-queue.compact .slot { height: 32px; gap: 8px; padding-right: 8px; }
-.ov-queue.compact .slot .ix { width: 26px; font-size: 20px; }
-.ov-queue.compact .slot .nm { font-size: 19px; }
+.ov-queue.compact ol.slots { display: flex; flex-direction: column; gap: 3px; }
+.ov-queue.compact .slot { height: 27px; gap: 8px; padding-right: 8px; }
+.ov-queue.compact .slot .ix { width: 26px; font-size: 19px; }
+.ov-queue.compact .slot .nm { flex: 0 1 auto; font-size: 19px; max-width: 200px; }
+.ov-queue.compact .slot .mid, .ov-queue.compact .nx .mid { flex: 1; min-width: 0; font: 600 15px/1 var(--f-num); letter-spacing: .06em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-top: 2px; }
+.ov-queue.compact .slot .mid::before, .ov-queue.compact .nx .mid::before { content: "ID "; color: var(--flame); font-family: var(--f-hud); font-weight: 700; font-size: 11px; letter-spacing: .14em; }
 .ov-queue.compact .slot.is-empty .nm { font-size: 12px; letter-spacing: .2em; }
-.ov-queue.compact .bal { font-size: 19px; }
-.ov-queue.compact section:last-child ol { display: flex; flex-direction: row; flex-wrap: wrap; gap: 4px 14px; }
-.ov-queue.compact .nx { height: 24px; gap: 6px; border: 0; }
-.ov-queue.compact .nx .no { font-size: 19px; width: auto; }
-.ov-queue.compact .nx .nm { font-size: 18px; max-width: 150px; }
+.ov-queue.compact .bal { font-size: 18px; margin-left: auto; }
+.ov-queue.compact section:last-child ol { display: flex; flex-direction: column; gap: 2px; }
+.ov-queue.compact .nx { height: 22px; gap: 8px; border: 0; }
+.ov-queue.compact .nx .no { font-size: 18px; width: 26px; }
+.ov-queue.compact .nx .nm { flex: 0 1 auto; font-size: 17px; max-width: 200px; }
 .ov-queue.compact .nx .g { display: none; }
+.ov-queue.compact .nx.more { height: 18px; font-size: 12px; }
 .ov-queue.compact .q-empty { padding: 2px 0; font-size: 15px; }
 
 .ov-music { --cut: 14px; border: 0; padding: 0; border-radius: 0;
@@ -293,3 +298,12 @@
   background: var(--crimson); color: #fff; font: 700 12px/1 var(--f-hud); letter-spacing: .26em; }
 .ov-music .mu-tab svg { width: 13px; height: 13px; }
 .ov-music .mu-demo { position: absolute; inset: 0; display: grid; place-items: center; font: 600 15px/1 var(--f-hud); letter-spacing: .2em; color: var(--muted); }
+
+/* thank-you pop (Sociabuzz order) */
+.q-alert { position: absolute; z-index: 6; height: 52px; display: flex; align-items: center; justify-content: center; gap: 12px;
+  background: linear-gradient(180deg, #fff6cf, #ffd84f 46%, #ffb300 56%, #e58c00); color: #3a0009; box-shadow: 0 0 0 3px #1a0206, 0 10px 24px rgba(0,0,0,.5), 0 0 24px rgba(255,207,74,.6);
+  clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%); animation: q-alert 6s cubic-bezier(.2,1.4,.4,1) forwards; }
+.q-alert b { font: 400 26px/1 var(--f-disp); letter-spacing: .02em; }
+.q-alert span { font: 800 22px/1 var(--f-clean); max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.q-alert i { font: 400 24px/1 var(--f-disp); font-style: normal; background: #3a0009; color: #ffd84f; padding: 5px 10px 3px; transform: skewX(-12deg); }
+@keyframes q-alert { 0% { transform: translateY(20px) scale(.6); opacity: 0; } 8% { transform: none; opacity: 1; } 88% { transform: none; opacity: 1; } 100% { transform: translateY(-10px); opacity: 0; } }

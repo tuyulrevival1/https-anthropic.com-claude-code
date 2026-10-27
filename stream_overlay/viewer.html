@@ -37,6 +37,8 @@
   li .no { font: 600 22px/1 var(--num); color: #ff8a9b; width: 26px; padding-top: 2px; }
   li .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 18px; }
   li .bal { font-size: 13px; color: var(--gold); white-space: nowrap; }
+  li .who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  li .who small { color: var(--mut); font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   li.me { outline: 2px solid var(--gold); }
   li.empty { color: var(--mut); font-weight: 500; }
   .wl { display: flex; gap: 10px; }
@@ -59,7 +61,7 @@
 
   <section class="card">
     <h2>Semak baki game anda</h2>
-    <form class="look" id="v-form" autocomplete="off"><input id="v-name" placeholder="Taip nama / ID ML anda" aria-label="Nama atau ID ML"></form>
+    <form class="look" id="v-form" autocomplete="off"><input id="v-name" placeholder="Taip nama atau ID ML anda" aria-label="Nama atau ID ML"></form>
     <div class="res" id="v-res" hidden></div>
   </section>
 
@@ -103,16 +105,22 @@
   function render() {
     if (!S) return;
     const members = S.members || {}, mem = p => members[p.key] || { name: p.key, bal: 0 }, max = CFG.mabar.maxPlaying;
-    const k = me.trim().toLowerCase();
+    const raw = me.trim().toLowerCase();
+    const pad = n => String(n).padStart(2, "0");
+    const fd = ms => { if (!ms) return ""; const d = new Date(ms), h = d.getHours(); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${h % 12 || 12}:${pad(d.getMinutes())} ${h < 12 ? "AM" : "PM"}`; };
+    // find by name or by ML ID
+    let k = raw;
+    if (raw && !members[raw]) { const hit = Object.entries(members).find(([kk, m]) => String(m.mlid || "").toLowerCase().replace(/\s+/g, "").includes(raw.replace(/\s+/g, ""))); if (hit) k = hit[0]; }
+    const who = p => `<span class="who"><span class="nm">${esc(mem(p).name)}</span><small>${mem(p).mlid ? `ID ${esc(mem(p).mlid)}` : ""}${p.at ? `${mem(p).mlid ? " · " : ""}order ${fd(p.at)}` : ""}</small></span>`;
     $("v-pc").textContent = `${(S.playing || []).length}/${max}`; $("v-qc").textContent = (S.queue || []).length;
-    $("v-play").innerHTML = (S.playing || []).length ? S.playing.map(p => `<li class="${p.key === k ? "me" : ""}"><span class="nm">${esc(mem(p).name)}</span><span class="bal">baki ${mem(p).bal} game</span></li>`).join("") : `<li class="empty">Belum ada yang main.</li>`;
-    $("v-queue").innerHTML = (S.queue || []).length ? S.queue.map((p, i) => `<li class="${p.key === k ? "me" : ""}"><span class="no">${i + 1}</span><span class="nm">${esc(mem(p).name)}</span><span class="bal">baki ${mem(p).bal} game</span></li>`).join("") : `<li class="empty">Queue kosong.</li>`;
+    $("v-play").innerHTML = (S.playing || []).length ? S.playing.map(p => `<li class="${p.key === k ? "me" : ""}">${who(p)}<span class="bal">baki ${mem(p).bal} game</span></li>`).join("") : `<li class="empty">Belum ada yang main.</li>`;
+    $("v-queue").innerHTML = (S.queue || []).length ? S.queue.map((p, i) => `<li class="${p.key === k ? "me" : ""}"><span class="no">${i + 1}</span>${who(p)}<span class="bal">baki ${mem(p).bal} game</span></li>`).join("") : `<li class="empty">Queue kosong.</li>`;
     $("v-w").textContent = S.wins || 0; $("v-l").textContent = S.losses || 0;
     const res = $("v-res");
     if (k) {
       const m = members[k], pos = (S.queue || []).findIndex(p => p.key === k), playing = (S.playing || []).some(p => p.key === k);
       res.hidden = false;
-      res.innerHTML = m ? `<div><div style="font-size:18px">${esc(m.name)}</div><small>${playing ? "Sedang main sekarang" : pos >= 0 ? `Dalam queue · nombor ${pos + 1}` : "Tiada dalam queue"}</small></div><div style="text-align:right"><b>${m.bal}</b><br><small>baki game</small></div>`
+      res.innerHTML = m ? `<div><div style="font-size:18px">${esc(m.name)}</div><small>${m.mlid ? `ID ${esc(m.mlid)}<br>` : ""}${playing ? "Sedang main sekarang" : pos >= 0 ? `Dalam queue · nombor ${pos + 1}` : "Tiada dalam queue"}${m.last ? `<br>Order terakhir ${fd(m.last)}` : ""}</small></div><div style="text-align:right"><b>${m.bal}</b><br><small>baki game</small></div>`
         : `<div><div style="font-size:18px">${esc(me)}</div><small>Tiada rekod VIP dengan nama ni. Semak ejaan atau tanya admin.</small></div>`;
     } else res.hidden = true;
   }

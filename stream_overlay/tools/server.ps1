@@ -1,28 +1,40 @@
 # SYNO Overlay server. Tiada install diperlukan (guna PowerShell bawaan Windows).
 # Dijalankan oleh START_OVERLAY.bat. Biar tetingkap ni terbuka selagi live.
-#  - Fail overlay, app kawalan & halaman penonton
-#  - /api/state : simpan & kongsi data (queue, baki VIP, W/L, timer)
-#  - Tulis data dari PC ni bebas; dari phone / admin lain perlu PIN (data\admin_pin.txt)
+#  - Fail overlay, App Kawalan & halaman penonton
+#  - /api/state      : simpan & kongsi data (queue, baki VIP, W/L, timer)
+#  - /api/order-hook/KUNCI : terima order automatik (Sociabuzz webhook)
+#  - /api/orders     : App/overlay ambil order baru (PC ini / admin sahaja)
+#  - Tulis data dari PC ni bebas; dari phone / admin / internet perlu PIN (data\admin_pin.txt)
+#  - Link kekal (Tailscale Funnel) dihidupkan sendiri kalau Tailscale dipasang
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $port = 8787
 $dataDir = Join-Path $root 'data'
 if (-not (Test-Path -LiteralPath $dataDir)) { New-Item -ItemType Directory -Path $dataDir | Out-Null }
 $stateFile = Join-Path $dataDir 'state.txt'
+$pendingFile = Join-Path $dataDir 'orders_pending.txt'
+$orderLog = Join-Path $dataDir 'orders_log.txt'
 $pinFile = Join-Path $dataDir 'admin_pin.txt'
-if (-not (Test-Path -LiteralPath $pinFile)) {
-  $newPin = '{0:D4}' -f (Get-Random -Minimum 0 -Maximum 10000)
-  [System.IO.File]::WriteAllText($pinFile, $newPin)
-}
+$keyFile = Join-Path $dataDir 'webhook_key.txt'
+$publicFile = Join-Path $dataDir 'public_url.txt'
+
+if (-not (Test-Path -LiteralPath $pinFile)) { [System.IO.File]::WriteAllText($pinFile, ('{0:D6}' -f (Get-Random -Minimum 0 -Maximum 1000000))) }
 $pin = ([System.IO.File]::ReadAllText($pinFile)).Trim()
+if (-not (Test-Path -LiteralPath $keyFile)) {
+  $chars = 'abcdefghjkmnpqrstuvwxyz23456789'.ToCharArray()
+  [System.IO.File]::WriteAllText($keyFile, (-join (1..20 | ForEach-Object { $chars | Get-Random })))
+}
+$hookKey = ([System.IO.File]::ReadAllText($keyFile)).Trim()
 
 $mime = @{
   '.html' = 'text/html; charset=utf-8'; '.js' = 'application/javascript; charset=utf-8'; '.css' = 'text/css; charset=utf-8'
-  '.png' = 'image/png'; '.jpg' = 'image/jpeg'; '.jpeg' = 'image/jpeg'; '.svg' = 'image/svg+xml'; '.woff2' = 'font/woff2'
+  '.png' = 'image/png'; '.jpg' = 'image/jpeg'; '.jpeg' = 'image/jpeg'; '.webp' = 'image/webp'; '.svg' = 'image/svg+xml'; '.woff2' = 'font/woff2'
   '.mp4' = 'video/mp4'; '.json' = 'application/json'; '.webmanifest' = 'application/manifest+json'
   '.txt' = 'text/plain; charset=utf-8'; '.md' = 'text/plain; charset=utf-8'; '.ico' = 'image/x-icon'
 }
+$latin1 = [System.Text.Encoding]::GetEncoding(28591)
 function ToBytes([string]$s) { return [System.Text.Encoding]::UTF8.GetBytes($s) }
+function JsonStr([string]$s) { return '"' + ($s -replace '\\', '\\' -replace '"', '\"') + '"' }
 
 try {
   $listener = New-Object System.Net.Sockets.TcpListener ([System.Net.IPAddress]::Any, $port)
@@ -42,6 +54,26 @@ try {
     ForEach-Object { $_.ToString() }
 } catch { }
 
+# ---------- link kekal: data\public_url.txt, atau Tailscale Funnel ----------
+$publicUrl = ''
+if (Test-Path -LiteralPath $publicFile) { $publicUrl = ([System.IO.File]::ReadAllText($publicFile)).Trim().TrimEnd('/') }
+if (-not $publicUrl) {
+  $ts = $null
+  $cmd = Get-Command tailscale -ErrorAction SilentlyContinue
+  if ($cmd) { $ts = $cmd.Source } elseif (Test-Path "$env:ProgramFiles\Tailscale\tailscale.exe") { $ts = "$env:ProgramFiles\Tailscale\tailscale.exe" }
+  if ($ts) {
+    Write-Host "  Menghidupkan link kekal (Tailscale Funnel)..." -ForegroundColor DarkGray
+    try {
+      $job = Start-Job -ScriptBlock { param($exe, $p) & $exe funnel --bg $p 2>&1 } -ArgumentList $ts, $port
+      if (-not (Wait-Job $job -Timeout 20)) { Stop-Job $job; Write-Host "  Tailscale minta kebenaran: jalankan 'tailscale funnel $port' sekali dalam PowerShell dan ikut link yang keluar." -ForegroundColor Yellow }
+      else { $out = Receive-Job $job; if ($out -match 'https://\S+') { } }
+      Remove-Job $job -Force -ErrorAction SilentlyContinue
+      $st = & $ts status --json | ConvertFrom-Json
+      if ($st.Self.DNSName) { $publicUrl = 'https://' + $st.Self.DNSName.TrimEnd('.') }
+    } catch { Write-Host "  (Tailscale tak dapat dihidupkan: $($_.Exception.Message))" -ForegroundColor DarkYellow }
+  }
+}
+
 Write-Host ""
 Write-Host "  =====================================================" -ForegroundColor Red
 Write-Host "   SYNO OVERLAY JALAN  -  jangan tutup tetingkap ni" -ForegroundColor Green
@@ -49,71 +81,113 @@ Write-Host "  =====================================================" -Foreground
 Write-Host ""
 Write-Host "  OBS overlay   : http://127.0.0.1:$port/overlay.html"
 Write-Host "  App kawalan   : http://127.0.0.1:$port/control.html"
-Write-Host "  Penonton      : http://127.0.0.1:$port/viewer.html"
-foreach ($ip in $ips) {
-  Write-Host "  Phone / admin : http://${ip}:$port/control.html   (Wi-Fi sama)" -ForegroundColor Cyan
+foreach ($ip in $ips) { Write-Host "  Wi-Fi sama    : http://${ip}:$port/control.html" -ForegroundColor Cyan }
+if ($publicUrl) {
+  Write-Host ""
+  Write-Host "  LINK KEKAL (letak di Linktree / bio):" -ForegroundColor Magenta
+  Write-Host "    Penonton : $publicUrl/viewer.html" -ForegroundColor Magenta
+  Write-Host "    Admin    : $publicUrl/control.html   (perlu PIN)" -ForegroundColor Magenta
+  Write-Host "    Sociabuzz webhook : $publicUrl/api/order-hook/$hookKey" -ForegroundColor Magenta
+} else {
+  Write-Host ""
+  Write-Host "  Link kekal belum aktif. Lihat PASANG_OBS.md bahagian 'Link kekal'." -ForegroundColor DarkGray
 }
 Write-Host ""
 Write-Host "  PIN admin     : $pin   (tukar dalam data\admin_pin.txt)" -ForegroundColor Yellow
 Write-Host ""
 
-# buka app kawalan sebagai tetingkap app (Edge), atau browser biasa
 $appUrl = "http://127.0.0.1:$port/control.html"
-try { Start-Process 'msedge.exe' -ArgumentList "--app=$appUrl" } catch {
-  try { Start-Process $appUrl } catch { }
-}
+try { Start-Process 'msedge.exe' -ArgumentList "--app=$appUrl" } catch { try { Start-Process $appUrl } catch { } }
+
+$fails = 0; $lockUntil = [DateTime]::MinValue
+$fwdHeaders = @('x-forwarded-for', 'cf-connecting-ip', 'x-forwarded-host', 'forwarded', 'x-real-ip', 'tailscale-funnel-request')
 
 while ($true) {
   $client = $listener.AcceptTcpClient()
   try {
-    # sambungan kosong (preconnect browser) jangan tahan server
     $ready = $client.Client.Poll(400000, [System.Net.Sockets.SelectMode]::SelectRead)
     if (-not $ready -or $client.Available -eq 0) { continue }
-    $client.ReceiveTimeout = 3000
+    $client.ReceiveTimeout = 4000
     $stream = $client.GetStream()
-    $reader = New-Object System.IO.StreamReader($stream, [System.Text.Encoding]::ASCII)
-    $line = $reader.ReadLine()
-    $hdr = @{}
-    while ($true) {
-      $h = $reader.ReadLine()
-      if ($h -eq $null -or $h -eq '') { break }
-      $ix = $h.IndexOf(':')
-      if ($ix -gt 0) { $hdr[$h.Substring(0, $ix).Trim().ToLower()] = $h.Substring($ix + 1).Trim() }
+
+    # ---- read request bytes (headers + body) ----
+    $buf = New-Object byte[] 65536; $ms = New-Object System.IO.MemoryStream; $hEnd = -1
+    while ($hEnd -lt 0 -and $ms.Length -lt 65536) {
+      $n = $stream.Read($buf, 0, $buf.Length); if ($n -le 0) { break }
+      $ms.Write($buf, 0, $n); $hEnd = $latin1.GetString($ms.ToArray()).IndexOf("`r`n`r`n")
     }
+    if ($hEnd -lt 0) { continue }
+    $all = $ms.ToArray(); $headText = $latin1.GetString($all, 0, $hEnd)
+    $lines = $headText -split "`r`n"; $line = $lines[0]; $hdr = @{}
+    foreach ($h in $lines[1..($lines.Count - 1)]) { $ix = $h.IndexOf(':'); if ($ix -gt 0) { $hdr[$h.Substring(0, $ix).Trim().ToLower()] = $h.Substring($ix + 1).Trim() } }
+    $len = 0; [void][int]::TryParse([string]$hdr['content-length'], [ref]$len); if ($len -gt 1048576) { $len = 1048576 }
+    $bodyMs = New-Object System.IO.MemoryStream; $start = $hEnd + 4
+    if ($all.Length -gt $start) { $bodyMs.Write($all, $start, [Math]::Min($all.Length - $start, $len)) }
+    while ($bodyMs.Length -lt $len) { $n = $stream.Read($buf, 0, [Math]::Min($buf.Length, $len - $bodyMs.Length)); if ($n -le 0) { break }; $bodyMs.Write($buf, 0, $n) }
+    $bodyBytes = $bodyMs.ToArray()
+
+    # ---- who is calling? ----
     $remoteIp = $client.Client.RemoteEndPoint.Address
-    $isLocal = [System.Net.IPAddress]::IsLoopback($remoteIp) -and -not $hdr.ContainsKey('cf-connecting-ip') -and -not $hdr.ContainsKey('x-forwarded-for')
-    $okPin = $isLocal -or ($hdr['x-pin'] -eq $pin)
+    $fwd = $false; foreach ($f in $fwdHeaders) { if ($hdr.ContainsKey($f)) { $fwd = $true } }
+    $isLocal = [System.Net.IPAddress]::IsLoopback($remoteIp) -and -not $fwd -and ([string]$hdr['host'] -match '^(127\.0\.0\.1|localhost)(:\d+)?$')
+    $locked = (Get-Date) -lt $lockUntil
+    $okPin = $isLocal -or (-not $locked -and $hdr['x-pin'] -and $hdr['x-pin'] -eq $pin)
+    if (-not $isLocal -and $hdr['x-pin'] -and -not $okPin -and -not $locked) {
+      $fails++; if ($fails -ge 10) { $lockUntil = (Get-Date).AddMinutes(10); $fails = 0; Write-Host "  PIN salah terlalu banyak kali. Akses admin luar dikunci 10 minit." -ForegroundColor Red }
+    }
 
     $status = '200 OK'; $type = 'text/plain; charset=utf-8'; $body = [byte[]]@(); $isHead = $false
-    $m = [regex]::Match([string]$line, '^(GET|HEAD|POST) (\S+)')
+    $m = [regex]::Match([string]$line, '^(GET|HEAD|POST|OPTIONS) (\S+)')
     if (-not $m.Success) {
       $status = '400 Bad Request'; $body = ToBytes 'Bad request'
     } else {
       $method = $m.Groups[1].Value; $isHead = ($method -eq 'HEAD')
-      $rawPath = $m.Groups[2].Value
-      $qi = $rawPath.IndexOf('?'); if ($qi -ge 0) { $rawPath = $rawPath.Substring(0, $qi) }
+      $rawPath = $m.Groups[2].Value; $query = ''
+      $qi = $rawPath.IndexOf('?'); if ($qi -ge 0) { $query = $rawPath.Substring($qi + 1); $rawPath = $rawPath.Substring(0, $qi) }
       $path = [Uri]::UnescapeDataString($rawPath).TrimStart('/')
       if ($path -eq '') { $path = 'index.html' }
 
       if ($path -eq 'api/state') {
         if ($method -eq 'POST') {
-          if (-not $okPin) {
-            $status = '401 Unauthorized'; $body = ToBytes 'PIN salah'
-          } else {
-            $len = 0; [void][int]::TryParse([string]$hdr['content-length'], [ref]$len)
-            $buf = New-Object char[] $len; $read = 0
-            while ($read -lt $len) { $n = $reader.Read($buf, $read, $len - $read); if ($n -le 0) { break }; $read += $n }
-            [System.IO.File]::WriteAllText($stateFile, [string]::new($buf, 0, $read))
-            $body = ToBytes 'ok'
+          if ($locked -and -not $isLocal) { $status = '429 Too Many Requests'; $body = ToBytes 'Dikunci sementara' }
+          elseif (-not $okPin) { $status = '401 Unauthorized'; $body = ToBytes 'PIN salah' }
+          else { [System.IO.File]::WriteAllBytes($stateFile, $bodyBytes); $body = ToBytes 'ok' }
+        } elseif (Test-Path -LiteralPath $stateFile) { $body = [System.IO.File]::ReadAllBytes($stateFile) }
+      } elseif ($path -eq 'api/order-hook' -or $path -like 'api/order-hook/*') {
+        # Sociabuzz (atau servis lain) POST order ke sini. Kunci rahsia: /api/order-hook/KUNCI, ?key=KUNCI, atau header token
+        $k = ''; foreach ($pair in $query -split '&') { if ($pair -like 'key=*') { $k = [Uri]::UnescapeDataString($pair.Substring(4)) } }
+        if ($path -like 'api/order-hook/*') { $k = $path.Substring(15) }
+        foreach ($hn in @('sb-webhook-token', 'x-sociabuzz-webhook-token', 'x-sociabuzz-token', 'x-webhook-token')) { if (-not $k -and $hdr[$hn]) { $k = $hdr[$hn] } }
+        if (-not $k -and ([string]$hdr['authorization']) -match '^Bearer\s+(.+)$') { $k = $matches[1] }
+        if ($method -ne 'POST') { $body = ToBytes 'SYNO order hook OK' }
+        elseif ($k -ne $hookKey) { $status = '403 Forbidden'; $body = ToBytes 'Kunci salah' }
+        else {
+          $b64 = [Convert]::ToBase64String($bodyBytes)
+          $ct = [string]$hdr['content-type']
+          $entry = '{"t":' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() + ',"ct":' + (JsonStr $ct) + ',"b":"' + $b64 + '"}'
+          [System.IO.File]::AppendAllText($pendingFile, $entry + "`n")
+          $hlist = ($hdr.GetEnumerator() | Where-Object { $_.Key -ne 'x-pin' } | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join '; '
+          [System.IO.File]::AppendAllText($orderLog, (Get-Date -Format 's') + "`r`n  HEADERS: " + $hlist + "`r`n  BODY: " + [System.Text.Encoding]::UTF8.GetString($bodyBytes) + "`r`n")
+          Write-Host ("  Order baru diterima ({0})" -f (Get-Date -Format 'h:mm tt')) -ForegroundColor Green
+          $body = ToBytes 'OK'   # isi 'Webhook HTTP Test Response' di Sociabuzz dengan: OK
+        }
+      } elseif ($path -eq 'api/orders') {
+        $type = 'application/json'
+        if (-not $okPin) { $status = '401 Unauthorized'; $body = ToBytes '[]' }
+        else {
+          $items = @()
+          if (Test-Path -LiteralPath $pendingFile) {
+            $items = @([System.IO.File]::ReadAllLines($pendingFile) | Where-Object { $_.Trim() })
+            Remove-Item -LiteralPath $pendingFile -Force
           }
-        } elseif (Test-Path -LiteralPath $stateFile) {
-          $body = [System.IO.File]::ReadAllBytes($stateFile)
+          $body = ToBytes ('[' + ($items -join ',') + ']')
         }
       } elseif ($path -eq 'api/auth') {
         $type = 'application/json'
-        $ipList = ($ips | ForEach-Object { '"' + $_ + '"' }) -join ','
-        $body = ToBytes ('{"local":' + $isLocal.ToString().ToLower() + ',"ok":' + $okPin.ToString().ToLower() + ',"port":' + $port + ',"ips":[' + $ipList + ']}')
-      } elseif ($path -like 'data/*' -or $path -like 'data\*') {
+        $ipList = ($ips | ForEach-Object { JsonStr $_ }) -join ','
+        $hook = ''; if ($okPin -and $publicUrl) { $hook = "$publicUrl/api/order-hook/$hookKey" } elseif ($okPin) { $hook = "/api/order-hook/$hookKey" }
+        $body = ToBytes ('{"local":' + $isLocal.ToString().ToLower() + ',"ok":' + $okPin.ToString().ToLower() + ',"locked":' + $locked.ToString().ToLower() + ',"port":' + $port + ',"ips":[' + $ipList + '],"publicUrl":' + (JsonStr $publicUrl) + ',"hookUrl":' + (JsonStr $hook) + '}')
+      } elseif ($path -like 'data/*' -or $path -like 'data\*' -or $path -like 'tools/*' -or $path -like 'tools\*') {
         $status = '403 Forbidden'; $body = ToBytes 'Tiada akses'
       } else {
         $full = [System.IO.Path]::GetFullPath((Join-Path $root $path))
@@ -126,7 +200,7 @@ while ($true) {
         }
       }
     }
-    $head = "HTTP/1.1 $status`r`nContent-Type: $type`r`nContent-Length: $($body.Length)`r`nCache-Control: no-store`r`nConnection: close`r`n`r`n"
+    $head = "HTTP/1.1 $status`r`nContent-Type: $type`r`nContent-Length: $($body.Length)`r`nCache-Control: no-store`r`nX-Content-Type-Options: nosniff`r`nConnection: close`r`n`r`n"
     $hb = [System.Text.Encoding]::ASCII.GetBytes($head)
     $stream.Write($hb, 0, $hb.Length)
     if (-not $isHead -and $body.Length -gt 0) { $stream.Write($body, 0, $body.Length) }

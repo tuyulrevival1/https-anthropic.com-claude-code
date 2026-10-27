@@ -11,16 +11,16 @@ Semua dalam HTML: tak perlu edit video, tak perlu install Python.
 |---|---|
 | `START_OVERLAY.bat` | Hidupkan server kecil (PowerShell Windows) + buka App Kawalan. Biar terbuka masa live. |
 | `BUKA_APP.bat` | Buka semula tetingkap App Kawalan |
-| `LINK_PENONTON.bat` | Link awam (Cloudflare) untuk penonton & admin luar |
+| `AMBIL_LOGO_RANK.bat` | Muat turun logo rank MLBB asli (Epic hingga Immortal) dari wiki |
 | `overlay.html` | Overlay 1080×1920 untuk OBS |
-| `control.html` | **App Kawalan SYNO**: timer, W/L, game habis, queue, baki VIP, YouTube, link |
+| `control.html` | **App Kawalan SYNO**: timer, W/L, game habis, queue (ID ML + tarikh), baki VIP, order Sociabuzz, YouTube, link |
 | `viewer.html` | Halaman penonton: semak baki & queue (lihat sahaja) |
 | `banner.html` | Banner sahaja, 1080×192 |
 | `obs-overlay.html` | Overlay untuk OBS "Local file" (tanpa server) |
 | `assets/config.js` | **Ubah teks & harga di sini** |
 | `exports/banner_*.mp4` | Banner siap render (loop 24 s) |
 | `logos/` | Logo maskot (3 gaya), wordmark SYNO STORE, gambar profil (PNG telus) |
-| `data/` | Dibuat automatik: `state.txt` (queue, baki VIP, W/L) & `admin_pin.txt` |
+| `data/` | Dibuat automatik: `state.txt` (queue, baki VIP, W/L), `admin_pin.txt`, `webhook_key.txt`, `orders_log.txt` |
 
 ## Layout
 
@@ -36,13 +36,18 @@ Mesej, kicker, tag harga dan hook banner diubah dalam `config.js` › `banner.me
 
 ## Queue Mabar & baki VIP
 
-- Baki dikira dalam **game**. Top up dalam app: +1 game RM4, +3 game RM10, +1 Immortal RM6, atau nombor sendiri.
-- **Menang / Kalah** dalam app: tambah W/L, setiap yang sedang main tolak 1 game. Baki habis keluar, queue naik sendiri.
-- Admin di phone / PC lain: link Wi-Fi + PIN. Penonton: `viewer.html` (tak boleh ubah).
+- Setiap VIP: nama, **ID ML**, **baki game**, tarikh order. Queue di overlay tunjuk nama + ID.
+- Tambah dalam app: taip bilangan game sendiri (atau isi cepat RM4 / RM10 / Immortal RM6), tarikh order, ID.
+- **Menang / Kalah**: tambah W/L, setiap yang sedang main tolak 1 game. Baki habis keluar, queue naik sendiri.
+- **Order Sociabuzz automatik**: webhook › server › terus masuk queue (ID ML dari mesej pembeli).
+
+## Link kekal & admin luar
+
+Tailscale Funnel memberi link tetap `https://<pc>.<tailnet>.ts.net` untuk `viewer.html` (Linktree / bio) dan `control.html` (admin, perlu PIN). Langkah dalam [PASANG_OBS.md](PASANG_OBS.md) › bahagian 7.
 
 ## Ikon rank asli
 
-Letak PNG asli dalam `assets/ranks/` (`epic`, `legend`, `mythic`, `honor`, `glory`, `immortal` .png). Banner putar 3D dengan glow & kilauan. Tanpa fail, lencana ganti dipakai.
+Klik `AMBIL_LOGO_RANK.bat` untuk muat turun ikon asli ke `assets/ranks/` (`epic`, `legend`, `mythic`, `honor`, `glory`, `immortal` .png), atau letak PNG sendiri. Banner putar 3D dengan glow & kilauan.
 
 ## Render semula video banner / logo
 

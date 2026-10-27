@@ -114,7 +114,7 @@
     <div class="bitem"><b>Minimal (gaya SOLOZ)</b><div class="bshot"><div class="bn-host" data-banner="minimal"></div></div></div>
   </div>
 
-  <p>Ikon rank untuk mesej joki guna <b>logo rank MLBB asli</b> yang awak letak dalam <code>assets/ranks/</code> (epic, legend, mythic, glory, immortal .png). Ikon diputar 3D dengan ketebalan, bayang lantai, glow dan kilauan. Selagi fail tiada, lencana ganti dipaparkan.</p>
+  <p>Ikon rank untuk mesej joki guna <b>logo rank MLBB asli</b> yang awak letak dalam <code>assets/ranks/</code> (epic, legend, mythic, honor, glory, immortal .png, atau klik <code>AMBIL_LOGO_RANK.bat</code>). Ikon diputar 3D dengan ketebalan, bayang lantai, glow dan kilauan. Selagi fail tiada, lencana ganti dipaparkan.</p>
 
   <h2>Logo</h2>
   <p>Maskot 3D awak dalam tiga gaya (bertukar sendiri dalam banner) dan wordmark SYNO STORE. PNG latar telus ada dalam folder <code>logos/</code> untuk gambar profil, thumbnail dan watermark.</p>
@@ -129,7 +129,7 @@
   <p>Perkara yang paling beri kesan pada streamer portrait yang ramai penonton, disusun ikut keutamaan.</p>
   <div class="tips">
     <div class="tip"><h4>Belakang kamera</h4><ul>
-      <li><b>Lampu LED strip ungu + merah</b> di dinding belakang atau bawah meja. Latar hitam jadi bergradien dan ikut tema overlay.</li>
+      <li><b>Lampu LED strip merah</b> di dinding belakang atau bawah meja. Latar hitam jadi bergradien dan ikut tema overlay.</li>
       <li><b>Neon sign / poster</b> logo SYNO STORE atau maskot di belakang, biar sikit kabur.</li>
       <li><b>Lampu depan (ring light / softbox)</b> serong 45°. Muka terang, latar kekal gelap tapi berwarna.</li>
       <li>Kemas kabel dan barang dalam frame.</li></ul></div>
@@ -139,9 +139,9 @@
       <li>Mic: noise suppression + compressor. Muzik latar jauh lebih perlahan dari suara.</li></ul></div>
     <div class="tip"><h4>Hook penonton</h4><ul>
       <li><b>Tajuk live jelas</b>: contoh "SOLO PUSH GLOBAL · MABAR VIP RM4".</li>
-      <li>Sebut nama penonton yang masuk dan balas komen. Ajak komen "VIP" untuk queue.</li>
+      <li>Sebut nama penonton yang masuk dan balas komen. Bila order Sociabuzz masuk, overlay ucap "TERIMA KASIH": sebut nama dia juga.</li>
       <li>Guna <b>LIVE Goal</b> TikTok (like / gift) supaya penonton ada sebab untuk kekal.</li>
-      <li>Tukar layout ikut sesi: <b>Mabar</b> bila ada queue, <b>Solo Push</b> bila tiada.</li></ul></div>
+      <li>Letak <b>link penonton</b> di bio supaya orang boleh semak queue &amp; baki sendiri.</li></ul></div>
     <div class="tip"><h4>Konsisten</h4><ul>
       <li><b>Jadual tetap</b> (contoh setiap malam pukul 9) supaya penonton tahu bila nak datang.</li>
       <li>Klip momen savage / maniac, post sebagai video TikTok sebelum live.</li>
@@ -149,7 +149,7 @@
   </div>
 
   <h2>App Kawalan SYNO</h2>
-  <p>Satu app untuk semua: timer live, Win/Lose, game habis, queue Mabar dan baki VIP. Cuba di sini: tambah nama, tekan Menang atau Kalah, dan tengok preview di atas berubah. Nama dalam preview ni contoh sahaja. Penonton pula ada halaman sendiri (<code>viewer.html</code>) untuk semak baki & queue tanpa boleh ubah.</p>
+  <p>Satu app untuk semua: timer live, Win/Lose, game habis, queue Mabar (ID ML + tarikh order), baki VIP (taip bilangan game sendiri) dan order Sociabuzz automatik. Cuba di sini: tambah nama, tekan Menang atau Kalah, dan tengok preview di atas berubah. Nama dalam preview ni contoh sahaja. Penonton pula ada halaman sendiri (<code>viewer.html</code>) untuk semak baki & queue tanpa boleh ubah.</p>
   <div class="tools">
     <button type="button" id="g-sample">Isi contoh</button>
     <button type="button" id="g-empty">Kosongkan</button>
@@ -174,14 +174,14 @@
       <li>Browser source, URL <code>http://127.0.0.1:8787/overlay.html</code>, 1080×1920.</li>
       <li>Page permissions: <b>Read access to OBS status information</b> (timer mula sendiri bila Start Streaming).</li>
       <li>Move to Top. Widget lagu letak atas overlay.</li></ul></div>
-    <div class="step"><h4>4 · Admin, phone &amp; penonton</h4><ul>
-      <li>Phone / admin (Wi-Fi sama): link dari tetingkap hitam + PIN.</li>
-      <li>Penonton internet: <code>LINK_PENONTON.bat</code> › kongsi <code>https://….trycloudflare.com/viewer.html</code>.</li>
-      <li>YouTube viewers: API key + link live dalam app.</li></ul></div>
+    <div class="step"><h4>4 · Link kekal &amp; Sociabuzz</h4><ul>
+      <li>Pasang Tailscale, jalankan <code>tailscale funnel 8787</code> sekali › link tetap <code>https://….ts.net</code>.</li>
+      <li>Penonton (Linktree / bio): <code>…/viewer.html</code> · admin dari mana-mana: <code>…/control.html</code> + PIN.</li>
+      <li>Sociabuzz › Integrations › Webhook › tampal <b>Sociabuzz Webhook URL</b> dari app. Order terus masuk queue.</li></ul></div>
   </div>
 </div>
 <!--ARTIFACT-BODY-END-->
-<script>window.OVERLAY_STORE_KEY = "synoOverlay.preview3";</script>
+<script>window.OVERLAY_STORE_KEY = "synoOverlay.preview4";</script>
 <script src="assets/config.js"></script>
 <script src="assets/overlay.js"></script>
 <script src="assets/ranks3d.js"></script>
@@ -193,16 +193,17 @@
 (function () {
   const O = window.ChouOverlay;
   const SAMPLE = {
-    playing: [["Aqil.MY", 2], ["Farhan2311", 1], ["NAJWA", 3]],
-    queue: [["Haziq_", 3], ["zul.gg", 1], ["Mira Hanis", 1], ["Danish99", 3], ["KudoX", 1]]
+    playing: [["Aqil.MY", 2, "1123456789 (2231)"], ["Farhan2311", 1, "987654321 (1102)"], ["NAJWA", 3, "556677889 (3001)"]],
+    queue: [["Haziq_", 3, "443322110 (2222)"], ["zul.gg", 1, "112233445 (9999)"], ["Mira Hanis", 1, ""], ["Danish99", 3, "778899001 (1200)"]]
   };
   const seed = () => O.Store.set(s => {
-    let n = 0; s.members = {};
-    const entry = ([name, bal]) => { const k = O.keyOf(name); s.members[k] = { name, bal }; return { id: "s" + n++, key: k }; };
+    let n = 0; s.members = {}; s.orders = []; const now = Date.now();
+    const entry = ([name, bal, mlid], i) => { const k = O.keyOf(name), at = now - (20 - n) * 300000; s.members[k] = { name, bal, mlid, last: at };
+      s.orders.unshift({ key: k, name, mlid, games: bal, at, src: i % 2 ? "manual" : "sociabuzz", rx: at }); return { id: "s" + n++, key: k, at }; };
     s.playing = SAMPLE.playing.map(entry);
     s.queue = SAMPLE.queue.map(entry);
     s.showQueue = true; s.showBanner = true; s.wins = 12; s.losses = 5; s.streak = 3;
-    s.live = { running: true, start: Date.now() - 4523000, acc: 0 };
+    s.live = { running: true, start: now - 4523000, acc: 0 };
   });
   O.Store.init();
   if (!O.Store.read()) seed();

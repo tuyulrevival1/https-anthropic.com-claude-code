@@ -44,6 +44,7 @@
   // upgrade older saves (queue entries with name/games) to members + balance
   function normalize(s) {
     s.members = s.members || {};
+    s.orders = s.orders || [];
     s.live = Object.assign({ running: false, start: 0, acc: 0 }, s.live || {});
     s.yt = Object.assign({ viewers: null, at: 0 }, s.yt || {});
     const fix = e => {
@@ -75,6 +76,7 @@
         this.remote = true;
         if (txt && txt.trim()) this.onRemote(txt, true); else this.push(this.state);
         setInterval(() => this.pull(), 700);
+        setInterval(pullOrders, 3000); setTimeout(pullOrders, 800);
         window.dispatchEvent(new CustomEvent("ov-remote", { detail: true }));
       }).catch(() => window.dispatchEvent(new CustomEvent("ov-remote", { detail: false })));
     },
@@ -124,17 +126,27 @@
       }
     },
     // top up a VIP (creates the member) and put them in the queue
-    add(name, games, join = true) {
-      name = String(name || "").trim().slice(0, 18); const k = keyOf(name); if (!k) return;
-      games = Math.max(0, Math.min(99, parseInt(games, 10) || 0));
-      Store.set(s => {
-        const m = s.members[k] || (s.members[k] = { name, bal: 0 });
-        m.name = name; m.bal += games;
-        if (join && m.bal > 0 && !inLine(s, k)) s.queue.push({ id: uid("p"), key: k });
-        Q.fillSlots(s);
-      });
+    // top up a VIP (creates the member) and put them in the queue.
+    // extra: { mlid: "123456 (1234)", at: order time in ms, src: "sociabuzz" }
+    add(name, games, join = true, extra = {}) {
+      name = String(name || "").trim().slice(0, 24); const k = keyOf(name); if (!k) return null;
+      games = Math.max(0, Math.min(999, parseInt(games, 10) || 0));
+      const at = +extra.at || Date.now(), mlid = String(extra.mlid || "").trim().slice(0, 32);
+      Store.set(s => Q._add(s, k, name, games, join, at, mlid, extra.src));
+      return k;
     },
-    join(k) { Store.set(s => { const m = s.members[k]; if (m && m.bal > 0 && !inLine(s, k)) s.queue.push({ id: uid("p"), key: k }); Q.fillSlots(s); }); },
+    _add(s, k, name, games, join, at, mlid, src, info = {}) {
+      const m = s.members[k] || (s.members[k] = { name, bal: 0 });
+      m.name = name; m.bal += games; m.last = at; if (mlid) m.mlid = mlid;
+      Q._log(s, Object.assign({ key: k, name, mlid: m.mlid || "", games, at, src: src || "manual" }, info));
+      const e = s.queue.find(p => p.key === k);
+      if (e) e.at = e.at || at;
+      else if (join && m.bal > 0 && !s.playing.some(p => p.key === k)) s.queue.push({ id: uid("p"), key: k, at });
+      Q.fillSlots(s);
+    },
+    _log(s, o) { (s.orders = s.orders || []).unshift(Object.assign({ rx: Date.now() }, o)); s.orders = s.orders.slice(0, 200); },
+    setMl(k, v) { Store.set(s => { const m = s.members[k]; if (m) m.mlid = String(v || "").trim().slice(0, 32); }); },
+    join(k) { Store.set(s => { const m = s.members[k]; if (m && m.bal > 0 && !inLine(s, k)) s.queue.push({ id: uid("p"), key: k, at: Date.now() }); Q.fillSlots(s); }); },
     addBal(k, d) { Store.set(s => { const m = s.members[k]; if (!m) return; m.bal = Math.max(0, m.bal + d); if (m.bal === 0) { s.playing = s.playing.filter(p => p.key !== k); s.queue = s.queue.filter(p => p.key !== k); } Q.fillSlots(s); }); },
     setBal(k, v) { Store.set(s => { const m = s.members[k]; if (!m) return; m.bal = Math.max(0, parseInt(v, 10) || 0); if (m.bal === 0) { s.playing = s.playing.filter(p => p.key !== k); s.queue = s.queue.filter(p => p.key !== k); } Q.fillSlots(s); }); },
     delMember(k) { Store.set(s => { delete s.members[k]; s.playing = s.playing.filter(p => p.key !== k); s.queue = s.queue.filter(p => p.key !== k); Q.fillSlots(s); }); },
@@ -163,6 +175,62 @@
       });
     }
   };
+  /* ---------- automatic orders (Sociabuzz webhook -> server -> here) ---------- */
+  const SB = Object.assign({ autoQueue: true, toMYR: { MYR: 1, RM: 1 }, packs: [{ rm: 10, games: 3 }, { rm: 4, games: 1 }], immortalPerGame: 6 }, CFG.sociabuzz || {});
+  const pick = (o, keys) => { for (const k of keys) if (o[k] != null && String(o[k]).trim() !== "") return o[k]; return null; };
+  const num = v => { if (typeof v === "number") return v; const t = String(v || "").replace(/[^\d.,]/g, ""); if (!t) return 0; const n = /[.,]\d{1,2}$/.test(t) ? parseFloat(t.replace(/[.,](?=\d{3}\b)/g, "").replace(",", ".")) : parseFloat(t.replace(/[.,]/g, "")); return isNaN(n) ? 0 : n; };
+  function parseOrder(entry) {
+    let text = "";
+    try { text = new TextDecoder().decode(Uint8Array.from(atob(entry.b || ""), c => c.charCodeAt(0))); } catch (e) {}
+    let b = {};
+    try { b = JSON.parse(text); } catch (e) { try { b = Object.fromEntries(new URLSearchParams(text)); } catch (e2) {} }
+    if (b && typeof b.data === "object" && b.data) b = Object.assign({}, b, b.data);
+    const name = String(pick(b, ["supporter", "buyer_name", "supporter_name", "name", "nama"]) || "Anonim").trim().slice(0, 24);
+    const msg = String(pick(b, ["message", "note", "notes", "buyer_note", "supporter_message", "pesan"]) || "");
+    const skip = /^(id|transaction_id|order_id|amount|amount_settled|price|total|currency|currency_settled|created_at|paid_at|date|email|email_supporter|buyer_email|buyer_whatsapp|media_type|media_url|token)$/i;
+    const extra = Object.entries(b).filter(([k, v]) => typeof v === "string" && !skip.test(k)).map(([, v]) => v).join(" ");
+    // ML ID: "123456789 (1234)", "123456789 1234", "ID: 123456789 Server 1234"
+    const ML = /(\d{6,12})(?!\d)\s*(?:[(\[:|\/-]|\b(?:server|zone|sv|srv)\b)?\s*[(\[:]?\s*(\d{3,5})(?!\d)/i;
+    const idm = msg.match(ML) || extra.match(ML);
+    const mlid = idm ? `${idm[1]} (${idm[2]})` : (((msg + " " + extra).match(/\b\d{6,12}\b/) || [""])[0]);
+    const cur = String(pick(b, ["currency_settled", "currency"]) || "MYR").toUpperCase();
+    const amount = num(pick(b, ["amount_settled", "amount", "price", "total"]));
+    const rm = amount * (SB.toMYR[cur] != null ? SB.toMYR[cur] : 1);
+    let games = parseInt(pick(b, ["quantity", "qty", "jumlah"]), 10) || 0;
+    const gm = msg.match(/(\d{1,3})\s*(?:x\s*)?(?:game|games|g\b|gem|match|kali)/i);
+    if (!games && gm) games = parseInt(gm[1], 10);
+    if (!games && rm > 0) {
+      if (/immortal/i.test(msg)) games = Math.floor(rm / SB.immortalPerGame + 1e-9);
+      else { let rest = rm; for (const p of SB.packs) { const n = Math.floor(rest / p.rm + 1e-9); games += n * p.games; rest -= n * p.rm; } }
+    }
+    const at = Date.parse(pick(b, ["created_at", "paid_at", "date"]) || "") || entry.t || Date.now();
+    const id = String(pick(b, ["id", "transaction_id", "order_id"]) || `${name}|${amount}|${at}`);
+    const test = /ini hanya test notifikasi/i.test(msg) || String(b.email_supporter || "") === "jessica@example.com";
+    return { id, name, mlid, games, at, amount, cur, msg: msg.slice(0, 120), test };
+  }
+  let ordersBusy = false;
+  function pullOrders() {
+    if (ordersBusy || !Store.remote || !Store.canWrite) return; ordersBusy = true;
+    const pin = Store.pin();
+    fetch("api/orders", { cache: "no-store", headers: pin ? { "X-Pin": pin } : {} }).then(r => r.ok ? r.json() : []).then(list => {
+      if (!list || !list.length) return;
+      const orders = list.map(parseOrder);
+      Store.set(s => {
+        s.seenOrders = s.seenOrders || [];
+        for (const o of orders) {
+          if (s.seenOrders.includes(o.id)) continue;
+          s.seenOrders.unshift(o.id);
+          const info = { amount: o.amount, cur: o.cur, note: o.msg };
+          if (o.test) { Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "test" }, info)); continue; }
+          const k = keyOf(o.name);
+          if (o.games > 0 && k) Q._add(s, k, o.name, o.games, SB.autoQueue, o.at, o.mlid, "sociabuzz", info);
+          else Q._log(s, Object.assign({ key: k, name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz", warn: "Jumlah tak cukup untuk 1 game" }, info));
+        }
+        s.seenOrders = s.seenOrders.slice(0, 300);
+      });
+    }).catch(() => {}).finally(() => { ordersBusy = false; });
+  }
+
   const fmtTime = ms => { const x = Math.floor(ms / 1000), h = Math.floor(x / 3600), m = Math.floor(x / 60) % 60, sec = x % 60; return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`; };
 
   /* ---------- layout (1080x1920) ----------
@@ -305,12 +373,12 @@
     let slots = "";
     for (let i = 0; i < max; i++) {
       const p = s.playing[i];
-      if (p) { const m = mem(s, p); slots += `<li class="slot${isNew(p.id)}"><span class="ix">${i + 1}</span><span class="nm">${esc(m.name)}</span><span class="bal">${m.bal}<small>G</small></span></li>`; }
+      if (p) { const m = mem(s, p); slots += `<li class="slot${isNew(p.id)}"><span class="ix">${i + 1}</span><span class="nm">${esc(m.name)}</span>${m.mlid ? `<span class="mid">${esc(m.mlid)}</span>` : ""}<span class="bal">${m.bal}<small>G</small></span></li>`; }
       else slots += `<li class="slot is-empty"><span class="ix">${i + 1}</span><span class="nm">SLOT KOSONG</span></li>`;
     }
-    const lim = wide ? 6 : compact ? 4 : 3;
+    const lim = wide ? 6 : compact ? 2 : 3;
     let next = s.queue.slice(0, lim).map((p, i) =>
-      `<li class="nx${isNew(p.id)}"><span class="no">${String(i + 1).padStart(2, "0")}</span><span class="nm">${esc(mem(s, p).name)}</span><span class="g">${mem(s, p).bal}G</span></li>`).join("");
+      `<li class="nx${isNew(p.id)}"><span class="no">${String(i + 1).padStart(2, "0")}</span><span class="nm">${esc(mem(s, p).name)}</span>${mem(s, p).mlid ? `<span class="mid">${esc(mem(s, p).mlid)}</span>` : ""}<span class="g">${mem(s, p).bal}G</span></li>`).join("");
     if (s.queue.length > lim) next += `<li class="nx more">+${s.queue.length - lim} LAGI</li>`;
     const nextBlock = s.queue.length ? `<ol>${next}</ol>` : `<p class="q-empty">${full ? "Queue kosong" : "Slot masih ada"}</p>`;
     return `<div class="q-head"><div><div class="q-open${full ? " full" : ""}">${full ? "PENUH · MASUK QUEUE" : "SLOT DIBUKA"}</div><h3 class="ov-h">${esc(CFG.mabar.title)}</h3></div><div class="q-prices">${chipsHTML()}</div></div>
@@ -363,16 +431,21 @@ ${streak}
   function energyLayer(L) {
     const u = uid("en");
     const lines = L.energy.map((y, i) => `<g class="en" data-y="${y}" data-i="${i}">
-<rect x="0" y="${y - 9}" width="${W}" height="18" fill="url(#${u}v)" opacity=".75" class="en-glow"/>
-<path class="en-wave" fill="none" stroke="${TH.hi}" stroke-width="3" filter="url(#${u}b)"/>
-<path class="en-wave2" fill="none" stroke="${CFG.theme === "red" ? "#ffb35c" : "#ff2350"}" stroke-width="2" opacity=".8"/>
-<rect x="0" y="${y - 1.5}" width="${W}" height="3" fill="#f6efff"/>
-<path class="en-arc" fill="none" stroke="#fff" stroke-width="2.4" stroke-linejoin="bevel" filter="url(#${u}a)"/>
-<circle class="en-spark" r="6" cy="${y}" fill="#fff" filter="url(#${u}a)"/></g>`).join("");
+<rect x="0" y="${y - 6}" width="${W}" height="12" fill="url(#${u}v)" opacity=".7" class="en-glow"/>
+<path class="en-wave" fill="none" stroke="${TH.hi}" stroke-width="1.6" filter="url(#${u}b)"/>
+<path class="en-wave2" fill="none" stroke="${CFG.theme === "red" ? "#ffb35c" : "#ff2350"}" stroke-width="1.2" opacity=".7"/>
+<rect x="0" y="${y - 1}" width="${W}" height="2" fill="#f6efff" opacity=".9"/>
+<path class="en-arc" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="bevel" filter="url(#${u}a)"/>
+${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam" data-j="${j}">
+ <rect x="-300" y="${y - 3}" width="300" height="6" fill="url(#${u}s${g})" opacity=".55" filter="url(#${u}b)"/>
+ <rect x="-300" y="${y - .9}" width="300" height="1.8" fill="url(#${u}s${g})"/>
+ <rect x="${g === "R" ? -26 : -300}" y="${y - .6}" width="26" height="1.2" fill="#fff"/></g>`; }).join("")}</g>`).join("");
     const wrap = el("div", "ov-layer");
     wrap.innerHTML = `<svg class="ov-layer" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true"><defs>
 <linearGradient id="${u}v" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${TH.a}" stop-opacity="0"/><stop offset=".5" stop-color="${TH.a}" stop-opacity=".9"/><stop offset="1" stop-color="${TH.a}" stop-opacity="0"/></linearGradient>
-<filter id="${u}b" x="-5%" y="-200%" width="110%" height="500%"><feGaussianBlur stdDeviation="3"/></filter>
+<filter id="${u}b" x="-5%" y="-200%" width="110%" height="500%"><feGaussianBlur stdDeviation="2.2"/></filter>
+<linearGradient id="${u}sR" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${TH.a}" stop-opacity="0"/><stop offset=".7" stop-color="${TH.hi}" stop-opacity=".8"/><stop offset="1" stop-color="#ffffff"/></linearGradient>
+<linearGradient id="${u}sL" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="${TH.a}" stop-opacity="0"/><stop offset=".7" stop-color="${TH.hi}" stop-opacity=".8"/><stop offset="1" stop-color="#ffffff"/></linearGradient>
 <filter id="${u}a" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>${lines}</svg>`;
     const groups = [...wrap.querySelectorAll(".en")];
     let last = -1;
@@ -396,8 +469,12 @@ ${streak}
           for (let j = 1; j <= 6; j++) { x0 += (rnd(k * 13 + j + i * 5) - .5) * 34; yy += dir * (6 + rnd(k * 17 + j) * 8); d += `L${x0.toFixed(1)} ${yy.toFixed(1)}`; }
           arc.setAttribute("d", d); arc.setAttribute("opacity", (1 - lt / .32).toFixed(3));
         } else arc.setAttribute("opacity", "0");
-        const sp = g.querySelector(".en-spark"), f = frac(t / 6 + i * .5);
-        sp.setAttribute("cx", (i ? W + 60 - f * (W + 120) : f * (W + 120) - 60).toFixed(1));
+        // thin laser beams sliding along the line (two per line, opposite directions)
+        g.querySelectorAll(".en-beam").forEach(bm => {
+          const j = +bm.dataset.j, right = (i + j) % 2 === 0, f = frac(t / (j ? 4 : 3) + i * .37 + j * .5);
+          const x = right ? f * (W + 330) : W + 300 - f * (W + 330) + 300;
+          bm.setAttribute("transform", `translate(${x.toFixed(1)} 0)`);
+        });
         g.querySelector(".en-glow").setAttribute("opacity", (.55 + .25 * Math.sin(t * TAU / 4 + i * Math.PI)).toFixed(3));
       });
     });
@@ -423,12 +500,12 @@ ${streak}
 
     // band between facecam and gameplay
     // band under the facecam: LIVE · stream timer · clock · YouTube viewers
-    const band = el("div", "ov-band", `<span class="sweep"></span><span class="live"><span class="dot"></span><span>LIVE</span></span>
-<span class="itm timer" hidden><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M12 13V9M9 2h6M19 6l-1.5 1.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><b>00:00:00</b></span>
-<span class="itm clock">--:--</span>
+    // [● LIVE 01:23:45]  (live duration)   ·   [clock 2:04 PM]  (time now)   ·   [YouTube viewers]
+    const band = el("div", "ov-band", `<span class="sweep"></span><span class="live"><span class="dot"></span><span>LIVE</span><b class="timer" hidden>00:00:00</b></span>
+<span class="itm clock"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg><b>--:--</b><small></small></span>
 <span class="itm yt" hidden><svg viewBox="0 0 24 24"><rect x="1" y="5" width="22" height="14" rx="4" fill="#ff0000"/><path d="M10 9l5 3-5 3z" fill="#fff"/></svg><b></b></span>`);
     band.style.top = L.band + "px"; if (L.band != null) stage.appendChild(band);
-    const clock = band.querySelector(".clock"), timerEl = band.querySelector(".timer"), timerTxt = timerEl.querySelector("b");
+    const clockB = band.querySelector(".clock b"), clockAp = band.querySelector(".clock small"), timerEl = band.querySelector(".timer"), timerTxt = timerEl;
     const ytEl = band.querySelector(".yt"), ytTxt = ytEl.querySelector("b");
     let lastClock = "", lastTimer = "", lastYt = "";
 
@@ -469,6 +546,17 @@ ${streak}
         }
       }
       if (api.banner) api.banner.el.style.display = s.showBanner ? "" : "none";
+      // thank-you pop when a Sociabuzz order lands
+      const o = (s.orders || [])[0], po = prev && (prev.orders || [])[0];
+      if (prev && o && o.src === "sociabuzz" && o.games > 0 && (!po || o.rx !== po.rx)) {
+        const qc = panels.find(p => p.def.type === "queue");
+        if (qc) {
+          const al = el("div", "q-alert", `<b>TERIMA KASIH</b><span>${esc(o.name)}</span><i>+${o.games} GAME</i>`);
+          qc.e.parentNode.appendChild(al);
+          Object.assign(al.style, { left: qc.def.x + "px", top: (qc.def.y - 26) + "px", width: qc.def.w + "px" });
+          setTimeout(() => al.remove(), 6000);
+        }
+      }
     }
     render(Store.state, null);
     Store.on(render);
@@ -487,8 +575,8 @@ ${streak}
       if (L.band == null) return;
       const st = Store.state, nowMs = Date.now();
       if (manualT == null) {
-        const d = new Date(), c = String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
-        if (c !== lastClock) { clock.textContent = c; lastClock = c; }
+        const d = new Date(), h = d.getHours(), c = `${h % 12 || 12}:${String(d.getMinutes()).padStart(2, "0")}`, ap = h < 12 ? "AM" : "PM";
+        if (c + ap !== lastClock) { clockB.textContent = c; clockAp.textContent = ap; lastClock = c + ap; }
       }
       const el_ = liveElapsed(st, nowMs), tt = el_ > 0 || st.live.running ? fmtTime(el_) : "";
       if (tt !== lastTimer) { timerTxt.textContent = tt; timerEl.hidden = !tt; timerEl.classList.toggle("paused", !st.live.running); lastTimer = tt; }
@@ -536,5 +624,5 @@ ${streak}
 
   requestAnimationFrame(loop);
   const util = { el, esc, clamp, seg, eOut, eBack, frac, rnd, TAU, fill, priceHL, uid, tickers, now };
-  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util, keyOf, liveElapsed, fmtTime };
+  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util, keyOf, liveElapsed, fmtTime, parseOrder };
 })();

@@ -18,6 +18,15 @@ window.OVERLAY_CONFIG = {
     maxPlaying: 4 // berapa orang main sekali (max 4, sebab party 5)
   },
 
+  // Order automatik dari Sociabuzz (webhook). Pembeli tulis ID ML dalam mesej,
+  // contoh: "ID 123456789 (1234) 3 game". Bilangan game dikira dari mesej atau jumlah bayaran.
+  sociabuzz: {
+    autoQueue: true,
+    toMYR: { MYR: 1, RM: 1, IDR: 0.00028, SGD: 3.3, USD: 4.4 },   // anggaran tukaran ke RM
+    packs: [{ rm: 10, games: 3 }, { rm: 4, games: 1 }],            // pakej besar dulu
+    immortalPerGame: 6                                             // kalau mesej sebut "immortal"
+  },
+
   // Servis lain (keluar bila queue disorok)
   services: [
     { label: "Komen album", price: "RM5" },
