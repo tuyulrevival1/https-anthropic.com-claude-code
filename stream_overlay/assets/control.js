@@ -136,7 +136,17 @@ ${embedded ? "" : `<header class="app-top">
     <p class="muted">Order Sociabuzz masuk sendiri ke sini dan ke queue. Pembeli perlu tulis ID ML dalam mesej, contoh <b>ID 123456789 (1234) 3 game</b>.</p>
     <div class="hookst" id="ap-hookst"><b>Status webhook</b><span id="ap-hooklast">Masuk dengan PIN / buka START_OVERLAY.bat</span></div>
     <ol class="list hooklog" id="ap-hooklog"></ol>
-    <div class="row"><button class="btn gold" type="button" id="ap-simorder">Simulasi order</button><button class="btn" type="button" id="ap-testalert">Test alert</button><button class="btn ghost" type="button" id="ap-cleartest" data-confirm="Tekan lagi: buang semua baris TEST">Buang baris TEST</button></div>
+    <form id="ap-ctest" class="addform ctest" autocomplete="off">
+      <b class="ctest-h">Custom test (macam pembayaran sebenar)</b>
+      <div class="two"><label class="fld">Nama<input id="ap-ctname" maxlength="24" value="Test SYNO"></label>
+      <label class="fld">ID ML<input id="ap-ctid" maxlength="32" value="123456789 (1234)"></label></div>
+      <div class="two"><label class="fld">Pakej TRIBE<select id="ap-ctpkg" class="gsel">
+        <option value="">(ikut jumlah)</option>${((CFG.sociabuzz && CFG.sociabuzz.tribe) || ["1 GAME", "PACKAGE 3 GAME", "PACKAGE 6 GAME", "PACKAGE 9 GAME", "RANK IMMORTAL 1 GAME", "RANK IMMORTAL 3 GAME", "FAST TRACK (VVIP) RM8 1 GAME", "KOMEN ALBUM", "JOKI MINIGAME LAYLA 250K+ SCORE"]).map(x => `<option>${esc(x)}</option>`).join("")}</select></label>
+      <label class="fld">Jumlah (RM)<input id="ap-ctamt" type="number" min="1" max="999" inputmode="numeric" value="10"></label></div>
+      <div class="row pk">${[4, 5, 6, 8, 10, 15, 20, 30].map(n => `<button class="btn" type="button" data-ctamt="${n}">RM${n}</button>`).join("")}</div>
+      <div class="row"><button class="btn gold" type="submit">Hantar custom test</button><span class="muted">Dihantar melalui webhook yang sama dengan Sociabuzz: masuk Mabar VIP / Komen Album, queue dan alert di live. Ditanda TEST ALERT.</span></div>
+    </form>
+    <div class="row"><button class="btn gold" type="button" id="ap-simorder" hidden>Simulasi order</button><button class="btn" type="button" id="ap-testalert">Test alert sahaja</button><button class="btn ghost" type="button" id="ap-cleartest" data-confirm="Tekan lagi: buang semua baris TEST">Buang baris TEST</button></div>
     <p class="muted"><b>Simulasi order</b> hantar order palsu (Test SYNO, ID 123456789 (1234), RM10 = 3 game) melalui webhook yang sama dengan Sociabuzz: masuk queue + alert di overlay. Padam VIP "Test SYNO" lepas test. <b>Test alert</b> cuma tunjuk alert di overlay.</p>
   </section>
 
@@ -677,6 +687,20 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
       }).catch(() => {});
     }
     setInterval(hookTick, 4000);
+    // custom test: same path as a Sociabuzz payment (webhook), marked as a test by its example.com email
+    const PKG_RM = { "1 GAME": 4, "PACKAGE 3 GAME": 10, "PACKAGE 6 GAME": 20, "PACKAGE 9 GAME": 30, "RANK IMMORTAL 1 GAME": 6, "RANK IMMORTAL 3 GAME": 15, "FAST TRACK (VVIP) RM8 1 GAME": 8, "KOMEN ALBUM": 5, "JOKI MINIGAME LAYLA 250K+ SCORE": 10 };
+    root.querySelectorAll("[data-ctamt]").forEach(b => b.addEventListener("click", () => { $("ap-ctamt").value = b.dataset.ctamt; $("ap-ctpkg").value = ""; }));
+    $("ap-ctpkg").addEventListener("change", e => { if (PKG_RM[e.target.value]) $("ap-ctamt").value = PKG_RM[e.target.value]; });
+    $("ap-ctest").addEventListener("submit", e => {
+      e.preventDefault();
+      const p = hookPath(); if (!p) { toast("Perlu server & PIN dulu"); return; }
+      const amt = Math.max(1, parseFloat($("ap-ctamt").value) || 0), name = $("ap-ctname").value.trim() || "Test SYNO", pkg = $("ap-ctpkg").value;
+      const body = { id: "CT-" + Date.now(), amount: amt, currency: "MYR", supporter: name, email_supporter: "test@example.com", message: "ID " + $("ap-ctid").value.trim(), created_at: new Date().toISOString() };
+      if (pkg) body.package = pkg;
+      fetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+        .then(r => { toast(r.ok ? `Custom test RM${amt}${pkg ? " · " + pkg : ""} dihantar, tunggu 3 saat…` : "Server tolak (" + r.status + ")", 3500); setTimeout(hookTick, 600); })
+        .catch(() => toast("Server tak jawab"));
+    });
     $("ap-simorder").addEventListener("click", () => {
       const p = hookPath(); if (!p) { toast("Perlu server & PIN dulu"); return; }
       const body = { id: "SIM-" + Date.now(), amount: 10, currency: "MYR", supporter: "Test SYNO", email_supporter: "test@syno.local", message: "ID 123456789 (1234) 3 game", created_at: new Date().toISOString() };

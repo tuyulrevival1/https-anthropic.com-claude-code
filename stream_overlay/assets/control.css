@@ -244,3 +244,10 @@
 /* ---- tabs while arranging ---- */
 .app.editing .app-tabs button { cursor: grab; touch-action: none; outline: 1px dashed rgba(255, 207, 74, .45); outline-offset: -3px; }
 .app.editing .app-tabs button.dragging { opacity: .55; outline: 2px solid var(--c-gold); cursor: grabbing; }
+
+/* ---- custom test form in the Order card ---- */
+.app .ctest { padding: 10px 12px; background: #10070a; border: 1px dashed rgba(255, 207, 74, .4); }
+.app .ctest-h { font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--c-gold); }
+.app .ctest .pk { display: flex; flex-wrap: wrap; gap: 6px; }
+.app .ctest .pk .btn { flex: 1 1 64px; width: auto; padding: 8px 4px; }
+.app .ctest .gsel { width: 100%; padding: 9px 6px; }
