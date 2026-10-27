@@ -3,7 +3,7 @@
 Overlay live MLBB tema merah, dengan app kawalan untuk timer, Win/Lose, queue Mabar VIP dan baki VIP.
 Semua dalam HTML: tak perlu edit video, tak perlu install Python.
 
-**Cara pasang langkah demi langkah: [PASANG_OBS.md](PASANG_OBS.md)**
+**Mula di sini: [MULA_DI_SINI.md](MULA_DI_SINI.md)** · Cara pasang penuh: [PASANG_OBS.md](PASANG_OBS.md)
 
 ## Fail utama
 

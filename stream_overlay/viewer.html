@@ -229,10 +229,12 @@
     live.querySelector("b").textContent = L.running ? fmt(ms) : "";
   }
   let lastTxt = "";
+  // no server (opened as a file / preview): read the copy saved in this browser
+  function loadLocal() { try { const t = localStorage.getItem("chouOverlay.v1"); if (t && t !== lastTxt) { S = JSON.parse(t); lastTxt = t; render(); } } catch (e) {} }
   function load() {
     if (/^https?:$/.test(location.protocol)) {
-      fetch("api/state", { cache: "no-store" }).then(r => r.ok ? r.text() : "").then(t => { if (t && t.trim() && t !== lastTxt) { try { S = JSON.parse(decodeURIComponent(t)); lastTxt = t; render(); } catch (e) {} } }).catch(() => {});
-    } else { try { S = JSON.parse(localStorage.getItem("chouOverlay.v1") || "null"); render(); } catch (e) {} }
+      fetch("api/state", { cache: "no-store" }).then(r => r.ok ? r.text() : Promise.reject(r.status)).then(t => { if (t && t.trim() && t !== lastTxt) { try { S = JSON.parse(decodeURIComponent(t)); lastTxt = t; render(); } catch (e) {} } }).catch(loadLocal);
+    } else loadLocal();
   }
   const setMe = () => { me = $("v-name").value; ls.set("syno.viewer.me", me); render(); };
   $("v-form").addEventListener("submit", e => { e.preventDefault(); setMe(); });
