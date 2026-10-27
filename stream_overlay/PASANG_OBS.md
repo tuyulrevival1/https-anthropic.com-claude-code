@@ -179,6 +179,16 @@ Bila orang bayar:
 - Order masa PC off tak dihantar semula oleh Sociabuzz: semak dashboard Sociabuzz dan tambah manual.
 - Semua order mentah disimpan dalam `data\orders_log.txt`.
 
+### Pindah order ke tempat lain
+
+Order masuk sendiri ikut jumlah: **RM4 / 10 / 20 / 30** = 1 / 3 / 6 / 9 game (baki + queue), **RM5** = Komen Album, **RM40** = Mainkan Akaun. Donate biasa (contoh RM3) atau salah tempat:
+
+1. App › **Order** › tekan **Pilih ke mana** / **Pindah ke** pada order tu.
+2. Tukar **Game** kalau perlu.
+3. Pilih: **+ Baki mabar** (baki sahaja), **+ Queue live** (baki + masuk queue), **★ VVIP**, **Komen Album**, **Mainkan Akaun** atau **Abaikan**.
+
+Pindah = tempat lama ditarik balik dulu (contoh game ditolak semula dari baki), jadi tak dikira dua kali.
+
 ## 9. YouTube live viewers
 
 1. console.cloud.google.com › projek baru › **Enable "YouTube Data API v3"** › Credentials › **Create API key**.

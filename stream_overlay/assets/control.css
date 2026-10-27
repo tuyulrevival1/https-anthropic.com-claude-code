@@ -287,3 +287,13 @@
 .app .list.sglist { max-height: min(60vh, 600px); }
 .app .sgmin { flex-direction: row; align-items: center; gap: 8px; text-transform: none; letter-spacing: .04em; font-size: 13px; }
 .app .sgmin input { width: 70px; }
+
+/* order: Pindah ke (baki mabar / queue / VVIP / album / akaun) */
+.app .list li:has(details.omv) { flex-wrap: wrap; }
+.app details.omv { order: 5; flex-basis: 100%; }
+.app details.omv summary { cursor: pointer; display: inline-block; font: 700 12px/1 "OV Raj", Rajdhani, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--c-gold); padding: 6px 2px; }
+.app details.omv.need summary { color: #0b0507; background: var(--c-gold); padding: 6px 10px; }
+.app details.omv .omv-b { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-end; padding: 6px 0 4px; }
+.app details.omv .omv-n { width: 74px; }
+.app details.omv .omv-n input { width: 100%; }
+.app .list li details.raw { order: 6; }

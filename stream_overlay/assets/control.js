@@ -149,7 +149,7 @@ ${embedded ? "" : `<header class="app-top">
   <section class="card orders">
     <h3>Order masuk <span id="ap-oc"></span></h3>
     <ol class="list" id="ap-orders"></ol>
-    <p class="muted">Order Sociabuzz masuk sendiri ke sini dan ke queue. Pembeli perlu tulis ID ML dalam mesej, contoh <b>ID 123456789 (1234) 3 game</b>.</p>
+    <p class="muted">Order Sociabuzz masuk sendiri ikut jumlah: RM4 / 10 / 20 / 30 = 1 / 3 / 6 / 9 game (baki + queue), RM5 = Komen Album, RM40 = Mainkan Akaun. Salah tempat atau donate biasa? Tekan <b>Pindah ke</b> pada order tu. Pembeli tulis ID ML dalam mesej, contoh <b>ID 123456789 (1234)</b>.</p>
     <div class="hookst" id="ap-hookst"><b>Status webhook</b><span id="ap-hooklast">Masuk dengan PIN / buka START_OVERLAY.bat</span></div>
     <ol class="list hooklog" id="ap-hooklog"></ol>
     <form id="ap-ctest" class="addform ctest" autocomplete="off">
@@ -435,6 +435,13 @@ ${embedded ? "" : `<header class="app-top">
       if (t.classList.contains("idin") || t.classList.contains("akin") || t.classList.contains("mvcin") || t.classList.contains("mvnote")) { e.preventDefault(); t.blur(); }
     });
 
+    // order "Pindah ke": remember which row is open and its game count across re-renders
+    let ordOpen = null; const ordN = {};
+    root.addEventListener("toggle", e => { const d = e.target; if (d.classList && d.classList.contains("omv")) { if (d.open) ordOpen = +d.dataset.rx; else if (ordOpen === +d.dataset.rx) ordOpen = null; } }, true);
+    root.addEventListener("click", e => { const sm = e.target.closest("details.omv > summary"); if (sm) { const d = sm.parentElement; ordOpen = d.open ? null : +d.dataset.rx; } }, true);
+    root.addEventListener("input", e => { if (e.target.classList.contains("og")) ordN[e.target.dataset.rx] = e.target.value; });
+    const MVL = { mabar: "Baki mabar", queue: "Queue live", vvip: "VVIP fast track", album: "Komen Album", akaun: "Mainkan Akaun", none: "Abaikan" };
+
     root.addEventListener("click", e => {
       const b = e.target.closest("[data-a]"); if (!b) return;
       const a = b.dataset.a, id = b.dataset.id, k = b.dataset.k;
@@ -466,6 +473,13 @@ ${embedded ? "" : `<header class="app-top">
       else if (a === "sgdone") Q.songDone(id);
       else if (a === "sgdel") Q.songDel(id);
       else if (a === "role") Q.setRole(k, b.dataset.r);
+      else if (a === "ordmv") {
+        const rx = +b.dataset.rx, inp = root.querySelector(`.og[data-rx="${b.dataset.rx}"]`);
+        const n = inp ? inp.value : 1;
+        ordOpen = null; delete ordN[b.dataset.rx];               // before the move: the store re-renders the list right away
+        const r = Q.orderMove(rx, b.dataset.t, n);
+        if (r) { toast(`${r.name} → ${MVL[r.to]}${r.games ? ` · +${r.games} game` : ""}`, 3000); }
+      }
       else if (a === "orddel") {
         if (!b.dataset.armed) { b.dataset.armed = "1"; b.textContent = "Pasti?"; setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = "✕"; } }, 2500); return; }
         const rx = +b.dataset.rx;
@@ -530,7 +544,12 @@ ${embedded ? "" : `<header class="app-top">
       $("ap-oc").textContent = ords.length ? `${ords.length}` : "";
       const SVL = { album: "KOMEN ALBUM", akaun: "MAIN AKAUN", joki: "JOKI MINIGAME" };
       const srcTag = o => o.trial ? `<span class="tag test">TEST ALERT${o.svc ? " · " + (SVL[o.svc] || o.svc) : ""}</span>` : o.svc && o.src !== "test" ? `<span class="tag sb">${SVL[o.svc] || o.svc}</span>` : o.src === "sociabuzz" ? `<span class="tag sb">SOCIABUZZ</span>` : o.src === "test" ? `<span class="tag test">TEST</span>` : o.src === "sim" ? `<span class="tag test">ALERT</span>` : `<span class="tag man">MANUAL</span>`;
-      $("ap-orders").innerHTML = ords.length ? ords.map(o => `<li class="${o.warn ? "warn" : ""}">${srcTag(o)}<span class="who"><span class="nm">${esc(o.name)}</span><span class="sub">${o.mlid ? `ID ${esc(o.mlid)} · ` : "tiada ID · "}${fmtDate(o.at)}${o.amount ? ` · ${esc(o.cur || "")} ${o.amount}` : ""}${o.warn ? ` · ${esc(o.warn)}` : ""}</span></span><span class="bal">${o.games ? `+${o.games} game${o.vip ? " VVIP" : ""}` : o.svc && o.src !== "test" ? "✓" : "—"}</span><button class="btn sq ghost" type="button" data-a="orddel" data-rx="${o.rx}" aria-label="Buang order ${esc(o.name)}">✕</button>${o.raw ? `<details class="raw"><summary>Data asal</summary><code>${esc(o.raw)}</code></details>` : ""}</li>`).join("")
+      // move an order: Baki mabar / Queue live / VVIP / Komen Album / Mainkan Akaun / Abaikan
+      const mvBtn = (o, t, txt) => `<button class="btn small${o.moved === t ? " red" : " ghost"}" type="button" data-a="ordmv" data-rx="${o.rx}" data-t="${t}">${txt}</button>`;
+      const ordBox = o => o.src === "test" ? "" : `<details class="omv${!o.games && !o.svc ? " need" : ""}" data-rx="${o.rx}"${ordOpen === o.rx ? " open" : ""}><summary>${!o.games && !o.svc ? "Pilih ke mana" : "Pindah ke"}</summary><div class="omv-b">
+<label class="fld omv-n">Game<input type="number" class="og" data-rx="${o.rx}" min="1" max="99" inputmode="numeric" value="${esc(ordN[o.rx] || Q.orderGames(o))}"></label>
+${mvBtn(o, "mabar", "+ Baki mabar")}${mvBtn(o, "queue", "+ Queue live")}${mvBtn(o, "vvip", "★ VVIP")}${mvBtn(o, "album", "Komen Album")}${mvBtn(o, "akaun", "Mainkan Akaun")}${mvBtn(o, "none", "Abaikan")}</div></details>`;
+      $("ap-orders").innerHTML = ords.length ? ords.map(o => `<li class="${o.warn ? "warn" : ""}">${srcTag(o)}<span class="who"><span class="nm">${esc(o.name)}</span><span class="sub">${o.mlid ? `ID ${esc(o.mlid)} · ` : "tiada ID · "}${fmtDate(o.at)}${o.amount ? ` · ${esc(o.cur || "")} ${o.amount}` : ""}${o.warn ? ` · ${esc(o.warn)}` : ""}</span></span><span class="bal">${o.games ? `+${o.games} game${o.vip ? " VVIP" : ""}` : o.svc && o.src !== "test" ? "✓" : "—"}</span>${ordBox(o)}<button class="btn sq ghost" type="button" data-a="orddel" data-rx="${o.rx}" aria-label="Buang order ${esc(o.name)}">✕</button>${o.raw ? `<details class="raw"><summary>Data asal</summary><code>${esc(o.raw)}</code></details>` : ""}</li>`).join("")
         : `<li class="empty">Belum ada order.</li>`;
       // text areas: never overwrite while being edited
       if (document.activeElement !== $("ap-rules") && !$("ap-rules").dataset.dirty) $("ap-rules").value = s.rules || "";

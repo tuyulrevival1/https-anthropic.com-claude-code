@@ -193,7 +193,48 @@
       else if (join && tot(m) > 0 && !s.playing.some(p => p.key === k)) enqueue(s, { id: uid("p"), key: k, at, vip: (m.vbal || 0) > 0 });
       Q.fillSlots(s);
     },
-    _log(s, o) { (s.orders = s.orders || []).unshift(Object.assign({ rx: Date.now() }, o)); s.orders = s.orders.slice(0, 200); },
+    _log(s, o) { (s.orders = s.orders || []).unshift(Object.assign({ rx: Date.now() + Math.random() }, o)); s.orders = s.orders.slice(0, 200); },
+    // suggested games for an order row in the App
+    orderGames(o) { return o.games || packGames(rmOf(o)) || 1; },
+    // move an order somewhere else: first take back what it gave before (games / album row / akaun slot),
+    // then give it to the new place. to = mabar | queue | vvip | album | akaun | none
+    orderMove(rx, to, games) {
+      let res = null;
+      Store.set(s => {
+        const o = (s.orders || []).find(x => x.rx === rx); if (!o) return;
+        if (o.games > 0 && o.key && s.members[o.key]) {
+          const m = s.members[o.key]; let left = o.games;
+          const f1 = o.vip ? "vbal" : "bal", f2 = o.vip ? "bal" : "vbal";
+          const a = Math.min(m[f1] || 0, left); m[f1] = (m[f1] || 0) - a; left -= a;
+          m[f2] = Math.max(0, (m[f2] || 0) - left);
+          if (!tot(m)) leave(s, o.key);
+        }
+        if (o.svc === "album") {
+          const al = s.album || [], i = al.findIndex(x => o.albumId ? x.id === o.albumId : x.name === o.name && x.at === o.at);
+          if (i >= 0) al.splice(i, 1);
+        }
+        if (o.svc === "akaun") {
+          const r = (s.akaun || []).slice().reverse().find(x => String(x.name || "") === String(o.name || "").slice(0, 40));
+          if (r) r.name = "";
+        }
+        o.games = 0; o.svc = ""; o.vip = false; o.albumId = ""; o.warn = "";
+        const name = o.name || "Anonim", k = keyOf(name), n = Math.max(1, parseInt(games, 10) || 1);
+        if (to === "mabar" || to === "queue" || to === "vvip") {
+          const m = s.members[k] || (s.members[k] = { name, bal: 0, vbal: 0 });
+          if (o.mlid && !m.mlid) m.mlid = o.mlid;
+          m.last = Date.now();
+          if (to === "vvip") { m.vbal = (m.vbal || 0) + n; m.vvip = true; o.vip = true; } else m.bal = (m.bal || 0) + n;
+          o.games = n; o.key = k;
+          const e = s.queue.find(p => p.key === k);
+          if (to === "vvip" && e && !e.vip) { s.queue = s.queue.filter(p => p !== e); e.vip = true; enqueue(s, e); }
+          else if (to !== "mabar" && !e && !s.playing.some(p => p.key === k)) enqueue(s, { id: uid("p"), key: k, at: Date.now(), vip: to === "vvip" });
+          Q.fillSlots(s);
+        } else if (to === "album") { o.svc = "album"; o.albumId = Q._albumAdd(s, name, o.mlid, albumNote(o.note), o.at, o.src || "sociabuzz"); }
+        else if (to === "akaun") { o.svc = "akaun"; Q._akaunBook(s, name, o.at); }
+        o.moved = to; res = { name, to, games: o.games };
+      });
+      return res;
+    },
     setMl(k, v) { Store.set(s => { const m = s.members[k]; if (m) m.mlid = String(v || "").trim().slice(0, 32); }); },
     // role in the party: EXP / JUNGLE / MID / GOLD / ROAM (tap again to clear)
     setRole(k, r) { Store.set(s => { const m = s.members[k]; if (m) m.role = m.role === r ? "" : r; }); },
@@ -312,8 +353,10 @@
     /* ---------- komen album (RM5) ---------- */
     _albumAdd(s, name, mlid, note, at, src) {
       s.album = s.album || [];
-      s.album.unshift({ id: uid("a"), name: String(name || "").trim().slice(0, 24) || "Anonim", mlid: String(mlid || "").slice(0, 32), note: String(note || "").slice(0, 120), at: at || Date.now(), done: false, src: src || "manual" });
+      const id = uid("a");
+      s.album.unshift({ id, name: String(name || "").trim().slice(0, 24) || "Anonim", mlid: String(mlid || "").slice(0, 32), note: String(note || "").slice(0, 120), at: at || Date.now(), done: false, src: src || "manual" });
       s.album = s.album.slice(0, 300);
+      return id;
     },
     albumAdd(name, mlid, note) { Store.set(s => Q._albumAdd(s, name, mlid, note, Date.now(), "manual")); },
     albumToggle(id) { Store.set(s => { const a = (s.album || []).find(x => x.id === id); if (a) { a.done = !a.done; a.doneAt = a.done ? Date.now() : 0; } }); },
@@ -414,6 +457,10 @@
   const SB = Object.assign({ autoQueue: true, toMYR: { MYR: 1, RM: 1 }, packs: [{ rm: 10, games: 3 }, { rm: 4, games: 1 }], immortalPerGame: 6 }, CFG.sociabuzz || {});
   const pick = (o, keys) => { for (const k of keys) if (o[k] != null && String(o[k]).trim() !== "") return o[k]; return null; };
   const num = v => { if (typeof v === "number") return v; const t = String(v || "").replace(/[^\d.,]/g, ""); if (!t) return 0; const n = /[.,]\d{1,2}$/.test(t) ? parseFloat(t.replace(/[.,](?=\d{3}\b)/g, "").replace(",", ".")) : parseFloat(t.replace(/[.,]/g, "")); return isNaN(n) ? 0 : n; };
+  const albumNote = msg => String(msg || "").replace(/\b(?:id\s*(?:ml)?\s*[:=]?\s*)?\d{6,12}\s*[(\[]?\s*\d{3,5}\s*[)\]]?/i, "").replace(/\s{2,}/g, " ").trim();
+  // games an amount buys with the normal packs (RM4 = 1, RM10 = 3, RM20 = 6, RM30 = 9)
+  const rmOf = o => (+o.amount || 0) * (SB.toMYR[String(o.cur || "MYR").toUpperCase()] != null ? SB.toMYR[String(o.cur || "MYR").toUpperCase()] : 1);
+  const packGames = rm => { let rest = Math.round(rm), g = 0; for (const p of SB.packs || []) { const n = Math.floor(rest / p.rm + 1e-9); g += n * p.games; rest -= n * p.rm; } return g; };
   function parseOrder(entry) {
     let text = "";
     try { text = new TextDecoder().decode(Uint8Array.from(atob(entry.b || ""), c => c.charCodeAt(0))); } catch (e) {}
@@ -527,7 +574,7 @@
           if (!o.test && !o.trial && s.seenOrders.includes(o.dk)) { Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz", warn: "Order sama dengan sebelum ni, diabaikan" }, info)); continue; }
           if (!o.test && !o.trial) s.seenOrders.unshift(o.dk);
           if (o.test) { Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "test" }, info)); continue; }
-          if (o.svc === "album") { Q._albumAdd(s, o.name, o.mlid, o.msg.replace(/\b(?:id\s*(?:ml)?\s*[:=]?\s*)?\d{6,12}\s*[(\[]?\s*\d{3,5}\s*[)\]]?/i, "").replace(/\s{2,}/g, " ").trim(), o.at, "sociabuzz"); Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz" }, info)); continue; }
+          if (o.svc === "album") { const albumId = Q._albumAdd(s, o.name, o.mlid, albumNote(o.msg), o.at, "sociabuzz"); Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz", albumId }, info)); continue; }
           if (o.svc === "joki") { Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz" }, info)); continue; }
           if (o.svc === "akaun") { Q._akaunBook(s, o.name, o.at); Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz" }, info)); continue; }
           const k = keyOf(o.name);
