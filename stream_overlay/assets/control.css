@@ -15,7 +15,7 @@
 .app .chip.ok { border-color: rgba(109, 255, 176, .5); color: var(--c-win); }
 .app .chip.warn { border-color: rgba(255, 207, 74, .5); color: var(--c-gold); }
 .app .pinbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 14px; margin-bottom: 12px; background: rgba(255, 207, 74, .08); border: 1px solid rgba(255, 207, 74, .4); }
-.app .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 12px; align-items: start; }
+.app .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 12px; align-items: stretch; grid-auto-flow: row dense; }
 .app .card { background: linear-gradient(170deg, var(--c-card2), var(--c-card)); border: 1px solid var(--c-line); border-top: 3px solid var(--c-red); padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .app h3 { margin: 2px 0 0; font: 700 13px/1 inherit; letter-spacing: .26em; text-transform: uppercase; color: #ff8a9b; display: flex; gap: 8px; }
 .app h3 span { color: var(--c-fg); }
@@ -150,3 +150,76 @@
 .app .gsel:focus-visible { outline: 2px solid var(--c-gold); }
 .app .list.members, .app .list.mvplist, .app .list#ap-queue { border-bottom: 1px solid var(--c-line); }
 .app .list li.empty.imp { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; }
+
+/* ---- layout editing: drag to move, corner to resize ---- */
+.app .card { position: relative; }
+.app .card.fixed-h { overflow: auto; }
+.app .lay-bar { display: none; align-items: center; gap: 6px; margin: -6px -6px 0; padding: 6px; background: rgba(255, 207, 74, .1); border: 1px dashed rgba(255, 207, 74, .5); }
+.app.editing .lay-bar { display: flex; }
+.app .lay-grip { flex: 1; cursor: grab; touch-action: none; user-select: none; font: 700 12px/1 "OV Raj", Rajdhani, sans-serif; letter-spacing: .16em; text-transform: uppercase; color: var(--c-gold); padding: 9px 6px; }
+.app .lay-grip:active { cursor: grabbing; }
+.app .lay-w { display: inline-flex; gap: 3px; }
+.app .lay-w button, .app .lay-h { font: 700 12px/1 "OV Raj", Rajdhani, sans-serif; color: var(--c-fg); background: #0a0405; border: 1px solid var(--c-line); padding: 7px 9px; cursor: pointer; }
+.app .lay-w button.on { background: var(--c-gold); border-color: var(--c-gold); color: #160a00; }
+.app .lay-w button:focus-visible, .app .lay-h:focus-visible { outline: 2px solid var(--c-gold); }
+.app .lay-rs { display: none; position: absolute; right: 0; bottom: 0; width: 26px; height: 26px; cursor: nwse-resize; touch-action: none;
+  background: linear-gradient(135deg, transparent 50%, var(--c-gold) 50%, var(--c-gold) 58%, transparent 58%, transparent 70%, var(--c-gold) 70%, var(--c-gold) 78%, transparent 78%); }
+.app.editing .lay-rs { display: block; }
+.app.editing .card { outline: 1px dashed rgba(255, 207, 74, .35); outline-offset: -1px; }
+.app .card.dragging { opacity: .6; outline: 2px solid var(--c-gold); }
+.app .card.sizing { outline: 2px solid var(--c-gold); }
+.app.editing .card > :not(.lay-bar):not(.lay-rs) { pointer-events: none; }
+@media (max-width: 720px) { .app .lay-w, .app .lay-h { display: none; } }
+@media (prefers-reduced-motion: no-preference) { .app .card { transition: outline-color .15s; } }
+
+/* ---- Hutang Mabar rows: stacked on phones, one table row on wide cards ---- */
+.app .card.vip, .app .card.mvp { container-type: inline-size; }
+.app .list li.mrow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto auto; grid-template-areas: "name name name name st bal" "id id dt dt dt dt" "act act act act act act" "miss miss miss miss miss miss"; gap: 6px 8px; align-items: center; padding: 8px 8px 8px 10px; }
+.app .mc-name { grid-area: name; min-width: 0; } .app .mc-st { grid-area: st; } .app .mbal { grid-area: bal; display: flex; align-items: baseline; gap: 4px; justify-content: flex-end; }
+.app .mc-id { grid-area: id; min-width: 0; padding: 7px 8px; font-size: 14px; } .app .mc-dt { grid-area: dt; min-width: 0; padding: 7px 8px; font-size: 14px; }
+.app .mc-act { grid-area: act; } .app .mc-miss { grid-area: miss; }
+.app .list li.mhead { display: none; }
+@container (min-width: 860px) {
+  .app .list li.mrow, .app .list li.mhead { grid-template-columns: minmax(150px, 1.3fr) 52px 86px minmax(110px, 1fr) minmax(176px, 1.1fr) minmax(300px, 1.9fr); grid-template-areas: "name st bal id dt act" "miss miss miss miss miss miss"; }
+  .app .list li.mhead { display: grid; gap: 6px 8px; min-height: 0; padding: 4px 8px 6px 10px; background: transparent; position: sticky; top: 0; z-index: 1; background: var(--c-card); }
+  .app .list li.mhead span { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--c-mut); }
+  .app .list li.mhead span:nth-child(1) { grid-area: name; } .app .list li.mhead span:nth-child(2) { grid-area: st; } .app .list li.mhead span:nth-child(3) { grid-area: bal; text-align: right; }
+  .app .list li.mhead span:nth-child(4) { grid-area: id; } .app .list li.mhead span:nth-child(5) { grid-area: dt; } .app .list li.mhead span:nth-child(6) { grid-area: act; }
+  .app .list.members, .app .list.mvplist { max-height: min(76vh, 900px); }
+  .app .list li.mvrow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, auto); align-items: center; gap: 10px; }
+  .app .mvrow .mvctl { justify-content: flex-end; }
+}
+
+/* ---- tabs ---- */
+.app .app-tabs { flex-basis: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 4px; }
+.app .app-tabs:empty { display: none; }
+.app .app-tabs button { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; padding: 11px 6px; cursor: pointer;
+  font: 700 13px/1 "OV Raj", Rajdhani, sans-serif; letter-spacing: .1em; text-transform: uppercase; color: var(--c-mut); background: #1a0b10; border: 1px solid var(--c-line); }
+.app .app-tabs button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app .app-tabs button i { font-style: normal; font: 600 15px/1 "OV Teko", Teko, monospace; letter-spacing: .02em; color: var(--c-gold); padding-top: 2px; }
+.app .app-tabs button i:empty { display: none; }
+.app .app-tabs button[aria-selected="true"] { color: #fff; background: var(--c-red); border-color: var(--c-red); }
+.app .app-tabs button[aria-selected="true"] i { color: #fff; }
+.app .app-tabs button:focus-visible { outline: 2px solid var(--c-gold); outline-offset: 1px; }
+.app .grid.solo > .card { grid-column: 1 / -1 !important; height: auto !important; overflow: visible; }
+.app .grid.solo { max-width: 1400px; }
+@media (max-width: 520px) { .app .app-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); } .app .app-tabs button { padding: 10px 2px; font-size: 11px; letter-spacing: .04em; flex-direction: column; gap: 3px; } }
+
+/* ---- queue card: playing | queue side by side when wide ---- */
+.app .card.queue { container-type: inline-size; }
+.app .qcols { display: flex; flex-direction: column; gap: 10px; }
+.app .qcol { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+@container (min-width: 720px) {
+  .app .qcols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  .app .card.queue > .muted { max-width: 70ch; }
+  .app .card.queue > #ap-clearq { align-self: flex-start; }
+}
+/* ---- Hutang Mabar add form on one row when wide ---- */
+@container (min-width: 860px) {
+  .app .card.vip .addform { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) 110px minmax(0, 1fr); gap: 8px 10px; align-items: end; }
+  .app .card.vip .addform .two { display: contents; }
+  .app .card.vip .addform .pk { grid-column: 1 / -1; grid-template-columns: auto repeat(5, minmax(0, 1fr)); align-items: center; }
+  .app .card.vip .addform .pk .muted { grid-column: auto; }
+  .app .card.vip .addform > .row { grid-column: 1 / -1; }
+  .app .card.vip .search { max-width: 420px; }
+}

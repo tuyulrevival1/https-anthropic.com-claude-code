@@ -19,7 +19,9 @@
     root.innerHTML = `
 ${embedded ? "" : `<header class="app-top">
   <div class="brand"><b>SYNO</b> CONTROL</div>
-  <div class="chips"><span class="chip" id="ap-conn">MENYAMBUNG…</span><span class="chip" id="ap-auth" hidden></span></div>
+  <div class="chips"><span class="chip" id="ap-conn">MENYAMBUNG…</span><span class="chip" id="ap-auth" hidden></span>
+  <button class="btn small ghost" type="button" id="ap-lay">⠿ Susun layout</button><button class="btn small ghost" type="button" id="ap-layreset" hidden>Reset</button></div>
+  <nav class="app-tabs" id="ap-tabs" role="tablist" aria-label="Bahagian"></nav>
 </header>
 <div class="pinbar" id="ap-pinbar" hidden>
   <label for="ap-pin">PIN admin</label><input id="ap-pin" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="cth 1234">
@@ -68,10 +70,11 @@ ${embedded ? "" : `<header class="app-top">
   </section>
 
   <section class="card queue">
+    <div class="qcols"><div class="qcol">
     <h3>Sedang main <span id="ap-pc"></span></h3>
-    <ol class="list" id="ap-play"></ol>
+    <ol class="list" id="ap-play"></ol></div><div class="qcol">
     <h3>Queue <span id="ap-qc"></span></h3>
-    <ol class="list" id="ap-queue"></ol>
+    <ol class="list" id="ap-queue"></ol></div></div>
     <p class="muted">★ = VVIP fast track (terus ke depan queue). <b>Tak muncul</b> = keluar queue, baki kekal dalam hutang mabar; hilang kali ke-2 tolak 1 game, kali ke-3 tolak 2 game.</p>
     <button class="btn ghost" type="button" id="ap-clearq" data-confirm="Tekan lagi untuk kosongkan">Kosongkan queue</button>
   </section>
@@ -146,6 +149,120 @@ ${embedded ? "" : `<header class="app-top">
 
     const $ = id => root.querySelector("#" + id);
     const toast = msg => { const t = $("ap-toast"); t.textContent = msg; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => { t.hidden = true; }, 1800); };
+
+    /* ---------- layout: drag cards to reorder, drag the corner to resize (saved on this device) ---------- */
+    const LAY_KEY = "syno.layout.v1";
+    let LAY = {}; try { LAY = JSON.parse(lsGet(LAY_KEY, "{}")) || {}; } catch (e) { LAY = {}; }
+    const LAY_DEF = { queue: 3, vip: 3, mvp: 3 }; // default widths (columns) before anything is saved
+    LAY.span = LAY.span || Object.assign({}, LAY_DEF); LAY.h = LAY.h || {};
+    const layGrid = root.querySelector(".grid");
+    const layCards = () => [...layGrid.children].filter(c => c.classList.contains("card"));
+    const layCols = () => (getComputedStyle(layGrid).gridTemplateColumns.split(" ").filter(Boolean).length) || 1;
+    const laySave = () => lsSet(LAY_KEY, JSON.stringify(LAY));
+    layCards().forEach(c => {
+      c.dataset.card = [...c.classList].find(x => x !== "card") || "";
+      c.insertAdjacentHTML("afterbegin", `<div class="lay-bar"><span class="lay-grip" title="Tarik untuk pindah">⠿ Tarik</span><span class="lay-w" role="group" aria-label="Lebar">${[1, 2, 3].map(n => `<button type="button" data-lw="${n}" aria-label="Lebar ${n} lajur">${n}</button>`).join("")}</span><button type="button" class="lay-h" title="Tinggi ikut isi">Auto tinggi</button></div>`);
+      c.insertAdjacentHTML("beforeend", `<span class="lay-rs" title="Tarik untuk ubah saiz" aria-hidden="true"></span>`);
+    });
+    function layApply() {
+      const byId = Object.fromEntries(layCards().map(c => [c.dataset.card, c]));
+      const order = (LAY.order || []).filter(id => byId[id]);
+      layCards().forEach(c => { if (!order.includes(c.dataset.card)) order.push(c.dataset.card); });
+      order.forEach(id => layGrid.appendChild(byId[id]));
+      const n = layCols();
+      layCards().forEach(c => {
+        const id = c.dataset.card, sp = Math.min(n, LAY.span[id] || 1), h = LAY.h[id];
+        c.style.gridColumn = sp > 1 ? `span ${sp}` : "";
+        c.style.height = h && n > 1 ? h + "px" : "";
+        c.classList.toggle("fixed-h", !!(h && n > 1));
+        c.querySelectorAll("[data-lw]").forEach(b => b.classList.toggle("on", +b.dataset.lw === sp));
+        c.querySelectorAll("[data-lw]").forEach(b => { b.hidden = +b.dataset.lw > n; });
+      });
+    }
+    layApply();
+    window.addEventListener("resize", () => { clearTimeout(layApply._t); layApply._t = setTimeout(layApply, 120); });
+    const layBtn = root.querySelector("#ap-lay"), layReset = root.querySelector("#ap-layreset");
+    if (layBtn) layBtn.addEventListener("click", () => {
+      const on = !root.classList.contains("editing");
+      root.classList.toggle("editing", on); layBtn.textContent = on ? "✓ Siap" : "⠿ Susun layout"; layBtn.classList.toggle("gold", on); layReset.hidden = !on;
+      if (!on) toast("Layout disimpan");
+    });
+    if (layReset) layReset.addEventListener("click", () => {
+      LAY = { span: Object.assign({}, LAY_DEF), h: {} }; laySave();
+      const def = ["live", "wl", "end", "queue", "vip", "mvp", "akaun", "rules", "orders", "yt", "links"];
+      LAY.order = def; layApply(); delete LAY.order; laySave(); toast("Layout asal");
+    });
+    layGrid.addEventListener("click", e => {
+      const w = e.target.closest("[data-lw]"), hb = e.target.closest(".lay-h");
+      if (!w && !hb) return;
+      const c = e.target.closest(".card"), id = c.dataset.card;
+      if (w) LAY.span[id] = +w.dataset.lw; else delete LAY.h[id];
+      laySave(); layApply();
+    });
+    // pointer drag (mouse + touch): grip = move, corner = resize
+    let drag = null;
+    layGrid.addEventListener("pointerdown", e => {
+      if (!root.classList.contains("editing")) return;
+      const grip = e.target.closest(".lay-grip"), rs = e.target.closest(".lay-rs"); if (!grip && !rs) return;
+      const c = e.target.closest(".card"), r = c.getBoundingClientRect(), n = layCols(), gap = parseFloat(getComputedStyle(layGrid).columnGap) || 12;
+      drag = { c, mode: grip ? "move" : "size", x: e.clientX, y: e.clientY, w: r.width, h: r.height, n, gap, colW: (layGrid.clientWidth - gap * (n - 1)) / n };
+      c.classList.add(grip ? "dragging" : "sizing"); e.target.setPointerCapture(e.pointerId); e.preventDefault();
+    });
+    layGrid.addEventListener("pointermove", e => {
+      if (!drag) return;
+      const d = drag;
+      if (d.mode === "move") {
+        const under = document.elementFromPoint(e.clientX, e.clientY), t = under && under.closest(".grid > .card");
+        if (!t || t === d.c) return;
+        const r = t.getBoundingClientRect(), before = d.n > 1 ? e.clientX < r.left + r.width / 2 : e.clientY < r.top + r.height / 2;
+        layGrid.insertBefore(d.c, before ? t : t.nextSibling);
+      } else {
+        const sp = Math.max(1, Math.min(d.n, Math.round((d.w + e.clientX - d.x + d.gap) / (d.colW + d.gap))));
+        const h = Math.max(140, Math.round(d.h + e.clientY - d.y));
+        d.c.style.gridColumn = sp > 1 ? `span ${sp}` : ""; d.sp = sp;
+        if (d.n > 1) { d.c.style.height = h + "px"; d.c.classList.add("fixed-h"); d.hh = h; }
+      }
+    });
+    const layEnd = () => {
+      if (!drag) return;
+      const d = drag; drag = null; d.c.classList.remove("dragging", "sizing");
+      if (d.mode === "move") LAY.order = layCards().map(c => c.dataset.card);
+      else { const id = d.c.dataset.card; if (d.sp) LAY.span[id] = d.sp; if (d.hh) LAY.h[id] = d.hh; }
+      laySave(); layApply();
+    };
+    layGrid.addEventListener("pointerup", layEnd); layGrid.addEventListener("pointercancel", layEnd);
+
+    /* ---------- tabs: pick which part of the app to see (remembered, or #mvp in the link) ---------- */
+    const TABS = [
+      { id: "live", label: "Live", cards: ["live", "wl", "end", "queue"] },
+      { id: "hutang", label: "Hutang Mabar", cards: ["vip"] },
+      { id: "mvp", label: "MVP", cards: ["mvp"] },
+      { id: "akaun", label: "Slot Akaun", cards: ["akaun"] },
+      { id: "rules", label: "Peraturan", cards: ["rules"] },
+      { id: "order", label: "Order", cards: ["orders"] },
+      { id: "tetapan", label: "Tetapan", cards: ["yt", "links"] },
+      { id: "semua", label: "Semua" }
+    ];
+    const tabNav = root.querySelector("#ap-tabs");
+    function showTab(id) {
+      if (!tabNav) return;
+      const t = TABS.find(x => x.id === id) || TABS[0];
+      layCards().forEach(c => { c.hidden = !!t.cards && !t.cards.includes(c.dataset.card); });
+      layGrid.classList.toggle("solo", !!t.cards && t.cards.length === 1);
+      tabNav.querySelectorAll("[data-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === t.id ? "true" : "false"));
+      lsSet("syno.app.tab", t.id);
+    }
+    if (tabNav) {
+      tabNav.innerHTML = TABS.map(t => `<button type="button" role="tab" data-tab="${t.id}"><span>${t.label}</span><i data-tabc="${t.id}"></i></button>`).join("");
+      tabNav.addEventListener("click", e => {
+        const b = e.target.closest("[data-tab]"); if (!b) return;
+        showTab(b.dataset.tab);
+        try { history.replaceState(null, "", location.pathname + location.search + "#" + b.dataset.tab); } catch (err) {}
+        window.scrollTo({ top: 0 });
+      });
+      window.addEventListener("hashchange", () => showTab(location.hash.slice(1)));
+      showTab(location.hash.slice(1) || lsGet("syno.app.tab", "live"));
+    }
     // two-step buttons (no confirm() dialogs)
     const twoStep = (btn, fn) => btn.addEventListener("click", () => {
       if (btn.dataset.armed) { delete btn.dataset.armed; btn.textContent = btn.dataset.label; fn(); return; }
@@ -257,6 +374,10 @@ ${embedded ? "" : `<header class="app-top">
       const balTxt = m => (m.vbal ? `${m.bal || 0} + ${m.vbal} VVIP` : `${m.bal || 0}`) + " game";
       const who = (p, extra = "") => `<span class="who"><span class="nm">${p.vip ? `<i class="vv">★</i> ` : ""}${esc(mem(p).name)}</span><span class="sub">${mem(p).mlid ? `ID ${esc(mem(p).mlid)}` : "tiada ID"}${mem(p).last ? ` · order ${fmtDate(mem(p).last)}` : ""}${extra}</span></span>`;
       $("ap-wins").textContent = s.wins; $("ap-losses").textContent = s.losses;
+      const tabc = (id, v) => { const e = root.querySelector(`[data-tabc="${id}"]`); if (e) e.textContent = v; };
+      tabc("live", `${s.playing.length}/${max}${s.queue.length ? ` · Q${s.queue.length}` : ""}`);
+      tabc("hutang", Object.values(s.members).filter(m => T(m) > 0).length || "");
+      tabc("mvp", (s.mvp || []).length || "");
       $("ap-streak").textContent = s.streak >= 2 ? `Win streak ${s.streak}` : s.streak <= -2 ? `Lose ${-s.streak} berturut` : "";
       $("ap-showq").checked = !!s.showQueue; $("ap-showb").checked = !!s.showBanner; $("ap-shows").checked = !s.song || s.song.on !== false;
       if (document.activeElement !== $("ap-song")) $("ap-song").value = (s.song && s.song.manual) || "";
@@ -286,17 +407,17 @@ ${embedded ? "" : `<header class="app-top">
         const q = ($("ap-search").value || "").trim().toLowerCase();
         const inLine = k => s.playing.some(p => p.key === k) || s.queue.some(p => p.key === k);
         const rows = list.filter(([k, m]) => !q || k.includes(q) || String(m.mlid || "").toLowerCase().includes(q)).sort((a, b) => (T(b[1]) > 0) - (T(a[1]) > 0) || (b[1].last || 0) - (a[1].last || 0) || a[1].name.localeCompare(b[1].name));
-        box.innerHTML = rows.length ? rows.map(([k, m]) => `<li class="mrow${T(m) ? "" : " zero"}">
-<div class="mtop"><span class="who"><span class="nm">${esc(m.name)} <button class="vvbtn${m.vvip ? " on" : ""}" type="button" data-a="vvip" data-k="${esc(k)}" title="${m.vvip ? "VVIP (tekan untuk buang)" : "Tanda sebagai VVIP"}" aria-label="VVIP ${esc(m.name)}">${m.vvip ? "★ VVIP" : "☆"}</button></span><span class="sub">${m.last ? `order ${fmtDate(m.last)}` : "tiada tarikh"}${m.miss ? ` · hilang ${m.miss}x` : ""}</span></span>
-${inLine(k) ? `<span class="tag">${s.playing.some(p => p.key === k) ? "MAIN" : "QUEUE"}</span>` : `<button class="btn sq" data-a="join" data-k="${esc(k)}" aria-label="Masuk queue" title="Masuk queue" ${T(m) > 0 ? "" : "disabled"}>Q</button>`}
-<span class="bal big">${T(m)}</span><small class="muted">${m.vbal ? `${m.bal || 0}+${m.vbal}V` : "game"}</small></div>
-<div class="mctl"><input class="idin" data-k="${esc(k)}" value="${esc(m.mlid || "")}" placeholder="ID ML" aria-label="ID ML ${esc(m.name)}">
-<input class="dtin" type="datetime-local" data-k="${esc(k)}" value="${toInput(m.last)}" aria-label="Waktu order ${esc(m.name)}"></div>
-<div class="mgrid"><input class="gin" type="number" inputmode="numeric" placeholder="0" aria-label="Bilangan game untuk ${esc(m.name)}">
+        box.innerHTML = rows.length ? `<li class="mhead" aria-hidden="true"><span>Nickname</span><span></span><span>Baki</span><span>ID ML</span><span>Waktu order</span><span>Tambah / set baki</span></li>` + rows.map(([k, m]) => `<li class="mrow${T(m) ? "" : " zero"}">
+<span class="who mc-name"><span class="nm">${esc(m.name)} <button class="vvbtn${m.vvip ? " on" : ""}" type="button" data-a="vvip" data-k="${esc(k)}" title="${m.vvip ? "VVIP (tekan untuk buang)" : "Tanda sebagai VVIP"}" aria-label="VVIP ${esc(m.name)}">${m.vvip ? "★ VVIP" : "☆"}</button></span><span class="sub">${m.last ? `order ${fmtDate(m.last)}` : "tiada tarikh"}${m.miss ? ` · hilang ${m.miss}x` : ""}</span></span>
+<span class="mc-st">${inLine(k) ? `<span class="tag">${s.playing.some(p => p.key === k) ? "MAIN" : "QUEUE"}</span>` : `<button class="btn sq" data-a="join" data-k="${esc(k)}" aria-label="Masuk queue" title="Masuk queue" ${T(m) > 0 ? "" : "disabled"}>Q</button>`}</span>
+<span class="mbal"><span class="bal big">${T(m)}</span><small class="muted">${m.vbal ? `${m.bal || 0}+${m.vbal}V` : "game"}</small></span>
+<input class="idin mc-id" data-k="${esc(k)}" value="${esc(m.mlid || "")}" placeholder="ID ML" aria-label="ID ML ${esc(m.name)}">
+<input class="dtin mc-dt" type="datetime-local" data-k="${esc(k)}" value="${toInput(m.last)}" aria-label="Waktu order ${esc(m.name)}">
+<div class="mgrid mc-act"><input class="gin" type="number" inputmode="numeric" placeholder="0" aria-label="Bilangan game untuk ${esc(m.name)}">
 <select class="gsel" aria-label="Jenis baki"><option value="">Biasa</option><option value="v">VVIP</option></select>
 <button class="btn" data-a="addn" data-k="${esc(k)}">Tambah</button><button class="btn ghost" data-a="setn" data-k="${esc(k)}">Set</button>
 <button class="btn sq ghost" data-a="del" data-k="${esc(k)}" aria-label="Padam ${esc(m.name)}">✕</button></div>
-${m.miss ? `<div class="mctl"><span class="muted">Hilang ${m.miss} kali</span><button class="btn small ghost" data-a="miss0" data-k="${esc(k)}">Reset hilang</button></div>` : ""}</li>`).join("")
+${m.miss ? `<div class="mctl mc-miss"><span class="muted">Hilang ${m.miss} kali</span><button class="btn small ghost" data-a="miss0" data-k="${esc(k)}">Reset hilang</button></div>` : ""}</li>`).join("")
           : (q ? `<li class="empty">Tiada nama sepadan.</li>` : `<li class="empty imp"><span>Belum ada rekod.${s.docImported ? "" : " Data lama dari dokumen belum masuk."}</span>${s.docImported ? "" : `<button class="btn gold" type="button" data-a="import">Import data doc lama</button><small class="muted">Pilih fail <b>seed_doc.js</b> (dari phone atau PC).</small>`}</li>`);
       }
       // MVP
