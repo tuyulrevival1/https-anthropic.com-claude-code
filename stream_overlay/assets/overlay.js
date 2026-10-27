@@ -686,7 +686,7 @@
 
   const mem = (s, p) => s.members[p.key] || { name: p.key, bal: 0 };
   const ROLES = ["EXP", "JUNGLE", "MID", "GOLD", "ROAM"];
-  const roleTag = m => m && m.role && ROLES.includes(m.role) ? `<span class="rl rl-${m.role.toLowerCase()}">${m.role === "JUNGLE" ? "JGL" : m.role}</span>` : "";
+  const roleTag = m => m && m.role && ROLES.includes(m.role) ? (window.SYNO_ROLES ? SYNO_ROLES.badge(m.role) : `<span class="rl rl-${m.role.toLowerCase()} rl-txt">${m.role === "JUNGLE" ? "JGL" : m.role}</span>`) : "";
   function queueHTML(s, variant, prevIds) {
     const wide = variant === "wide", compact = variant === "compact";
     const max = CFG.mabar.maxPlaying, full = s.playing.length >= max;
@@ -977,5 +977,5 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
 
   requestAnimationFrame(loop);
   const util = { el, esc, clamp, seg, eOut, eBack, frac, rnd, TAU, fill, priceHL, uid, tickers, now };
-  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util, keyOf, liveElapsed, fmtTime, parseOrder, NP, songText, ACTIONS, ROLES: ["EXP", "JUNGLE", "MID", "GOLD", "ROAM"] };
+  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util, keyOf, liveElapsed, fmtTime, parseOrder, NP, songText, ACTIONS, ROLES: ["EXP", "JUNGLE", "MID", "GOLD", "ROAM"], roleTag };
 })();

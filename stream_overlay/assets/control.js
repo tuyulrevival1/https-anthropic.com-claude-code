@@ -501,8 +501,8 @@ ${embedded ? "" : `<header class="app-top">
       const max = CFG.mabar.maxPlaying, rot = CFG.mabar.rotateEvery || 0, T = O.Q.tot;
       const mem = p => s.members[p.key] || { name: p.key, bal: 0, vbal: 0 };
       const mvpOf = p => { const x = (s.mvp || []).find(v => O.keyOf(v.name) === p.key || O.keyOf(v.name) === O.keyOf(mem(p).name)); return x ? ` · MVP ${x.cur || 0}` : ""; };
-      const roleRow = p => `<div class="roles" role="group" aria-label="Role ${esc(mem(p).name)}">${O.ROLES.map(r => `<button type="button" class="rlb rl-${r.toLowerCase()}${mem(p).role === r ? " on" : ""}" data-a="role" data-k="${esc(p.key)}" data-r="${r}" aria-pressed="${mem(p).role === r}">${r}</button>`).join("")}</div>`;
-      const roleBadge = m => m && m.role ? `<span class="rl rl-${m.role.toLowerCase()}">${m.role === "JUNGLE" ? "JGL" : m.role}</span>` : "";
+      const roleRow = p => `<div class="roles" role="group" aria-label="Role ${esc(mem(p).name)}">${O.ROLES.map(r => `<button type="button" class="rlb rl-${r.toLowerCase()}${mem(p).role === r ? " on" : ""}" data-a="role" data-k="${esc(p.key)}" data-r="${r}" aria-pressed="${mem(p).role === r}" title="${window.SYNO_ROLES ? SYNO_ROLES.LABEL[r] : r}" aria-label="${window.SYNO_ROLES ? SYNO_ROLES.LABEL[r] : r}">${window.SYNO_ROLES ? SYNO_ROLES.svg(r) : r}</button>`).join("")}</div>`;
+      const roleBadge = m => O.roleTag(m);
       const balTxt = m => (m.vbal ? `${m.bal || 0} + ${m.vbal} VVIP` : `${m.bal || 0}`) + " game";
       const who = (p, extra = "") => `<span class="who"><span class="nm">${p.vip ? `<i class="vv">★</i> ` : ""}${roleBadge(mem(p))}${esc(mem(p).name)}</span><span class="sub">${mem(p).mlid ? `ID ${esc(mem(p).mlid)}` : "tiada ID"}${mem(p).last ? ` · order ${fmtDate(mem(p).last)}` : ""}${extra}</span></span>`;
       $("ap-wins").textContent = s.wins; $("ap-losses").textContent = s.losses;

@@ -326,8 +326,10 @@
 .ov-card .bal .vv, .vv { color: #ffd84f; font-style: normal; margin-right: 2px; }
 
 /* role badges (EXP / JUNGLE / MID / GOLD / ROAM) */
-.rl { flex: none; display: inline-block; font: 700 11px/1 var(--f-hud); letter-spacing: .06em; padding: 3px 5px 2px; margin-right: 6px; color: #0b0507; border-radius: 2px; transform: skewX(-8deg); }
-.rl-exp { background: #ff7a45; } .rl-jungle { background: #3ddc84; } .rl-mid { background: #b388ff; } .rl-gold { background: #ffcf4a; } .rl-roam { background: #4fc3f7; }
+.rl { flex: none; display: inline-grid; place-items: center; width: 1.3em; height: 1.3em; margin-right: 2px; filter: drop-shadow(0 0 4px rgba(0,0,0,.6)); }
+.rl svg { width: 100%; height: 100%; }
+.rl.rl-txt { width: auto; height: auto; font: 700 11px/1 var(--f-hud); padding: 3px 5px 2px; }
+.rl-exp { color: #ff7a45; } .rl-jungle { color: #3ddc84; } .rl-mid { color: #b388ff; } .rl-gold { color: #ffcf4a; } .rl-roam { color: #4fc3f7; }
 
 /* song requests (IndoFinity) under the Mabar queue */
 .ov-songs { position: absolute; display: flex; flex-direction: column; gap: 6px; padding: 10px 14px 10px; background: linear-gradient(180deg, rgba(20, 6, 10, .82), rgba(10, 3, 6, .82));
