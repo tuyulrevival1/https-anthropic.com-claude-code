@@ -100,7 +100,9 @@ Data sama dengan portrait (queue, W/L, timer, lagu, OPEN/CLOSED). **KEMASKINI.ba
 
 **Tunjuk di overlay** (tab Live): on / off **Kamera**, **WIN / LOSE**, **Mabar VIP**, **Banner**, **Bar LIVE**, berasingan untuk **Portrait** dan **Landscape**. Kamera off = lubang kamera ditutup latar.
 
-**Efek menang / kalah** (tab Live): bila WIN naik, **VICTORY** emas dengan confetti dan sinar cahaya; bila LOSE naik, **DEFEAT** menghentak, overlay bergegar, kilat merah dan retakan. Suis **Efek menang / kalah** dan **Bunyi efek** (bunyi keluar melalui browser source: tanda "Control audio via OBS" kalau nak kawal volume). Butang **Uji MENANG / Uji KALAH** tunjuk efek tanpa ubah markah.
+**Efek menang / kalah** (tab Live): bila WIN naik, **VICTORY** emas dengan confetti dan sinar cahaya; bila LOSE naik, **DEFEAT** menghentak, overlay bergegar, kilat merah dan retakan. Suis **Efek menang / kalah** dan **Bunyi efek** (asal hidup; bunyi keluar melalui browser source: tanda "Control audio via OBS" kalau nak kawal volume). Butang **Uji MENANG / Uji KALAH / Uji MVP** tunjuk efek tanpa ubah markah.
+
+**Efek MVP**: bila MVP pemain naik (butang MVP pada pemain, atau + dalam Senarai MVP), skrin tunjuk mahkota, **MVP** emas, nama pemain (dengan logo role) dan **MVP KE-N**, syiling emas jatuh dan bunyi fanfare. Cukup 5 / 15: lencana **CLAIM SKIN!**. VVIP: **FREE 1 GAME**.
 
 **Tab** di atas App: Live · Hutang Mabar · MVP · Slot Akaun · Peraturan · Lagu · Order · Tetapan · Semua (link terus: `control.html#mvp`).
 **Susun layout**: tekan **⠿ Susun layout** › tarik **tab di atas** untuk tukar urutan tab, tarik **⠿ Tarik** untuk pindah kad, tarik bucu kanan bawah untuk ubah saiz, atau tekan 1 / 2 / 3 untuk lebar › **✓ Siap**. Disimpan dalam peranti tu (PC dan phone boleh lain). **Reset** = susunan asal.

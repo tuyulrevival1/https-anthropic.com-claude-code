@@ -54,6 +54,7 @@ ${embedded ? "" : `<header class="app-top">
       <label class="tog"><input id="ap-fxs" type="checkbox"><span>Bunyi efek</span></label>
       <button class="btn small gold" type="button" id="ap-fxwin">Uji MENANG</button>
       <button class="btn small red" type="button" id="ap-fxlose">Uji KALAH</button>
+      <button class="btn small" type="button" id="ap-fxmvp">Uji MVP</button>
     </div>
     <div class="ovparts">
       <b class="ctest-h">Tunjuk di overlay</b>
@@ -406,6 +407,7 @@ ${embedded ? "" : `<header class="app-top">
     $("ap-fxs").addEventListener("change", e => Q.patch({ fxSound: e.target.checked }));
     // test the effect on the overlay without changing W/L
     $("ap-fxwin").addEventListener("click", () => { Store.set(s => { s.fxTest = { k: "win", at: Date.now() }; }, { noHist: true }); toast("Efek MENANG dihantar ke overlay"); });
+    $("ap-fxmvp").addEventListener("click", () => { Store.set(s => { s.fxTest = { k: "mvp", at: Date.now(), name: "AQIL.MY", cur: 5 }; }, { noHist: true }); toast("Efek MVP dihantar ke overlay"); });
     $("ap-fxlose").addEventListener("click", () => { Store.set(s => { s.fxTest = { k: "lose", at: Date.now() }; }, { noHist: true }); toast("Efek KALAH dihantar ke overlay"); });
     root.querySelectorAll(".ovp").forEach(i => i.addEventListener("change", () => Q.hideSet(i.dataset.o, i.dataset.k, !i.checked)));
     $("ap-open").addEventListener("click", () => { Q.patch({ mabarClosed: false }); toast("Mabar VIP OPEN"); });
@@ -555,7 +557,7 @@ ${embedded ? "" : `<header class="app-top">
       // where the cameras sit in the landscape column right now (they move up when one is off)
       const lk = O.layoutOf && O.layoutOf("kiri"), sk = lk && O.stackLayout(lk, (s.hide || {}).l || {}, s.showBanner);
       if (sk && $("ap-ovpobs")) { const f = (n, r) => r ? `${n} ${r.x}, ${r.y} · ${r.w}×${r.h}` : ""; $("ap-ovpobs").textContent = ["OBS landscape: Game 384, 0 · 1536×1024", f("Facecam", sk.slots.face), f("Handcam", sk.slots.hand)].filter(Boolean).join(" · "); }
-      $("ap-showq").checked = !!s.showQueue; $("ap-fx").checked = s.fx !== false; $("ap-fxs").checked = !!s.fxSound; $("ap-open").setAttribute("aria-pressed", String(!s.mabarClosed)); $("ap-close").setAttribute("aria-pressed", String(!!s.mabarClosed)); $("ap-showb").checked = !!s.showBanner; $("ap-shows").checked = !s.song || s.song.on !== false;
+      $("ap-showq").checked = !!s.showQueue; $("ap-fx").checked = s.fx !== false; $("ap-fxs").checked = s.fxSound !== false; $("ap-open").setAttribute("aria-pressed", String(!s.mabarClosed)); $("ap-close").setAttribute("aria-pressed", String(!!s.mabarClosed)); $("ap-showb").checked = !!s.showBanner; $("ap-shows").checked = !s.song || s.song.on !== false;
       if (document.activeElement !== $("ap-song")) $("ap-song").value = (s.song && s.song.manual) || "";
       $("ap-pc").textContent = `${s.playing.length}/${max}`; $("ap-qc").textContent = s.queue.length;
       if (qDrag) { pending.queue = true; } else {

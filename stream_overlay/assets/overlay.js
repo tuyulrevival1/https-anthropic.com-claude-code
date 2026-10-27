@@ -1199,7 +1199,20 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
       // WIN / LOSE effects (assets/fx.js): when the count goes up, or the App's test buttons
       if (prev && window.SynoFX && s.fx !== false) {
         const t = s.fxTest, pt = prev.fxTest;
-        if (t && (!pt || t.at !== pt.at) && Date.now() - t.at < 8000) SynoFX[t.k === "lose" ? "lose" : "win"](stage, L, s);
+        // MVP +1: name, new count, VVIP free game (from the MVP button / MVP list "+")
+        let mvp = null;
+        for (const x of s.mvp || []) {
+          const px = (prev.mvp || []).find(v => v.id === x.id);
+          if ((x.cur || 0) > (px ? px.cur || 0 : 0)) {
+            const m = s.members[keyOf(x.name)], pm = prev.members && prev.members[keyOf(x.name)];
+            mvp = { name: (m && m.name) || x.name, cur: x.cur, role: m && m.role, free: !!(m && pm && (m.vbal || 0) > (pm.vbal || 0)) };
+          }
+        }
+        if (t && (!pt || t.at !== pt.at) && Date.now() - t.at < 8000) {
+          if (t.k === "mvp") SynoFX.mvp && SynoFX.mvp(stage, L, s, { name: t.name || "AQIL.MY", cur: t.cur || 5, role: "MID" });
+          else SynoFX[t.k === "lose" ? "lose" : "win"](stage, L, s);
+        }
+        else if (mvp && SynoFX.mvp) SynoFX.mvp(stage, L, s, mvp);
         else if (s.wins > prev.wins) SynoFX.win(stage, L, s);
         else if (s.losses > prev.losses) SynoFX.lose(stage, L, s);
       }
