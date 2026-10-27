@@ -85,6 +85,22 @@ ${embedded ? "" : `<header class="app-top">
     <p class="muted">Setiap tekan: tambah W/L, semua yang sedang main tolak 1 game (VVIP tolak baki VVIP dulu). Baki habis keluar. <b>Rotation:</b> lepas ${CFG.mabar.rotateEvery || 3} game, pemain keluar beri ruang kalau ada orang menunggu (queue tak ramai = boleh habiskan baki).</p>
   </section>
 
+  <section class="card killfx">
+    <h3>Auto efek kill <span id="ap-kst"></span></h3>
+    <p class="muted">Server di PC baca skrin game. Bila banner MLBB keluar (FIRST BLOOD, DOUBLE KILL, MANIAC, SAVAGE, SHUT DOWN…), efek penuh skrin keluar sendiri. MLBB mesti bahasa <b>English</b>. Kill biasa tiada tulisan, jadi tak dikesan.</p>
+    <div class="row toggles"><label class="tog"><input id="ap-kon" type="checkbox"><span>Auto detect kill</span></label>
+      <label class="fld kteam">Kill siapa<select id="ap-kteam"><option value="all">Semua kill</option><option value="ally">Pasukan kita sahaja (biru)</option></select></label></div>
+    <label class="fld">Tetingkap game di PC (mirror tablet / OBS Windowed Projector)<div class="row kwin"><select id="ap-kwin"><option value="">— pilih tetingkap —</option></select><button class="btn small ghost" type="button" id="ap-kwinr">↻ Muat semula</button></div></label>
+    <label class="fld">Bahagian skrin dibaca<select id="ap-kreg">
+      <option value="0.2,0.08,0.6,0.32">Atas tengah (banner kill MLBB, asal)</option>
+      <option value="0.15,0.15,0.7,0.45">Atas tengah lebih besar</option>
+      <option value="0.1,0.25,0.8,0.5">Tengah</option>
+      <option value="0,0,1,1">Seluruh tetingkap</option></select></label>
+    <div class="kdbg" id="ap-kdbg"><b>Status</b><span>—</span></div>
+    <div class="row ktest">${["first:FIRST BLOOD", "double:DOUBLE", "triple:TRIPLE", "maniac:MANIAC", "savage:SAVAGE", "shutdown:SHUT DOWN", "legendary:LEGENDARY"].map(x => `<button class="btn small" type="button" data-a="ktest" data-k="${x.split(":")[0]}">${x.split(":")[1]}</button>`).join("")}</div>
+    <p class="muted">Tip: kalau game cuma ada dalam OBS, klik kanan source game › <b>Windowed Projector (Source)</b>, kemudian pilih tetingkap projector tu di atas. Jangan minimize tetingkap tu.</p>
+  </section>
+
   <section class="card queue">
     <div class="qcols"><div class="qcol">
     <h3>Sedang main <span id="ap-pc"></span></h3>
@@ -285,7 +301,7 @@ ${embedded ? "" : `<header class="app-top">
     });
     if (layReset) layReset.addEventListener("click", () => {
       LAY = { span: Object.assign({}, LAY_DEF), h: {} }; laySave();
-      const def = ["live", "wl", "end", "queue", "vip", "mvp", "akaun", "rules", "orders", "yt", "links"];
+      const def = ["live", "wl", "end", "killfx", "queue", "vip", "mvp", "akaun", "rules", "orders", "yt", "links"];
       LAY.order = def; layApply(); delete LAY.order; laySave(); layApplyTabs(); toast("Layout asal");
     });
     layGrid.addEventListener("click", e => {
@@ -330,7 +346,7 @@ ${embedded ? "" : `<header class="app-top">
 
     /* ---------- tabs: pick which part of the app to see (remembered, or #mvp in the link) ---------- */
     const TABS = [
-      { id: "live", label: "Live", cards: ["live", "wl", "end", "queue"] },
+      { id: "live", label: "Live", cards: ["live", "wl", "end", "killfx", "queue"] },
       { id: "hutang", label: "Hutang Mabar", cards: ["vip"] },
       { id: "mvp", label: "MVP", cards: ["mvp"] },
       { id: "album", label: "Komen Album", cards: ["album"] },
@@ -404,6 +420,49 @@ ${embedded ? "" : `<header class="app-top">
     twoStep($("ap-clearq"), () => { Q.clear(); toast("Queue dikosongkan"); });
     $("ap-showq").addEventListener("change", e => Q.patch({ showQueue: e.target.checked }));
     $("ap-fx").addEventListener("change", e => Q.patch({ fx: e.target.checked }));
+    /* ---------- auto kill effects (PC server reads the game window with Windows OCR) ---------- */
+    const kHdr = () => ({ "X-Pin": lsGet(PIN_KEY, "") });
+    const KNAME = { first: "FIRST BLOOD", double: "DOUBLE KILL", triple: "TRIPLE KILL", maniac: "MANIAC", savage: "SAVAGE", shutdown: "SHUT DOWN", spree: "KILLING SPREE", monster: "MONSTER KILL", mega: "MEGA KILL", unstoppable: "UNSTOPPABLE", godlike: "GODLIKE", legendary: "LEGENDARY", rampage: "RAMPAGE", wiped: "WIPED OUT" };
+    let kCfg = null;
+    const kSave = patch => {
+      const body = Object.entries(patch).map(([k2, v]) => k2 + "=" + encodeURIComponent(v)).join("&");
+      return fetch("api/killcfg", { method: "POST", headers: kHdr(), body }).then(r => r.ok ? r.json() : null).then(j => { if (j) { kCfg = j; kShow(); } else toast("Perlu START_OVERLAY.bat versi baru / PIN"); }).catch(() => toast("Server tak dapat dihubungi"));
+    };
+    function kShow() {
+      if (!kCfg) return;
+      $("ap-kon").checked = !!kCfg.on; $("ap-kteam").value = kCfg.team || "all";
+      const reg = [kCfg.x, kCfg.y, kCfg.w, kCfg.h].join(","), sel = $("ap-kreg");
+      if (![...sel.options].some(o => o.value === reg)) sel.insertAdjacentHTML("beforeend", `<option value="${esc(reg)}">Custom (${esc(reg)})</option>`);
+      sel.value = reg;
+      const ws = $("ap-kwin"); if (kCfg.win && ![...ws.options].some(o => o.value === kCfg.win)) ws.insertAdjacentHTML("beforeend", `<option value="${esc(kCfg.win)}">${esc(kCfg.win)}</option>`);
+      ws.value = kCfg.win || "";
+    }
+    function kWins() {
+      fetch("api/windows", { headers: kHdr(), cache: "no-store" }).then(r => r.ok ? r.json() : []).then(list => {
+        const ws = $("ap-kwin"), cur = (kCfg && kCfg.win) || ws.value;
+        ws.innerHTML = `<option value="">— pilih tetingkap —</option>` + list.filter(t => !/^(Program Manager|Settings|Windows Input Experience)$/i.test(t)).map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
+        if (cur && !list.includes(cur)) ws.insertAdjacentHTML("beforeend", `<option value="${esc(cur)}">${esc(cur)} (tak dibuka)</option>`);
+        ws.value = cur || "";
+      }).catch(() => {});
+    }
+    fetch("api/killcfg", { headers: kHdr(), cache: "no-store" }).then(r => r.ok ? r.json() : null).then(j => { if (j) { kCfg = j; kShow(); kWins(); } else $("ap-kst").textContent = "perlu server baru"; }).catch(() => {});
+    $("ap-kon").addEventListener("change", e => kSave({ on: e.target.checked ? 1 : 0 }));
+    $("ap-kteam").addEventListener("change", e => kSave({ team: e.target.value }));
+    $("ap-kwin").addEventListener("change", e => kSave({ win: e.target.value }));
+    $("ap-kwinr").addEventListener("click", kWins);
+    $("ap-kreg").addEventListener("change", e => { const [x, y, w, h] = e.target.value.split(","); kSave({ x, y, w, h }); });
+    setInterval(() => {
+      const card = root.querySelector(".card.killfx"); if (!card || card.offsetParent === null || !kCfg) return;
+      fetch("api/killlog", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(j => {
+        if (!j) return;
+        const box = $("ap-kdbg"), inf = String(j.info || "").split(",");
+        const ago = j.hitAt ? Math.round((Date.now() - j.hitAt) / 1000) : null;
+        const st = !kCfg.cap ? "Tangkap skrin tak dapat dimuat di PC ni." : j.err && !j.ocr ? j.err : !j.on ? "Dimatikan." : !kCfg.win ? "Pilih tetingkap game dulu." : inf.length < 5 ? (j.info || "Menunggu…") : `Membaca ${inf[0]}×${inf[1]} · biru ${inf[2]} · merah ${inf[3]}${+inf[4] > 4000 ? " · skrin GELAP (tetingkap tak dapat ditangkap?)" : ""}`;
+        const html = `<b>Status</b><span>${esc(st)}</span>${j.hit ? `<span class="khit">Terakhir: <b>${esc(KNAME[j.hit] || j.hit)}</b>${ago != null ? ` · ${ago}s lepas` : ""}</span>` : ""}${j.text ? `<code>${esc(j.text)}</code>` : ""}${j.err && j.ocr ? `<span class="warn">${esc(j.err)}</span>` : ""}`;
+        if (box._h !== html) { box.innerHTML = html; box._h = html; }
+        $("ap-kst").textContent = j.on && kCfg.win ? "● aktif" : "";
+      }).catch(() => {});
+    }, 1000);
     $("ap-fxs").addEventListener("change", e => Q.patch({ fxSound: e.target.checked }));
     // test the effect on the overlay without changing W/L
     $("ap-fxwin").addEventListener("click", () => { Store.set(s => { s.fxTest = { k: "win", at: Date.now() }; }, { noHist: true }); toast("Efek MENANG dihantar ke overlay"); });
@@ -497,6 +556,7 @@ ${embedded ? "" : `<header class="app-top">
       else if (a === "sgdone") Q.songDone(id);
       else if (a === "sgdel") Q.songDel(id);
       else if (a === "role") Q.setRole(k, b.dataset.r);
+      else if (a === "ktest") { Store.set(s => { s.fxTest = { k: "kill", type: k, at: Date.now() }; }, { noHist: true }); toast("Efek dihantar ke overlay"); }
       else if (a === "ordmv") {
         const rx = +b.dataset.rx, inp = root.querySelector(`.og[data-rx="${b.dataset.rx}"]`);
         const n = inp ? inp.value : 1;

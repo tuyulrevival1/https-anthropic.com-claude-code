@@ -475,3 +475,26 @@
 @keyframes fx-ribbon { 0%, 22% { transform: scaleX(0); opacity: 0; } 34% { transform: scaleX(1.08); opacity: 1; } 40% { transform: scaleX(1); } 88% { opacity: 1; } 100% { opacity: 0; transform: translateY(16px); } }
 @keyframes fx-num-pop { 0% { transform: scale(2.4); } 100% { transform: scale(1); } }
 @keyframes fx-mile { 0%, 100% { transform: skewX(-12deg) scale(1); } 50% { transform: skewX(-12deg) scale(1.08); } }
+/* KILL announcements (FIRST BLOOD, DOUBLE KILL ... SAVAGE) */
+.fx-kflash { position: absolute; inset: 0; background: radial-gradient(ellipse at center, var(--ka) 0%, rgba(0,0,0,0) 70%); mix-blend-mode: screen; animation: fx-kflash .6s ease-out both; }
+.fx-kill.lvl3 .fx-kflash, .fx-kill.lvl4 .fx-kflash { background: radial-gradient(ellipse at center, var(--ka) 0%, rgba(0,0,0,.55) 75%); mix-blend-mode: normal; animation-duration: 1.2s; }
+.fx-slash { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.fx-slash path.s1, .fx-slash path.s2 { fill: none; stroke: #fff; stroke-width: 10; stroke-linecap: round; filter: drop-shadow(0 0 14px var(--ka)) drop-shadow(0 0 4px #fff); stroke-dasharray: 3000; stroke-dashoffset: 3000; }
+.fx-slash path.s1 { animation: fx-slash .9s cubic-bezier(.2, .8, .2, 1) both; }
+.fx-slash path.s2 { animation: fx-slash .9s cubic-bezier(.2, .8, .2, 1) .12s both; }
+.fx-slash .bolts path { fill: none; stroke: #f3d6ff; stroke-width: 4; filter: drop-shadow(0 0 10px var(--ka)); animation: fx-bolt .7s steps(2) 3 both; }
+.fx-ring.k { border-color: var(--ka); box-shadow: 0 0 40px var(--ka), inset 0 0 30px var(--ka); }
+.fx-ktitle { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; white-space: nowrap; }
+.fx-swords { width: 150px; height: 150px; margin-bottom: -18px; filter: drop-shadow(0 0 16px var(--ka)); animation: fx-swords 2.4s cubic-bezier(.2, 1.6, .4, 1) both; }
+.fx-ktitle b { position: relative; font-family: var(--f-disp); font-weight: 400; line-height: .9; letter-spacing: .04em; transform: skewX(-10deg);
+  background: linear-gradient(180deg, #fff 0%, #fff 38%, var(--ka) 62%, var(--kb) 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(5px 6px 0 var(--kb)) drop-shadow(0 0 30px var(--ka)); animation: fx-ktitle 2.4s cubic-bezier(.2, 1.5, .35, 1) both; }
+.fx-kill.lvl4 .fx-ktitle b { animation: fx-ktitle 2.4s cubic-bezier(.2, 1.5, .35, 1) both, fx-kpulse .18s ease-in-out .35s 6 alternate; }
+@keyframes fx-kflash { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes fx-slash { 0% { stroke-dashoffset: 3000; opacity: 1; } 45% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
+@keyframes fx-bolt { 0% { opacity: 1; } 50% { opacity: .1; } 100% { opacity: 0; } }
+@keyframes fx-swords { 0% { transform: scale(2.5) rotate(-90deg); opacity: 0; } 18% { transform: scale(1) rotate(0); opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; transform: scale(.8); } }
+@keyframes fx-ktitle { 0% { transform: skewX(-10deg) translateX(-140%) scaleX(1.6); opacity: 0; } 14% { transform: skewX(-10deg) translateX(4%) scaleX(.95); opacity: 1; } 20% { transform: skewX(-10deg) translateX(0) scaleX(1); } 82% { opacity: 1; transform: skewX(-10deg) translateX(0); } 100% { opacity: 0; transform: skewX(-10deg) translateX(30%); } }
+@keyframes fx-kpulse { from { filter: drop-shadow(5px 6px 0 var(--kb)) drop-shadow(0 0 30px var(--ka)); } to { filter: drop-shadow(5px 6px 0 var(--kb)) drop-shadow(0 0 70px var(--ka)) brightness(1.4); } }
+.ov-stage.fx-shake-s { animation: fx-shake-s .45s ease both; }
+@keyframes fx-shake-s { 0% { left: 0; top: 0; } 20% { left: -9px; top: 4px; } 40% { left: 8px; top: -4px; } 60% { left: -5px; top: 2px; } 80% { left: 3px; top: -1px; } 100% { left: 0; top: 0; } }

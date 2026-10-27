@@ -323,3 +323,12 @@
 .app .ovp-col { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .app .ovp-t { font: 700 12px/1 "OV Raj", Rajdhani, sans-serif; letter-spacing: .16em; text-transform: uppercase; color: var(--c-gold); }
 .app .ovp-obs { margin: 4px 0 0; font-size: 12px; }
+
+/* auto kill effects card */
+.app .killfx .kteam { min-width: 200px; }
+.app .killfx .kwin { flex-wrap: nowrap; } .app .killfx .kwin select { flex: 1; min-width: 0; }
+.app .kdbg { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; padding: 8px 10px; background: #0a0405; border-left: 3px solid var(--c-gold); font-size: 13px; }
+.app .kdbg > b { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--c-gold); }
+.app .kdbg .khit b { color: var(--c-win); } .app .kdbg .warn { color: #ff8a9b; }
+.app .kdbg code { font: 12px/1.4 ui-monospace, Consolas, monospace; color: #ffb3bf; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 90px; overflow: auto; }
+.app .killfx .ktest { gap: 6px; }

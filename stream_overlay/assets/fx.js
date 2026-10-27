@@ -164,6 +164,91 @@ ${mile ? `<div class="fx-mile">🎁 CUKUP ${n} MVP · CLAIM SKIN!</div>` : info.
     setTimeout(() => layer.remove(), kind === "mvp" ? 4400 : kind === "win" ? 3200 : 2600);
   }
 
+  // ---------- MLBB kill announcements (auto from the PC screen reader, or Stream Deck / App) ----------
+  // lvl 1..4 = how hard it hits (shake, sparks, sound). fire = flames (SAVAGE), bolt = lightning (MANIAC)
+  const KILL = {
+    first: { t: "FIRST BLOOD", a: "#ff2346", b: "#6b0010", lvl: 2 },
+    double: { t: "DOUBLE KILL", a: "#4fc3f7", b: "#08385a", lvl: 1 },
+    triple: { t: "TRIPLE KILL", a: "#b388ff", b: "#2e1260", lvl: 2 },
+    maniac: { t: "MANIAC", a: "#d46bff", b: "#40085e", lvl: 3, bolt: 1 },
+    savage: { t: "SAVAGE", a: "#ff6a1f", b: "#701000", lvl: 4, fire: 1 },
+    shutdown: { t: "SHUT DOWN", a: "#8ee9ff", b: "#06324a", lvl: 2 },
+    spree: { t: "KILLING SPREE", a: "#ffcf4a", b: "#6b4300", lvl: 1 },
+    monster: { t: "MONSTER KILL", a: "#ff8a3d", b: "#6b2400", lvl: 2 },
+    mega: { t: "MEGA KILL", a: "#ffb02e", b: "#6b3a00", lvl: 2 },
+    unstoppable: { t: "UNSTOPPABLE", a: "#ff5a7a", b: "#5a0020", lvl: 3 },
+    godlike: { t: "GODLIKE", a: "#ffe680", b: "#6b5200", lvl: 3 },
+    legendary: { t: "LEGENDARY", a: "#ffcf4a", b: "#5a3a00", lvl: 4, fire: 1 },
+    rampage: { t: "RAMPAGE", a: "#ff3d3d", b: "#5a0000", lvl: 3, fire: 1 },
+    wiped: { t: "WIPED OUT", a: "#ff2346", b: "#4a0010", lvl: 4, bolt: 1 }
+  };
+  function killSound(k) {
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      const t = actx.currentTime, out = actx.createGain(); out.gain.value = .32 + k.lvl * .06; out.connect(actx.destination);
+      // blade swish
+      const n = actx.createBuffer(1, actx.sampleRate * .35, actx.sampleRate), d = n.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / d.length);
+      const ns = actx.createBufferSource(), bp = actx.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 2;
+      bp.frequency.setValueAtTime(5000, t); bp.frequency.exponentialRampToValueAtTime(600, t + .3); ns.buffer = n; ns.connect(bp).connect(out); ns.start(t);
+      // impact
+      const o = actx.createOscillator(), v = actx.createGain(); o.type = "sine";
+      o.frequency.setValueAtTime(120 + k.lvl * 10, t + .12); o.frequency.exponentialRampToValueAtTime(38, t + .12 + .4 + k.lvl * .1);
+      v.gain.setValueAtTime(.001, t + .11); v.gain.linearRampToValueAtTime(.9, t + .13); v.gain.exponentialRampToValueAtTime(.001, t + .7 + k.lvl * .15);
+      o.connect(v).connect(out); o.start(t + .11); o.stop(t + 1.4);
+      // metal ring
+      [880, 1320 + k.lvl * 110].forEach((fq, i) => { const r = actx.createOscillator(), rv = actx.createGain(); r.type = "triangle"; r.frequency.value = fq;
+        rv.gain.setValueAtTime(.001, t + .13); rv.gain.linearRampToValueAtTime(.12, t + .14); rv.gain.exponentialRampToValueAtTime(.001, t + 1 + i * .2); r.connect(rv).connect(out); r.start(t + .13); r.stop(t + 1.4); });
+      if (k.fire || k.lvl >= 4) { // roar
+        const m = actx.createBuffer(1, actx.sampleRate * 1.2, actx.sampleRate), md = m.getChannelData(0);
+        for (let i = 0; i < md.length; i++) md[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / md.length, 1.5);
+        const ms = actx.createBufferSource(), lp = actx.createBiquadFilter(), mv = actx.createGain(); lp.type = "lowpass";
+        lp.frequency.setValueAtTime(300, t + .15); lp.frequency.linearRampToValueAtTime(1800, t + .5); lp.frequency.exponentialRampToValueAtTime(200, t + 1.3);
+        mv.gain.value = .7; ms.buffer = m; ms.connect(lp).connect(mv).connect(out); ms.start(t + .15);
+      }
+    } catch (e) {}
+  }
+  function killFx(stage, L, s, type) {
+    const k = KILL[type]; if (!stage || !k) return;
+    stage.querySelectorAll(".fx-kill").forEach(x => x.remove());          // a bigger streak replaces the last one
+    const W = L.w || 1080, H = L.h || 1920, game = (L.slots || []).find(x => x.id === "game") || { x: 0, y: 0, w: W, h: H };
+    const cx = game.x + game.w / 2, cy = game.y + game.h * .45, size = Math.round(Math.min(game.w * (k.t.length > 9 ? .11 : .15), 170));
+    const layer = document.createElement("div"); layer.className = "fx-layer fx-kill lvl" + k.lvl;
+    layer.style.setProperty("--ka", k.a); layer.style.setProperty("--kb", k.b);
+    const bolts = k.bolt ? Array.from({ length: 5 }, () => { let x = cx + rnd(-game.w * .45, game.w * .45), y = game.y, d = `M${x.toFixed(0)} ${y}`;
+      while (y < cy + game.h * .25) { x += rnd(-40, 40); y += rnd(30, 60); d += `L${x.toFixed(0)} ${y.toFixed(0)}`; } return `<path d="${d}"/>`; }).join("") : "";
+    const swords = `<svg class="fx-swords" viewBox="0 0 120 120"><g fill="#fff" stroke="${k.b}" stroke-width="3" stroke-linejoin="round">
+<path d="M18 12 L30 8 L92 70 L84 78 Z"/><path d="M80 74 L96 90 M88 66 L104 82" stroke="${k.a}" stroke-width="7" stroke-linecap="round"/><path d="M98 96 L108 106" stroke="#fff" stroke-width="9" stroke-linecap="round"/>
+<path d="M102 12 L90 8 L28 70 L36 78 Z"/><path d="M40 74 L24 90 M32 66 L16 82" stroke="${k.a}" stroke-width="7" stroke-linecap="round"/><path d="M22 96 L12 106" stroke="#fff" stroke-width="9" stroke-linecap="round"/></g></svg>`;
+    layer.innerHTML = `<div class="fx-kflash"></div>
+<svg class="fx-slash" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><path class="s1" d="M${cx - game.w * .5} ${cy + game.h * .22} L${cx + game.w * .5} ${cy - game.h * .22}"/><path class="s2" d="M${cx - game.w * .5} ${cy - game.h * .2} L${cx + game.w * .5} ${cy + game.h * .2}"/>${bolts ? `<g class="bolts">${bolts}</g>` : ""}</svg>
+<div class="fx-ring k" style="left:${cx}px;top:${cy}px"></div>
+<div class="fx-ktitle" style="left:${cx}px;top:${cy}px">${swords}<b style="font-size:${size}px" data-t="${esc(k.t)}">${esc(k.t)}</b></div>`;
+    stage.appendChild(layer);
+    // sparks (+ flames for fire kills)
+    const c = document.createElement("canvas"); c.width = W; c.height = H; layer.appendChild(c);
+    const g = c.getContext("2d"), P = [];
+    for (let i = 0; i < 30 + k.lvl * 30; i++) { const a = rnd(0, TAU), sp = rnd(8, 18 + k.lvl * 6); P.push({ x: cx, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, s: rnd(2, 5), life: rnd(25, 50), c: i % 3 ? k.a : "#fff" }); }
+    if (k.fire) for (let i = 0; i < 160; i++) P.push({ fire: 1, x: rnd(game.x, game.x + game.w), y: game.y + game.h + rnd(0, 60), vx: rnd(-1, 1), vy: -rnd(6, 16), s: rnd(10, 26), life: rnd(40, 80), d: rnd(0, 30) });
+    let f = 0;
+    (function step() {
+      f++; g.clearRect(0, 0, W, H); g.globalCompositeOperation = "lighter";
+      for (const p of P) {
+        if (p.d && p.d > f) continue; const k2 = (f - (p.d || 0)) / p.life; if (k2 > 1) continue;
+        p.x += p.vx; p.y += p.vy;
+        if (p.fire) { p.s *= .985; const gr = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.s); gr.addColorStop(0, `rgba(255,230,140,${.9 * (1 - k2)})`); gr.addColorStop(.4, `rgba(255,110,30,${.7 * (1 - k2)})`); gr.addColorStop(1, "rgba(255,40,0,0)");
+          g.fillStyle = gr; g.beginPath(); g.arc(p.x, p.y, p.s, 0, TAU); g.fill(); continue; }
+        p.vx *= .93; p.vy *= .93; g.globalAlpha = 1 - k2; g.fillStyle = p.c; g.beginPath(); g.arc(p.x, p.y, p.s, 0, TAU); g.fill(); g.globalAlpha = 1;
+      }
+      if (f < 110) requestAnimationFrame(step); else c.remove();
+    })();
+    stage.classList.remove("fx-shake", "fx-shake-s"); void stage.offsetWidth; stage.classList.add(k.lvl >= 3 ? "fx-shake" : "fx-shake-s");
+    setTimeout(() => stage.classList.remove("fx-shake", "fx-shake-s"), 800);
+    if (s.fxSound !== false) killSound(k);
+    setTimeout(() => layer.remove(), 2500);
+  }
+
   window.SynoFX = { win: (st, L, s) => play("win", st, L, s), lose: (st, L, s) => play("lose", st, L, s),
-    mvp: (st, L, s, info) => play("mvp", st, L, Object.assign({}, s, { _mvp: info })) };
+    mvp: (st, L, s, info) => play("mvp", st, L, Object.assign({}, s, { _mvp: info })),
+    kill: (st, L, s, type) => killFx(st, L, s, type), KILL };
 })();

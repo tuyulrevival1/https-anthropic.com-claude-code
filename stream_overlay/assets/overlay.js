@@ -459,6 +459,10 @@
     "wl-reset": () => Q.patch({ wins: 0, losses: 0, streak: 0 }),
     "win-reset": () => Q.patch({ wins: 0, streak: 0 }), "lose-reset": () => Q.patch({ losses: 0, streak: 0 })
   };
+  // MLBB kill announcements: from the PC screen reader (auto) or Stream Deck / App
+  const FX_BOOT = Date.now();
+  const KILL_TYPES = ["first", "double", "triple", "maniac", "savage", "shutdown", "spree", "monster", "mega", "unstoppable", "godlike", "legendary", "rampage", "wiped"];
+  KILL_TYPES.forEach(k => { ACTIONS["kill-" + k] = () => Store.set(s => { s.fxTest = { k: "kill", type: k, at: Date.now() }; }, { noHist: true }); });
   // Stream Deck presses wait on the PC server; whichever open overlay / app asks first runs them once
   let cmdBusy = false;
   function pullCmds() {
@@ -1209,9 +1213,12 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
           }
         }
         if (t && (!pt || t.at !== pt.at) && Date.now() - t.at < 8000) {
-          if (t.k === "mvp") SynoFX.mvp && SynoFX.mvp(stage, L, s, { name: t.name || "AQIL.MY", cur: t.cur || 5, role: "MID" });
+          if (t.k === "kill") SynoFX.kill && SynoFX.kill(stage, L, s, t.type);
+          else if (t.k === "mvp") SynoFX.mvp && SynoFX.mvp(stage, L, s, { name: t.name || "AQIL.MY", cur: t.cur || 5, role: "MID" });
           else SynoFX[t.k === "lose" ? "lose" : "win"](stage, L, s);
         }
+        // no counter effects in the first seconds (page load / OBS refresh catching up with saved state)
+        else if (Date.now() - FX_BOOT < 4000) {}
         else if (mvp && SynoFX.mvp) SynoFX.mvp(stage, L, s, mvp);
         else if (s.wins > prev.wins) SynoFX.win(stage, L, s);
         else if (s.losses > prev.losses) SynoFX.lose(stage, L, s);
@@ -1303,5 +1310,5 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
 
   requestAnimationFrame(loop);
   const util = { el, esc, clamp, seg, eOut, eBack, frac, rnd, TAU, fill, priceHL, uid, tickers, now };
-  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util, keyOf, liveElapsed, fmtTime, parseOrder, NP, MEDIA, ifxNow, ifxFind, songText, stackLayout, layoutOf: n => LAYOUTS[n], ACTIONS, ROLES: ["EXP", "JUNGLE", "MID", "GOLD", "ROAM"], roleTag };
+  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util, keyOf, liveElapsed, fmtTime, parseOrder, NP, MEDIA, ifxNow, ifxFind, KILL_TYPES, songText, stackLayout, layoutOf: n => LAYOUTS[n], ACTIONS, ROLES: ["EXP", "JUNGLE", "MID", "GOLD", "ROAM"], roleTag };
 })();

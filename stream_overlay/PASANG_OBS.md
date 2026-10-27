@@ -289,6 +289,32 @@ Server di PC dengar bunyi app **IndoFinity** dan baca teks dalam tetingkapnya (t
 
 Tajuk / nama tak keluar? App › Lagu › buka **Teks dibaca dari IndoFinity** dan hantar screenshot.
 
+## 13. Efek kill automatik (FIRST BLOOD, MANIAC, SAVAGE…)
+
+Server di PC baca skrin game guna pengecaman teks Windows (OCR). Bila banner kill MLBB keluar, overlay tunjuk efek penuh skrin dengan bunyi. Tak perlu tekan apa-apa.
+
+Dikesan: **FIRST BLOOD, DOUBLE KILL, TRIPLE KILL, MANIAC, SAVAGE, SHUT DOWN, KILLING SPREE, MONSTER KILL, MEGA KILL, UNSTOPPABLE, GODLIKE, LEGENDARY, RAMPAGE, WIPED OUT**. Kill biasa / solo kill tiada banner tulisan, jadi tak dikesan.
+
+1. Jalankan **KEMASKINI.bat**, tutup dan buka semula **START_OVERLAY.bat**.
+2. Game mesti ada dalam satu tetingkap di PC:
+   - mirror tablet / phone (contoh scrcpy), **atau**
+   - dalam OBS: klik kanan source game › **Windowed Projector (Source)**. Tetingkap tu boleh di belakang, tapi **jangan minimize**.
+3. MLBB guna bahasa **English** (Settings › Language).
+4. App › tab **Live** › **Auto efek kill**:
+   - pilih **Tetingkap game** (tekan ↻ kalau tak nampak),
+   - **Bahagian skrin dibaca**: biar **Atas tengah**,
+   - **Kill siapa**: *Semua kill*, atau *Pasukan kita sahaja (biru)*,
+   - tanda **Auto detect kill**.
+5. Kotak **Status** tunjuk teks yang dibaca. Masa game, bila banner keluar, baris **Terakhir:** berubah dan efek keluar di overlay.
+
+Butang **FIRST BLOOD / DOUBLE / … / LEGENDARY** dalam kad tu = uji efek. Stream Deck: `http://localhost:8787/api/do/kill-savage` (ganti `savage` dengan `first`, `double`, `triple`, `maniac`, `shutdown`, `legendary`…).
+
+| Status | Maksud |
+|---|---|
+| Skrin **GELAP** | Tetingkap tak dapat ditangkap: jangan minimize; untuk OBS guna *Windowed Projector*. |
+| Tiada bahasa OCR | Windows Settings › Time & Language › Language › tambah **English (United States)**. |
+| Teks dibaca tapi efek tak keluar | Hantar screenshot kotak Status. |
+
 ## Masalah biasa
 
 | Masalah | Penyelesaian |

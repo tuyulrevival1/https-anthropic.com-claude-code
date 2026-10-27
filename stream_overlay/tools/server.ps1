@@ -316,10 +316,165 @@ while ($true) {
   $mediaBg = $mediaPS.BeginInvoke()
 } catch { $mediaBg = $null }
 $mediaJson = ''; $mediaAt = [DateTime]::MinValue
+# ---------- auto efek kill MLBB: baca banner kill di skrin game (Windows OCR), di thread belakang ----------
+$capCs = @"
+using System;
+using System.IO;
+using System.Text;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
+namespace SynoCap {
+  public static class Cap {
+    delegate bool EnumProc(IntPtr h, IntPtr p);
+    [DllImport("user32.dll")] static extern bool EnumWindows(EnumProc cb, IntPtr p);
+    [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
+    [DllImport("user32.dll")] static extern bool IsIconic(IntPtr h);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetWindowText(IntPtr h, StringBuilder s, int n);
+    [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")] static extern bool PrintWindow(IntPtr h, IntPtr hdc, uint flags);
+    [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L, T, R, B; }
+    static string Title(IntPtr h) { var t = new StringBuilder(300); GetWindowText(h, t, 300); return t.ToString(); }
+    // tajuk semua tetingkap yang nampak (satu baris setiap satu)
+    public static string List() {
+      var sb = new StringBuilder();
+      EnumWindows((h, p) => { if (IsWindowVisible(h)) { string s = Title(h); if (s.Length > 0) sb.Append(s.Replace("\n", " ")).Append('\n'); } return true; }, IntPtr.Zero);
+      return sb.ToString();
+    }
+    static IntPtr Find(string part) {
+      IntPtr found = IntPtr.Zero; string want = (part ?? "").ToLowerInvariant();
+      if (want.Length == 0) return found;
+      EnumWindows((h, p) => { if (IsWindowVisible(h) && Title(h).ToLowerInvariant().Contains(want)) { found = h; return false; } return true; }, IntPtr.Zero);
+      return found;
+    }
+    // ambil sebahagian tetingkap (pecahan 0..1), besarkan untuk OCR, pulangkan PNG.
+    // info = "lebar,tinggi,piksel biru,piksel merah,piksel gelap" atau sebab gagal
+    public static byte[] Grab(string title, double fx, double fy, double fw, double fh, double scale, out string info) {
+      info = "";
+      IntPtr h = Find(title);
+      if (h == IntPtr.Zero) { info = "tetingkap tak jumpa"; return null; }
+      if (IsIconic(h)) { info = "tetingkap diminimize"; return null; }
+      RECT r; GetWindowRect(h, out r);
+      int W = r.R - r.L, H = r.B - r.T;
+      if (W < 80 || H < 80) { info = "tetingkap terlalu kecil"; return null; }
+      using (var full = new Bitmap(W, H, PixelFormat.Format32bppArgb)) {
+        using (var g = Graphics.FromImage(full)) {
+          IntPtr dc = g.GetHdc(); bool ok = PrintWindow(h, dc, 2); g.ReleaseHdc(dc);
+          if (!ok) g.CopyFromScreen(r.L, r.T, 0, 0, new Size(W, H));
+        }
+        int cx = Math.Max(0, (int)(W * fx)), cy = Math.Max(0, (int)(H * fy));
+        int cw = Math.Max(10, Math.Min(W - cx, (int)(W * fw))), ch = Math.Max(10, Math.Min(H - cy, (int)(H * fh)));
+        int ow = Math.Max(10, (int)(cw * scale)), oh = Math.Max(10, (int)(ch * scale));
+        using (var crop = new Bitmap(ow, oh, PixelFormat.Format32bppArgb)) {
+          using (var g2 = Graphics.FromImage(crop)) {
+            g2.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+            g2.DrawImage(full, new Rectangle(0, 0, ow, oh), new Rectangle(cx, cy, cw, ch), GraphicsUnit.Pixel);
+          }
+          int blue = 0, red = 0, dark = 0;
+          for (int y = 0; y < oh; y += 4) for (int x = 0; x < ow; x += 4) {
+            Color c = crop.GetPixel(x, y);
+            if (c.R + c.G + c.B < 60) dark++;
+            if (c.B > 140 && c.B > c.R + 50) blue++; else if (c.R > 150 && c.R > c.B + 60 && c.R > c.G + 40) red++;
+          }
+          info = W + "," + H + "," + blue + "," + red + "," + dark;
+          using (var ms = new MemoryStream()) { crop.Save(ms, ImageFormat.Png); return ms.ToArray(); }
+        }
+      }
+    }
+  }
+}
+"@
+$capOk = $false
+try { Add-Type -TypeDefinition $capCs -ReferencedAssemblies System.Drawing -ErrorAction Stop; $capOk = $true } catch { Write-Host 'Pengesan kill (tangkap skrin) tak dapat dimuat.' -ForegroundColor DarkYellow }
+$killFile = Join-Path $dataDir 'killfx.txt'
+$killShared = [hashtable]::Synchronized(@{ on = $false; win = ''; x = 0.2; y = 0.08; w = 0.6; h = 0.32; team = 'all'; last = '{}'; events = [System.Collections.ArrayList]::Synchronized((New-Object System.Collections.ArrayList)) })
+function KillNum([string]$v, [double]$d) { $o = 0.0; if ([double]::TryParse($v, [Globalization.NumberStyles]::Float, [Globalization.CultureInfo]::InvariantCulture, [ref]$o)) { return [Math]::Max(0.0, [Math]::Min(1.0, $o)) } return $d }
+if (Test-Path -LiteralPath $killFile) {
+  try {
+    $kv = ([System.IO.File]::ReadAllText($killFile)).Trim().Split('|')
+    if ($kv.Count -ge 7) { $killShared.on = ($kv[0] -eq '1'); $killShared.win = $kv[1]; $killShared.x = KillNum $kv[2] 0.2; $killShared.y = KillNum $kv[3] 0.08; $killShared.w = KillNum $kv[4] 0.6; $killShared.h = KillNum $kv[5] 0.32; $killShared.team = $kv[6] }
+  } catch { }
+}
+$killBg = $null
+if ($capOk) {
+  try {
+    $killPS = [PowerShell]::Create()
+    [void]$killPS.AddScript(@'
+param($K, $npAsTask)
+function NpAwait($op, [Type]$t) {
+  $task = $npAsTask.MakeGenericMethod($t).Invoke($null, @($op))
+  if ($task.Wait(3000)) { return $task.Result } else { return $null }
+}
+function JsonStr([string]$s) { return '"' + ($s -replace '\\', '\\' -replace '"', '\"') + '"' }
+# sama dengan perkataan banner (boleh beza 1 huruf, sebab OCR kadang tersalah baca)
+function Has([string]$txt, [string]$key) {
+  if ($txt.Contains($key)) { return $true }
+  $n = $key.Length
+  if ($n -lt 6 -or $txt.Length -lt $n) { return $false }
+  for ($i = 0; $i -le $txt.Length - $n; $i++) {
+    $d = 0
+    for ($j = 0; $j -lt $n; $j++) { if ($txt[$i + $j] -ne $key[$j]) { $d++; if ($d -gt 1) { break } } }
+    if ($d -le 1) { return $true }
+  }
+  return $false
+}
+$ocr = $null; $err = ''
+try {
+  [void][Windows.Media.Ocr.OcrEngine, Windows.Foundation, ContentType = WindowsRuntime]
+  [void][Windows.Media.Ocr.OcrResult, Windows.Foundation, ContentType = WindowsRuntime]
+  [void][Windows.Graphics.Imaging.BitmapDecoder, Windows.Graphics, ContentType = WindowsRuntime]
+  [void][Windows.Graphics.Imaging.SoftwareBitmap, Windows.Foundation, ContentType = WindowsRuntime]
+  [void][Windows.Globalization.Language, Windows.Globalization, ContentType = WindowsRuntime]
+  try { $ocr = [Windows.Media.Ocr.OcrEngine]::TryCreateFromLanguage((New-Object Windows.Globalization.Language 'en-US')) } catch { }
+  if (-not $ocr) { $ocr = [Windows.Media.Ocr.OcrEngine]::TryCreateFromUserProfileLanguages() }
+  if (-not $ocr) { $err = 'Tiada bahasa OCR. Windows Settings > Time & Language > Language: tambah English.' }
+} catch { $err = 'OCR Windows tak dapat dimuat: ' + $_.Exception.Message }
+$words = @('FIRSTBLOOD=first', 'DOUBLEKILL=double', 'TRIPLEKILL=triple', 'MANIAC=maniac', 'SAVAGE=savage', 'SHUTDOWN=shutdown', 'KILLINGSPREE=spree', 'MONSTERKILL=monster', 'MEGAKILL=mega', 'UNSTOPPABLE=unstoppable', 'GODLIKE=godlike', 'LEGENDARY=legendary', 'RAMPAGE=rampage', 'WIPEDOUT=wiped')
+$lastAt = @{}; $lastAny = [DateTime]::MinValue; $hitName = ''; $hitAt = 0
+while ($true) {
+  if (-not $K.on -or -not $K.win -or -not $ocr) {
+    $K.last = '{"on":' + ([string][bool]$K.on).ToLower() + ',"ocr":' + ([string][bool]$ocr).ToLower() + ',"err":' + (JsonStr $err) + ',"hit":' + (JsonStr $hitName) + ',"hitAt":' + $hitAt + '}'
+    Start-Sleep -Milliseconds 800; continue
+  }
+  $info = ''; $txt = ''; $e2 = ''
+  try {
+    $png = [SynoCap.Cap]::Grab([string]$K.win, [double]$K.x, [double]$K.y, [double]$K.w, [double]$K.h, 1.6, [ref]$info)
+    if ($png) {
+      $ms = New-Object System.IO.MemoryStream (,$png)
+      $ras = [System.IO.WindowsRuntimeStreamExtensions]::AsRandomAccessStream($ms)
+      $dec = NpAwait ([Windows.Graphics.Imaging.BitmapDecoder]::CreateAsync($ras)) ([Windows.Graphics.Imaging.BitmapDecoder])
+      if ($dec) {
+        $sbm = NpAwait ($dec.GetSoftwareBitmapAsync()) ([Windows.Graphics.Imaging.SoftwareBitmap])
+        if ($sbm) { $res = NpAwait ($ocr.RecognizeAsync($sbm)) ([Windows.Media.Ocr.OcrResult]); if ($res) { $txt = [string]$res.Text } }
+      }
+      $ms.Dispose()
+    }
+  } catch { $e2 = $_.Exception.Message }
+  $norm = ($txt.ToUpper() -replace '[^A-Z]', '')
+  $found = ''
+  foreach ($w in $words) { $p = $w.Split('='); if (Has $norm $p[0]) { $found = $p[1]; break } }
+  if ($found) {
+    $now = Get-Date
+    $teamOk = $true
+    if ($K.team -eq 'ally') { $ci = $info.Split(','); if ($ci.Count -ge 4) { $teamOk = ([int]$ci[2] -gt [int]$ci[3]) } }
+    $fresh = (-not $lastAt.ContainsKey($found)) -or (($now - $lastAt[$found]).TotalSeconds -ge 6)
+    if ($teamOk -and $fresh -and (($now - $lastAny).TotalSeconds -ge 1.2)) {
+      [void]$K.events.Add($found); $lastAt[$found] = $now; $lastAny = $now
+      $hitName = $found; $hitAt = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+    }
+  }
+  $K.last = '{"on":true,"ocr":true,"info":' + (JsonStr $info) + ',"text":' + (JsonStr (($txt -replace '[\x00-\x1f]', ' ').Trim())) + ',"hit":' + (JsonStr $hitName) + ',"hitAt":' + $hitAt + ',"err":' + (JsonStr $e2) + '}'
+  Start-Sleep -Milliseconds 250
+}
+'@)
+    [void]$killPS.AddArgument($killShared).AddArgument($npAsTask)
+    $killBg = $killPS.BeginInvoke()
+  } catch { $killBg = $null }
+}
 $hookHits = New-Object System.Collections.ArrayList   # 15 cubaan webhook terakhir (untuk App > Status webhook)
 $cmds = New-Object System.Collections.ArrayList       # arahan Stream Deck menunggu overlay / App ambil
 $stateRev = [long]((Get-Date) - [DateTime]'2026-01-01').TotalMilliseconds   # naik setiap kali state disimpan (/api/rev)
-$deckActs = @('win', 'lose', 'win-1', 'lose-1', 'end-win', 'end-lose', 'end', 'timer-start', 'timer-pause', 'timer-reset', 'queue-on', 'queue-off', 'mabar-open', 'mabar-close', 'mabar-toggle', 'facecam-on', 'facecam-off', 'facecam-toggle', 'handcam-on', 'handcam-off', 'handcam-toggle', 'banner-on', 'banner-off', 'wl-reset', 'win-reset', 'lose-reset')
+$deckActs = @('win', 'lose', 'win-1', 'lose-1', 'end-win', 'end-lose', 'end', 'timer-start', 'timer-pause', 'timer-reset', 'queue-on', 'queue-off', 'mabar-open', 'mabar-close', 'mabar-toggle', 'facecam-on', 'facecam-off', 'facecam-toggle', 'handcam-on', 'handcam-off', 'handcam-toggle', 'kill-first', 'kill-double', 'kill-triple', 'kill-maniac', 'kill-savage', 'kill-shutdown', 'kill-spree', 'kill-monster', 'kill-mega', 'kill-unstoppable', 'kill-godlike', 'kill-legendary', 'kill-rampage', 'kill-wiped', 'banner-on', 'banner-off', 'wl-reset', 'win-reset', 'lose-reset')
 $fwdHeaders = @('x-forwarded-for', 'cf-connecting-ip', 'x-forwarded-host', 'forwarded', 'x-real-ip', 'tailscale-funnel-request')
 
 while ($true) {
@@ -438,11 +593,46 @@ while ($true) {
         }
       } elseif ($path -eq 'api/rev') {
         # semakan pantas (5 kali sesaat): nombor state + arahan Stream Deck menunggu
-        $type = 'application/json'; $body = ToBytes ('{"s":' + $stateRev + ',"c":' + $cmds.Count + '}')
+        $type = 'application/json'; $body = ToBytes ('{"s":' + $stateRev + ',"c":' + ($cmds.Count + $killShared.events.Count) + '}')
       } elseif ($path -eq 'api/cmds') {
         $type = 'application/json'
         if (-not $okPin) { $status = '401 Unauthorized'; $body = ToBytes '[]' }
-        else { $body = ToBytes ('[' + ($cmds -join ',') + ']'); $cmds.Clear() }
+        else {
+          foreach ($ke in @($killShared.events)) { [void]$cmds.Add('{"a":"kill-' + $ke + '","t":' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() + '}') }
+          $killShared.events.Clear()
+          $body = ToBytes ('[' + ($cmds -join ',') + ']'); $cmds.Clear()
+        }
+      } elseif ($path -eq 'api/killcfg') {
+        # tetapan auto efek kill: on|tetingkap|x|y|w|h|team
+        $type = 'application/json'
+        if ($method -eq 'POST') {
+          if (-not $okPin) { $status = '401 Unauthorized' }
+          else {
+            $kf = @{}
+            foreach ($pair in ([System.Text.Encoding]::UTF8.GetString($bodyBytes)) -split '&') { $kp = $pair.Split('=', 2); if ($kp.Count -eq 2) { $kf[$kp[0]] = [Uri]::UnescapeDataString($kp[1].Replace('+', ' ')) } }
+            if ($kf.ContainsKey('on')) { $killShared.on = ($kf['on'] -eq '1') }
+            if ($kf.ContainsKey('win')) { $killShared.win = ($kf['win'] -replace '[|\r\n]', ' ').Trim() }
+            if ($kf.ContainsKey('x')) { $killShared.x = KillNum $kf['x'] 0.2 }
+            if ($kf.ContainsKey('y')) { $killShared.y = KillNum $kf['y'] 0.08 }
+            if ($kf.ContainsKey('w')) { $killShared.w = KillNum $kf['w'] 0.6 }
+            if ($kf.ContainsKey('h')) { $killShared.h = KillNum $kf['h'] 0.32 }
+            if ($kf.ContainsKey('team')) { if ($kf['team'] -eq 'ally') { $killShared.team = 'ally' } else { $killShared.team = 'all' } }
+            $ic = [Globalization.CultureInfo]::InvariantCulture
+            try { [System.IO.File]::WriteAllText($killFile, ((@($(if ($killShared.on) { '1' } else { '0' }), $killShared.win, $killShared.x.ToString($ic), $killShared.y.ToString($ic), $killShared.w.ToString($ic), $killShared.h.ToString($ic), $killShared.team)) -join '|')) } catch { }
+          }
+        }
+        $ic = [Globalization.CultureInfo]::InvariantCulture
+        $body = ToBytes ('{"cap":' + ([string]$capOk).ToLower() + ',"run":' + ([string][bool]$killBg).ToLower() + ',"on":' + ([string][bool]$killShared.on).ToLower() + ',"win":' + (JsonStr ([string]$killShared.win)) + ',"x":' + $killShared.x.ToString($ic) + ',"y":' + $killShared.y.ToString($ic) + ',"w":' + $killShared.w.ToString($ic) + ',"h":' + $killShared.h.ToString($ic) + ',"team":' + (JsonStr ([string]$killShared.team)) + '}')
+      } elseif ($path -eq 'api/killlog') {
+        $type = 'application/json'; $body = ToBytes ([string]$killShared.last)
+      } elseif ($path -eq 'api/windows') {
+        # senarai tetingkap untuk pilih skrin game (App > Live > Auto efek kill)
+        $type = 'application/json'
+        if (-not $okPin -or -not $capOk) { $body = ToBytes '[]' }
+        else {
+          $wl = @(); foreach ($t in ([SynoCap.Cap]::List()).Split("`n")) { $t = ($t -replace '[\x00-\x1f]', ' ').Trim(); if ($t) { $wl += (JsonStr $t) } }
+          $body = ToBytes ('[' + ($wl -join ',') + ']')
+        }
       } elseif ($path -eq 'api/wl') {
         # untuk plugin Stream Deck: bilangan W/L sekarang (dibaca dari state.txt)
         $type = 'application/json'; $w = 0; $l = 0; $cf = 0; $chh = 0; $mc = 0
