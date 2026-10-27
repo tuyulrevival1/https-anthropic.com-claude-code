@@ -252,14 +252,11 @@ Setiap tekan keluar dalam tetingkap hitam ("Stream Deck: end-win") dan App tunju
 
 Penonton taip `!play tajuk lagu` (atau `!req`) di TikTok › IndoFinity hantar webhook › lagu masuk **App › Lagu** dan panel **SONG REQUEST** di overlay (bawah kiri). Spotify dijeda sendiri supaya tak bertindih dengan YouTube Music IndoFinity.
 
-1. App › tab **Lagu** › buka **Sambung IndoFinity (webhook)** › salin link:
-   - IndoFinity di PC yang sama: `http://127.0.0.1:8787/api/song-hook/KUNCI`
-   - IndoFinity di luar PC: link public `https://synostore.xxxx.ts.net/api/song-hook/KUNCI`
-2. IndoFinity › **Webhook** › tambah aksi baru:
-   - Trigger: **Chat / Comment** yang mula dengan `!play`, `!req` (tambah `!skip`, `!revoke` kalau nak).
-   - URL: link di atas + `?user={username}&comment={comment}` (guna nama placeholder yang IndoFinity tunjuk).
-   - Method GET atau POST, kedua-dua diterima.
-3. Uji: komen `!play Hindia Evaluasi` di TikTok. Lagu keluar dalam App › Lagu dan di overlay.
+1. App › tab **Lagu** › buka **Sambung IndoFinity (webhook)** › salin **Link kekal** (`https://synostore.xxxx.ts.net/api/song-hook/KUNCI`). Link `http://127.0.0.1:8787/...` cuma untuk cuba kalau link kekal tak jalan.
+2. IndoFinity › **Pusat Interaksi** › **Interaksi** › buat baru › aksi **Trigger Webhook** › tampal link tadi. Hidupkan suis **Webhook**. IndoFinity hantar data cara POST (FormData), App terima terus.
+3. **Aktivitas** › buat baru › pemicu **Komentar** / perintah `!play` › pilih interaksi tadi. Buat juga untuk `!req`, `!skip`, `!revoke` kalau mahu.
+4. Uji: **Simulator** › Komentar › `!play Hindia Evaluasi`. Lagu keluar dalam App › Lagu dan di overlay. Kotak **Data terakhir dari IndoFinity** tunjuk apa yang IndoFinity hantar.
+5. Kotak tu tulis **Tajuk lagu tak jumpa**? Tambah `?user={username}&comment={comment}` pada hujung link (guna nama variabel IndoFinity), atau hantar gambar kotak tu.
 
 **Arahan**: `!play` / `!req` / `!sr` = tambah lagu. `!skip` = lagu paling lama ditanda dah main. `!revoke` = buang request terakhir orang tu.
 

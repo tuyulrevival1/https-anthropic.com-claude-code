@@ -156,7 +156,7 @@
       return e;
     }
   };
-  const HIST_SKIP = new Set(["rev", "updated", "seenOrders", "orderSeq", "yt", "docImported", "songResumeAt"]); // album / akaun changes stay undoable
+  const HIST_SKIP = new Set(["rev", "updated", "seenOrders", "orderSeq", "yt", "docImported", "songResumeAt", "songLast"]); // album / akaun changes stay undoable
 
   /* ---------- queue, VIP balance, W/L, timer ---------- */
   const inLine = (s, k) => s.playing.some(p => p.key === k) || s.queue.some(p => p.key === k);
@@ -519,11 +519,24 @@
   function parseSong(entry) {
     let text = ""; try { text = new TextDecoder().decode(Uint8Array.from(atob(entry.b || ""), c => c.charCodeAt(0))); } catch (e) {}
     const bag = {};
-    const put = (k, v) => { if (v == null || typeof v === "object") return; const kk = String(k).toLowerCase(); if (bag[kk] == null || bag[kk] === "") bag[kk] = String(v); };
+    // skip empty values and placeholders the sender did not fill in ("{comment}")
+    const put = (k, v) => { if (v == null || typeof v === "object") return; v = String(v); if (/^\s*\{[\w.]+\}\s*$/.test(v)) return; const kk = String(k).toLowerCase(); if (bag[kk] == null || bag[kk] === "") bag[kk] = v; };
+    const walk = (o, d) => { if (!o || typeof o !== "object" || d > 3) return; for (const [k, v] of Object.entries(o)) {
+      if (v && typeof v === "object") walk(v, d + 1);
+      else if (typeof v === "string" && /^\s*[{[]/.test(v)) { try { const j = JSON.parse(v); if (j && typeof j === "object") { walk(j, d + 1); continue; } } catch (e) {} put(k, v); }
+      else put(k, v); } };
+    let b = null;
+    // IndoFinity "Trigger Webhook" posts FormData = multipart/form-data
+    const bnd = (String(entry.ct || "").match(/boundary=("?)([^";]+)\1/i) || [])[2] || ((text.match(/^--([^\r\n]+)\r?\n/) || [])[1]);
+    if (bnd && text.includes("--" + bnd)) {
+      b = {};
+      for (const part of text.split("--" + bnd)) {
+        const m = part.match(/name="([^"]*)"[^\r\n]*\r?\n(?:[^\r\n]+\r?\n)*\r?\n([\s\S]*?)\r?\n?$/);
+        if (m && !/filename=/i.test(part.split(/\r?\n\r?\n/)[0])) b[m[1]] = m[2];
+      }
+    } else { try { b = JSON.parse(text); } catch (e) { try { b = Object.fromEntries(new URLSearchParams(text)); } catch (e2) {} } }
+    walk(b, 0);                                                 // body first: real values win over the URL
     try { new URLSearchParams(entry.q || "").forEach((v, k) => put(k, v)); } catch (e) {}
-    let b = null; try { b = JSON.parse(text); } catch (e) { try { b = Object.fromEntries(new URLSearchParams(text)); } catch (e2) {} }
-    const walk = (o, d) => { if (!o || typeof o !== "object" || d > 3) return; for (const [k, v] of Object.entries(o)) { if (v && typeof v === "object") walk(v, d + 1); else put(k, v); } };
-    walk(b, 0);
     const get = keys => { for (const k of keys) if (bag[k] != null && String(bag[k]).trim() !== "") return String(bag[k]).trim(); return ""; };
     const user = get(["user", "username", "nickname", "uniqueid", "unique_id", "displayname", "name", "sender"]).replace(/^@/, "").slice(0, 24) || "penonton";
     const said = get(["comment", "message", "text", "msg", "content", "chat"]) || (b == null && !entry.q ? text : "");
@@ -534,7 +547,8 @@
     else if (rv && !title) { kind = "revoke"; title = rv[2].trim(); }
     else if (!title && m) title = m[2].trim();
     else if (!title) title = said.trim();
-    return { user, title: title.slice(0, 90), kind, at: entry.t || Date.now() };
+    const raw = Object.entries(bag).map(([k, v]) => `${k}=${v}`).join(" · ").slice(0, 600) || text.slice(0, 300);
+    return { user, title: title.slice(0, 90), kind, at: entry.t || Date.now(), raw };
   }
   // pause / play Spotify through the PC server (Windows media controls)
   const spotify = act => { const pin = Store.pin(); return fetch("api/spotify/" + act, { cache: "no-store", headers: pin ? { "X-Pin": pin } : {} }).then(r => r.ok ? r.text() : "").catch(() => ""); };
@@ -561,7 +575,7 @@
         for (const e of list) {
           if (e.n != null && e.n <= from) continue;             // another page already did it
           if (first && e.t && Date.now() - e.t > 864e5) continue;
-          if (e.k === "song") { Q._song(s, parseSong(e)); continue; }
+          if (e.k === "song") { const r = parseSong(e); s.songLast = { at: Date.now(), raw: r.raw, user: r.user, title: r.title, kind: r.kind }; Q._song(s, r); continue; }
           let o;
           try { o = parseOrder(e); }
           catch (err) {

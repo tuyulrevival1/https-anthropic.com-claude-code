@@ -134,8 +134,13 @@ ${embedded ? "" : `<header class="app-top">
     <ol class="list sglist" id="ap-songs"></ol>
     <div class="row"><button class="btn ghost" type="button" id="ap-sgclear" data-confirm="Tekan lagi: buang yang dah main">Buang yang dah main</button></div>
     <details class="quick"><summary>Sambung IndoFinity (webhook)</summary>
-      <p class="muted">IndoFinity › Actions / Webhook › bila arahan chat <b>!play</b> / <b>!req</b> (dan !skip, !revoke kalau mahu) › URL di bawah. Kalau IndoFinity minta letak data, guna <b>user={username}</b> dan <b>comment={comment}</b> (ikut nama placeholder IndoFinity).</p>
+      <ol class="muted steps">
+        <li>IndoFinity › <b>Pusat Interaksi</b> › <b>Interaksi</b> › buat baru › aksi <b>Trigger Webhook</b> › tampal link di bawah. Hidupkan suis Webhook.</li>
+        <li><b>Aktivitas</b> › buat baru › pemicu <b>Komentar</b> / perintah <b>!play</b> (buat juga untuk !req, !skip, !revoke kalau mahu) › pilih interaksi tadi.</li>
+        <li>Uji dengan <b>Simulator</b> › Komentar › <b>!play Hindia Evaluasi</b>. Lagu keluar di senarai atas, dan data yang IndoFinity hantar keluar di bawah.</li>
+      </ol>
       <div class="links-list" id="ap-sglinks"><p class="muted">Masuk dengan PIN / buka START_OVERLAY.bat untuk lihat link.</p></div>
+      <div class="sglast" id="ap-sglast"><b>Data terakhir dari IndoFinity</b><span>Belum ada. Uji dengan Simulator IndoFinity.</span></div>
     </details>
   </section>
 
@@ -604,6 +609,8 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
       $("ap-songs").innerHTML = sg.length ? sg.map(x => `<li class="sgrow${x.done ? " done" : ""}"><span class="who"><span class="nm">♪ ${esc(x.title)}</span><span class="sub">@${esc(x.user)} · ${fmtDate(x.at)}</span></span>
 <button class="btn small ${x.done ? "ghost" : "gold"}" type="button" data-a="sgdone" data-id="${x.id}">${x.done ? "✓ Dah main" : "Tanda dah main"}</button><button class="btn sq ghost" type="button" data-a="sgdel" data-id="${x.id}" aria-label="Buang ${esc(x.title)}">✕</button></li>`).join("")
         : `<li class="empty">Belum ada song request. Sambung IndoFinity di bawah.</li>`;
+      const sl = s.songLast, slBox = $("ap-sglast");
+      if (sl && slBox) slBox.innerHTML = `<b>Data terakhir dari IndoFinity · ${fmtDate(sl.at)}</b><span>${sl.kind === "play" && sl.title ? `Dibaca: <b>@${esc(sl.user)}</b> minta <b>${esc(sl.title)}</b> ✓` : sl.kind !== "play" ? `Dibaca: !${esc(sl.kind)} oleh @${esc(sl.user)} ✓` : `<em>Tajuk lagu tak jumpa</em>. Tambah <b>?user={username}&comment={comment}</b> pada hujung link, atau hantar gambar data ni.`}</span><code>${esc(sl.raw || "(kosong)")}</code>`;
       // komen album
       const al = s.album || [];
       $("ap-alc").textContent = al.length ? `${alWait} menunggu · ${al.length - alWait} siap` : "";
@@ -768,8 +775,9 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
     function songLinks(a) {
       const box = $("ap-sglinks"); if (!box || !a || !a.hookUrl) return;
       const key = (String(a.hookUrl).match(/order-hook\/([^/?#]+)/) || [])[1]; if (!key) return;
-      const rows = [["IndoFinity di PC ni (disyorkan)", `http://127.0.0.1:${a.port || 8787}/api/song-hook/${key}`]];
-      if (a.publicUrl) rows.push(["Kalau IndoFinity hantar dari internet", `${a.publicUrl}/api/song-hook/${key}`]);
+      const rows = [];
+      if (a.publicUrl) rows.push(["Link kekal (disyorkan)", `${a.publicUrl}/api/song-hook/${key}`]);
+      rows.push([a.publicUrl ? "Cuba ini kalau link kekal tak jalan" : "IndoFinity di PC ni (pasang link kekal untuk lebih stabil)", `http://127.0.0.1:${a.port || 8787}/api/song-hook/${key}`]);
       box.innerHTML = rows.map(([t, u]) => `<div class="lk"><span>${esc(t)}</span><code>${esc(u)}</code><button class="btn sq" type="button" data-copy="${esc(u)}" aria-label="Salin">⧉</button></div>`).join("");
     }
     /* ---------- new version on GitHub? (PC only; KEMASKINI.bat installs it) ---------- */

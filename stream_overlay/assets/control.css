@@ -297,3 +297,8 @@
 .app details.omv .omv-n { width: 74px; }
 .app details.omv .omv-n input { width: 100%; }
 .app .list li details.raw { order: 6; }
+
+.app .sglast { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; padding: 8px 10px; background: #0a0405; border-left: 3px solid var(--c-gold); font-size: 13px; }
+.app .sglast > b { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--c-gold); }
+.app .sglast code { font: 12px/1.4 ui-monospace, Consolas, monospace; color: #ffb3bf; overflow-wrap: anywhere; white-space: pre-wrap; }
+.app ol.steps { margin: 4px 0 8px; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
