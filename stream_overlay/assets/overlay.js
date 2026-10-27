@@ -180,10 +180,51 @@
       const k = 28, i = 12, x0 = s.x + i, y0 = s.y + i, x1 = s.x + s.w - i, y1 = s.y + s.h - i;
       const cuts = s.cut ? [`M${x1 - k} ${y0}H${x1}V${y0 + k}`, `M${x0} ${y1 - k}V${y1}H${x0 + k}`]
         : [`M${x0} ${y0 + k}V${y0}H${x0 + k}`, `M${x1 - k} ${y0}H${x1}V${y0 + k}`, `M${x1} ${y1 - k}V${y1}H${x1 - k}`, `M${x0 + k} ${y1}H${x0}V${y1 - k}`];
-      if (s.id !== "face") out += cuts.map(p => `<path class="ov-corner" d="${p}"/>`).join("");
+      if (s.id === "hand") out += cuts.map(p => `<path class="ov-corner" d="${p}"/>`).join("");
     }
     return `<svg class="ov-layer" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">
 <defs><filter id="${f}" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur stdDeviation="5"/></filter></defs>${out}</svg>`;
+  }
+
+
+  /* ---------- animated backdrop: purple/crimson smoke + embers, masked out of the camera holes ---------- */
+  function bgFx(L) {
+    const c = el("canvas", "ov-layer ov-bgfx"); c.width = 270; c.height = 480;
+    const holes = L.slots.map(s => slotPath(s)).join("");
+    const mask = "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><path fill-rule="evenodd" d="M0 0H${W}V${H}H0Z${holes}"/></svg>`);
+    c.style.webkitMaskImage = c.style.maskImage = `url("${mask}")`;
+    c.style.webkitMaskSize = c.style.maskSize = "100% 100%";
+    const ctx = c.getContext("2d"); let last = -1;
+    const LOOP = 24;
+    tickers.push(t => {
+      if (manualT == null && t - last < 1 / 30) return; last = t;
+      ctx.clearRect(0, 0, 270, 480);
+      ctx.globalCompositeOperation = "lighter";
+      for (let i = 0; i < 18; i++) {
+        const r1 = rnd(i + 2001), r2 = rnd(i + 2101), r3 = rnd(i + 2201);
+        const x = frac(r1 + t * (1 + (i % 2)) / LOOP) * 360 - 45;
+        const y = 300 + r2 * 180 + Math.sin(t / LOOP * TAU * (1 + (i % 3)) + i) * 26;
+        const rad = 40 + r3 * 60, red = i % 3 === 0;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, rad);
+        g.addColorStop(0, red ? "rgba(255,35,80,.07)" : "rgba(123,44,255,.10)");
+        g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, rad, 0, TAU); ctx.fill();
+      }
+      for (let i = 0; i < 40; i++) {
+        const ph = frac(t * (2 + Math.floor(rnd(i + 2301) * 4)) / LOOP + rnd(i + 2401));
+        const x = rnd(i + 2501) * 270 + Math.sin(ph * TAU * 2 + i) * 6;
+        const y = 480 - ph * 300;
+        const a = Math.sin(ph * Math.PI) * .8;
+        ctx.fillStyle = i % 4 ? `rgba(205,170,255,${a})` : `rgba(255,110,140,${a})`;
+        ctx.fillRect(x, y, 1.2, 1.2);
+      }
+      const sw = frac(t / 8), sx = sw * 600 - 200;
+      const g = ctx.createLinearGradient(sx, 0, sx + 90, 60);
+      g.addColorStop(0, "rgba(185,138,255,0)"); g.addColorStop(.5, "rgba(185,138,255,.05)"); g.addColorStop(1, "rgba(185,138,255,0)");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, 270, 480);
+      ctx.globalCompositeOperation = "source-over";
+    });
+    return c;
   }
 
   /* ---------- panels ---------- */
@@ -252,6 +293,7 @@
       d.appendChild(img); stage.appendChild(d);
     }
     stage.insertAdjacentHTML("beforeend", bgSVG(L));
+    if (opts.bgfx !== false) stage.appendChild(bgFx(L));
     stage.insertAdjacentHTML("beforeend", frameSVG(L));
 
     // band between facecam and gameplay
@@ -273,9 +315,9 @@
     });
 
     const api = { stage, layout: L, banner: null };
-    api.setBanner = st => {
+    api.setBanner = (st, acc) => {
       if (api.banner) api.banner.destroy();
-      api.banner = st === "none" ? null : mountBanner(stage, { style: st, y: BY, inStage: true });
+      api.banner = st === "none" ? null : mountBanner(stage, { style: st, accent: acc || opts.accent, y: BY, inStage: true });
       if (api.banner) api.banner.el.style.display = Store.state.showBanner ? "" : "none";
     };
     api.setBanner(opts.banner || "pro");
@@ -466,6 +508,7 @@ ${crescent(u + "m", 118, 86, 70, `url(#${u}g)`, 'class="moon"')}
     Store.init();
     let style = opts.style || "pro";
     if (/^pro/.test(style) && window.ChouOverlay.mountProBanner) return window.ChouOverlay.mountProBanner(root, opts);
+    if (/^scene/.test(style) && window.ChouOverlay.mountSceneBanner) return window.ChouOverlay.mountSceneBanner(root, opts);
     const B = CFG.banner, msgs = B.messages, N = msgs.length, D = B.secondsPerMessage, LOOP = N * D;
     const ch = B.character || {};
     const bn = el("div", "bn bn--" + style);
@@ -474,7 +517,7 @@ ${crescent(u + "m", 118, 86, 70, `url(#${u}g)`, 'class="moon"')}
 <div class="bn-char"></div><div class="bn-sep"></div>
 ${msgs.map(m => `<div class="bn-msg"><div class="bn-kicker">${esc(fill(m.kicker))}</div><div class="bn-main">${esc(fill(m.main))}</div>
 <div class="bn-tags">${(m.tags || []).map(x => `<span class="bn-tag"><span>${priceHL(fill(x))}</span></span>`).join("")}</div></div>`).join("")}
-${msgs.map(m => `<div class="bn-art">${artSVG(m.art)}</div>`).join("")}
+${msgs.map(m => `<div class="bn-art">${m.art === "rank" && window.ChouOverlay && window.ChouOverlay.ranks3d ? window.ChouOverlay.ranks.html() : artSVG(m.art)}</div>`).join("")}
 <div class="bn-blade"></div><div class="bn-flash"></div>
 <div class="bn-edge"><i></i></div><div class="bn-edge bottom"></div>
 <div class="bn-ticks">${msgs.map(() => "<i><b></b></i>").join("")}</div>`;
@@ -528,7 +571,8 @@ ${msgs.map(m => `<div class="bn-art">${artSVG(m.art)}</div>`).join("")}
         const ap = seg(u, .2, .8), ae = eBack(ap);
         a.style.opacity = Math.min(1, ap * 3, 1 - out).toFixed(3);
         a.style.transform = `scale(${((.35 + .65 * ae) * (1 - .3 * out)).toFixed(3)}) rotate(${((1 - eOut(ap)) * -18).toFixed(1)}deg)`;
-        animArt(a.firstElementChild, msgs[i].art, t, LOOP);
+        if (msgs[i].art === "rank" && window.ChouOverlay.ranks3d) window.ChouOverlay.ranks.anim(a.firstElementChild, u, t);
+        else animArt(a.firstElementChild, msgs[i].art, t, LOOP);
       }
       const b = seg(u, 0, .5);
       blade.style.transform = `translateX(${(-300 + eOut(b) * 1500).toFixed(1)}px) skewX(-18deg)`;

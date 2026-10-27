@@ -2,6 +2,7 @@
 
 @font-face { font-family: "OV Anton"; src: url(fonts/anton.woff2) format("woff2"); font-display: block; }
 @font-face { font-family: "OV Mont"; src: url(fonts/montserrat-italic.woff2) format("woff2"); font-style: italic; font-weight: 100 900; font-display: block; }
+@font-face { font-family: "OV MontUp"; src: url(fonts/montserrat.woff2) format("woff2"); font-weight: 300 900; font-display: block; }
 @font-face { font-family: "OV Raj"; src: url(fonts/rajdhani-600.woff2) format("woff2"); font-weight: 600; font-display: block; }
 @font-face { font-family: "OV Raj"; src: url(fonts/rajdhani-700.woff2) format("woff2"); font-weight: 700; font-display: block; }
 @font-face { font-family: "OV Teko"; src: url(fonts/teko.woff2) format("woff2"); font-weight: 600; font-display: block; }
@@ -26,6 +27,7 @@
   --f-hud: "OV Raj", "Rajdhani", "Segoe UI", sans-serif;
   --f-num: "OV Teko", "Teko", "OV Anton", Impact, sans-serif;
   --f-brush: "OV Brush", "Yuji Syuku", serif;
+  --f-clean: "OV MontUp", "Montserrat", "Segoe UI", sans-serif;
 }
 
 .ov-stage {
@@ -35,6 +37,7 @@
 }
 .ov-stage *, .bn * { box-sizing: border-box; }
 .ov-layer { position: absolute; inset: 0; width: 1080px; height: 1920px; pointer-events: none; }
+.ov-bgfx { image-rendering: auto; }
 
 /* demo images (preview only) */
 .ov-demo { position: absolute; overflow: hidden; background: #1a1424; }
@@ -92,7 +95,7 @@
   clip-path: polygon(calc(var(--cut) - 1px) 0, 100% 0, 100% calc(100% - var(--cut) + 1px), calc(100% - var(--cut) + 1px) 100%, 0 100%, 0 calc(var(--cut) - 1px));
   background:
     radial-gradient(120% 70% at 100% 0%, rgba(123,44,255,.22), transparent 60%),
-    linear-gradient(170deg, #1c0d30 0%, #110820 55%, #0b0615 100%);
+    linear-gradient(170deg, rgba(28,13,48,.9) 0%, rgba(17,8,32,.9) 55%, rgba(11,6,21,.92) 100%);
 }
 .ov-card::after { /* sheen */
   content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none;
@@ -362,3 +365,65 @@
   radial-gradient(circle at 1px 1px, rgba(255,255,255,.06) 1.2px, transparent 1.6px) 0 0 / 9px 9px,
   linear-gradient(180deg, #1a0710, #07040d); }
 .bn-pro.bn--pro-crimson .pp-dots i.on { background: #ffcf4a; box-shadow: 0 0 8px #ffcf4a; }
+
+/* ================= SCENE BANNER (minimal, two scenes) ================= */
+.bn-scene { --acc: #a66bff; font-family: var(--f-clean); }
+.bn-scene .bn-bg { background: radial-gradient(70% 170% at 35% 50%, #1b1823 0%, #0c0b10 70%); }
+.bn-scene .sc-smoke { left: 0; top: 0; width: 1080px; height: 192px; }
+.bn-scene .sc-grain { inset: 0; background-size: 240px 240px; mix-blend-mode: overlay; opacity: .9; }
+.bn-scene .sc-strip { top: 0; height: 192px; background: var(--acc); overflow: hidden; }
+.bn-scene .sc-strip.a { left: 0; width: 480px; }
+.bn-scene .sc-strip.b { right: 0; width: 560px; background: linear-gradient(90deg, var(--acc), color-mix(in srgb, var(--acc) 70%, #000)); }
+.bn-scene .sc-kin { position: absolute; left: -30px; top: -26px; transform: rotate(-9deg); color: #0b0a0e; font: 400 30px/.92 var(--f-disp); letter-spacing: .02em; white-space: nowrap; }
+.bn-scene .sc-brand { left: 0; top: 0; width: 1080px; height: 192px; display: flex; align-items: center; justify-content: center; gap: 22px; visibility: hidden; }
+.bn-scene .sc-blogo { width: 104px; height: 104px; flex: none; }
+.bn-scene.lg-mascot .sc-blogo { width: 168px; height: 168px; }
+.bn-scene .sc-blogo svg, .bn-scene .sc-logo svg, .bn-scene .sc-ico svg { width: 100%; height: 100%; overflow: visible; display: block; }
+.bn-scene .sc-btxt { display: flex; flex-direction: column; gap: 10px; min-width: 420px; }
+.bn-scene .sc-track { font: 600 32px/1 var(--f-clean); color: #f3eee8; text-transform: uppercase; white-space: nowrap; }
+.bn-scene .sc-sub { font: 600 14px/1 var(--f-clean); letter-spacing: .42em; color: var(--acc); white-space: nowrap; }
+.bn-scene .sc-badge { right: 40px; top: 50px; display: flex; flex-direction: column; align-items: center; padding: 10px 18px 9px; background: var(--acc); color: #0b0a0e;
+  font: italic 900 22px/1.02 var(--f-shout); border-radius: 12px; border: 3px solid #fff; box-shadow: 0 6px 0 rgba(0,0,0,.5); visibility: hidden; }
+.bn-scene .sc-logo { left: 150px; top: 0; width: 360px; height: 192px; display: grid; place-items: center; visibility: hidden; }
+.bn-scene.lg-grunge .sc-logo svg { width: 350px; height: 138px; }
+.bn-scene.lg-emblem .sc-logo svg { width: 150px; height: 150px; }
+.bn-scene.lg-mascot .sc-logo svg { width: 188px; height: 188px; }
+.bn-scene .sc-item { left: 520px; top: 0; width: 540px; height: 192px; display: flex; align-items: center; gap: 14px; visibility: hidden; }
+.bn-scene .sc-ico { width: 140px; height: 100px; flex: none; transform-origin: 50% 55%; }
+.bn-scene .sc-txt { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.bn-scene .sc-b { display: flex; align-items: center; gap: 16px; font: 800 38px/1 var(--f-clean); color: #fff; white-space: nowrap; }
+.bn-scene .sc-l { font: 500 19px/1.1 var(--f-clean); letter-spacing: .14em; color: rgba(243,238,232,.78); text-transform: uppercase; white-space: nowrap; }
+.bn-scene .sc-l em { font-style: normal; font-weight: 800; color: var(--acc); }
+.bn-scene .sc-pill { position: relative; display: inline-flex; align-items: center; gap: 5px; padding: 9px 20px; border-radius: 999px; font: 500 18px/1 var(--f-clean); color: #fff;
+  background: linear-gradient(180deg, #2c2933, #141218); border: 2px solid rgba(255,255,255,.5); box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 4px 10px rgba(0,0,0,.5); transform-origin: 50% 50%; }
+.bn-scene .sc-pill b { font-weight: 800; }
+.bn-scene .sc-pill.press { background: var(--acc); color: #0b0a0e; border-color: #fff; }
+.bn-scene .sc-hand { position: absolute; right: -10px; bottom: -20px; width: 26px; height: 30px; opacity: 0; }
+.bn-scene .sc-hand svg { width: 100%; height: 100%; display: block; }
+.bn-scene .sc-wiper { inset: 0; overflow: hidden; pointer-events: none; }
+.bn-scene .sc-wiper i { position: absolute; top: -30px; height: 252px; opacity: 0; }
+.bn-scene .sc-wiper .w1 { width: 300px; background: var(--acc); }
+.bn-scene .sc-wiper .w2 { width: 150px; background: #0b0a0e; border-left: 6px solid #fff; }
+.bn-scene .sc-line { left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--acc) 30%, var(--acc) 70%, transparent); opacity: .75; }
+.bn-scene .sc-line.top { top: 0; } .bn-scene .sc-line.bot { bottom: 0; opacity: .35; }
+
+/* ================= 3D RANK ICONS ================= */
+.rk3d { position: absolute; inset: 0; }
+.rk3d .rk-rays { position: absolute; left: 50%; top: 46%; width: 150%; aspect-ratio: 1; opacity: 0; pointer-events: none;
+  background: repeating-conic-gradient(from 0deg, rgba(255,207,74,.28) 0deg 6deg, transparent 6deg 30deg);
+  -webkit-mask-image: radial-gradient(circle, #000 20%, transparent 62%); mask-image: radial-gradient(circle, #000 20%, transparent 62%); }
+.rk3d .rk-tier { position: absolute; inset: 0; perspective: 520px; visibility: hidden; }
+.rk3d .rk-glow { position: absolute; left: 50%; top: 46%; width: 92%; aspect-ratio: 1;
+  background: radial-gradient(circle, color-mix(in srgb, var(--g) 70%, transparent) 0%, color-mix(in srgb, var(--g) 22%, transparent) 38%, transparent 66%); }
+.rk3d .rk-shadow { position: absolute; left: 50%; bottom: 3%; width: 54%; height: 12%; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0,0,0,.85), rgba(0,0,0,0)); }
+.rk3d .rk-card { position: absolute; left: 50%; top: 46%; height: 84%; aspect-ratio: 1; transform-style: preserve-3d; }
+.rk3d .rk-l { position: absolute; inset: 0; display: grid; place-items: center; backface-visibility: visible; }
+.rk3d .rk-l:not(.front) { filter: brightness(.28) saturate(1.4); }
+.rk3d .rk-l img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.rk3d .rk-l.front img, .rk3d .rk-l.front svg { filter: drop-shadow(0 0 1px rgba(255,255,255,.5)) contrast(1.06) saturate(1.1); }
+.rk3d .rk-shine { position: absolute; inset: 0; opacity: 0; transform: translateZ(.5px); pointer-events: none; mix-blend-mode: screen;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.75) 50%, transparent 60%) 160% 0 / 250% 100% no-repeat;
+  -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; }
+.rk3d .rk-spk { position: absolute; width: 22px; height: 22px; background: #fff;
+  clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%); filter: drop-shadow(0 0 6px #ffcf4a); }

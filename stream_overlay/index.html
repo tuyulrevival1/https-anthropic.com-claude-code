@@ -6,7 +6,7 @@
 <!--ARTIFACT-START-->
 <title>Chou KOF Overlay</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:ital,wght@1,900&family=Rajdhani:wght@600;700&family=Teko:wght@600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:ital,wght@0,400..900;1,900&family=Rajdhani:wght@600;700&family=Teko:wght@600&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&text=%E5%85%AB%E7%A8%9A%E5%A5%B3&display=swap">
 <link rel="stylesheet" href="assets/overlay.css">
 <link rel="stylesheet" href="assets/control.css">
@@ -16,6 +16,8 @@
     --g-bg: #0b0712; --g-panel: #140c21; --g-line: rgba(185,138,255,.2); --g-fg: #f3eee8; --g-mut: rgba(243,238,232,.62);
     --g-acc: #b98aff; --g-red: #ff2350;
     --g-disp: "OV Anton", "Anton", Impact, sans-serif; --g-hud: "OV Raj", "Rajdhani", "Segoe UI", system-ui, sans-serif;
+    --f-disp: "OV Anton", "Anton", Impact, sans-serif; --f-hud: "OV Raj", "Rajdhani", sans-serif;
+    --f-shout: "OV Mont", "Montserrat", sans-serif; --f-clean: "OV MontUp", "Montserrat", sans-serif;
     color-scheme: dark;
   }
   body { background: var(--g-bg); color: var(--g-fg); font: 500 16px/1.5 var(--g-hud); margin: 0; }
@@ -30,6 +32,24 @@
   .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--g-line); background: var(--g-panel); }
   .seg button { font: 700 14px/1 var(--g-hud); letter-spacing: .14em; text-transform: uppercase; color: var(--g-mut); background: none; border: 0; padding: 12px 14px; cursor: pointer; }
   .seg button[aria-pressed="true"] { background: var(--g-red); color: #fff; }
+  .ctl { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; max-width: 100%; }
+  .acc { display: flex; align-items: center; gap: 8px; }
+  .acc span { font: 700 12px/1 var(--g-hud); letter-spacing: .24em; text-transform: uppercase; color: var(--g-mut); margin-right: 4px; }
+  .acc button { width: 28px; height: 28px; border-radius: 50%; background: var(--c); border: 3px solid var(--g-bg); box-shadow: 0 0 0 1px var(--g-line); cursor: pointer; }
+  .acc button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--g-fg); }
+  .acc button:focus-visible { outline: 2px solid var(--g-acc); outline-offset: 2px; }
+  .logos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 12px; }
+  .logo { background: radial-gradient(circle at 50% 40%, #1d1430, #0e0a16); border: 1px solid var(--g-line); padding: 14px; display: flex; flex-direction: column; gap: 8px; align-items: center; min-width: 0; }
+  .logo .lbox { width: 100%; aspect-ratio: 1; display: grid; place-items: center; }
+  .logo .lbox.wide { aspect-ratio: 1.6; }
+  .logo .lbox svg { width: 86%; height: 86%; overflow: visible; }
+  .logo b { font: 700 13px/1 var(--g-hud); letter-spacing: .22em; text-transform: uppercase; color: var(--g-acc); }
+  .logo small { color: var(--g-mut); font-size: 13px; text-align: center; }
+  .tips { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 14px; }
+  .tip { background: var(--g-panel); border: 1px solid var(--g-line); border-top: 3px solid var(--g-red); padding: 16px 18px; min-width: 0; }
+  .tip h4 { margin: 0 0 10px; font: 400 22px/1 var(--g-disp); letter-spacing: .02em; }
+  .tip ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; color: var(--g-mut); }
+  .tip li b { color: var(--g-fg); font-weight: 700; }
   .seg button:focus-visible { outline: 2px solid var(--g-acc); outline-offset: -2px; }
   .layouts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 18px; }
   .lay { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
@@ -66,12 +86,25 @@
       <h1><small>OVERLAY LIVE · PORTRAIT 1080×1920</small>CHOU KOF OVERLAY</h1>
       <p class="lead">Tiga susunan layout, lima gaya banner bawah (dua premium, tiga ringkas), dan queue Mabar VIP yang dikawal dari panel. Tukar gaya banner di sini, semua preview ikut.</p>
     </div>
+    <div class="ctl">
     <div class="seg" role="group" aria-label="Gaya banner">
+      <button type="button" data-style="scene-grunge" aria-pressed="false">Minimal · Grunge</button>
+      <button type="button" data-style="scene-emblem" aria-pressed="false">Minimal · Emblem</button>
+      <button type="button" data-style="scene-mascot" aria-pressed="false">Minimal · Maskot</button>
       <button type="button" data-style="pro" aria-pressed="true">Premium Ungu</button>
       <button type="button" data-style="pro-crimson" aria-pressed="false">Premium Merah</button>
       <button type="button" data-style="flame" aria-pressed="false">Flame</button>
       <button type="button" data-style="slash" aria-pressed="false">Slash</button>
       <button type="button" data-style="moon" aria-pressed="false">Moon</button>
+    </div>
+    <div class="acc" role="group" aria-label="Warna aksen (gaya Minimal)">
+      <span>Aksen</span>
+      <button type="button" data-acc="violet" aria-pressed="true" style="--c:#a66bff" aria-label="Ungu"></button>
+      <button type="button" data-acc="crimson" aria-pressed="false" style="--c:#ff2350" aria-label="Merah"></button>
+      <button type="button" data-acc="lime" aria-pressed="false" style="--c:#b6ff3b" aria-label="Hijau lime"></button>
+      <button type="button" data-acc="ice" aria-pressed="false" style="--c:#52d8ff" aria-label="Biru ais"></button>
+      <button type="button" data-acc="gold" aria-pressed="false" style="--c:#ffcf4a" aria-label="Emas"></button>
+    </div>
     </div>
   </header>
 
@@ -91,13 +124,50 @@
   </section>
 
   <h2>Banner bawah</h2>
-  <p>Kekal dalam jalur 1080×192 sahaja, tak masuk kawasan atas. Banner premium: maskot sticker main tablet di kiri, teks bergerak huruf demi huruf, ikon kanan ikut mesej (diamond berkilat, rank Epic sampai Immortal, VIP, link). Empat mesej bertukar setiap 6 saat.</p>
+  <p>Kekal dalam jalur 1080×192 sahaja, tak masuk kawasan atas. Gaya <b>Minimal</b> ikut rentak rujukan SOLOZ: babak jenama (jalur aksen menyapu, teks berulang, huruf rapat dari jarak lebar, lencana "info lanjut di bio") kemudian babak servis (logo besar, teks bertukar dengan kabur-pudar, butang Link in Bio diketuk). Banner premium: maskot sticker main tablet di kiri, teks bergerak huruf demi huruf, ikon kanan ikut mesej (diamond berkilat, ikon rank 3D, VIP, link). Empat mesej bertukar setiap 6 saat.</p>
   <div class="banners">
+    <div class="bitem"><b>Minimal · Grunge · ungu</b><div class="bshot"><div class="bn-host" data-banner="scene-grunge" data-acc="violet"></div></div></div>
+    <div class="bitem"><b>Minimal · Maskot · merah</b><div class="bshot"><div class="bn-host" data-banner="scene-mascot" data-acc="crimson"></div></div></div>
+    <div class="bitem"><b>Minimal · Emblem · lime</b><div class="bshot"><div class="bn-host" data-banner="scene-emblem" data-acc="lime"></div></div></div>
     <div class="bitem"><b>Premium Ungu</b><div class="bshot"><div class="bn-host" data-banner="pro"></div></div></div>
     <div class="bitem"><b>Premium Merah</b><div class="bshot"><div class="bn-host" data-banner="pro-crimson"></div></div></div>
     <div class="bitem"><b>Gaya lama · Flame</b><div class="bshot"><div class="bn-host" data-banner="flame"></div></div></div>
     <div class="bitem"><b>Gaya lama · Slash</b><div class="bshot"><div class="bn-host" data-banner="slash"></div></div></div>
     <div class="bitem"><b>Gaya lama · Moon</b><div class="bshot"><div class="bn-host" data-banner="moon"></div></div></div>
+  </div>
+
+  <p>Ikon rank untuk mesej joki guna <b>logo rank MLBB asli</b> yang awak letak dalam <code>assets/ranks/</code> (epic, legend, mythic, glory, immortal .png). Ikon diputar 3D dengan ketebalan, bayang lantai, glow dan kilauan. Selagi fail tiada, lencana ganti dipaparkan.</p>
+
+  <h2>Logo</h2>
+  <p>Empat bentuk logo dengan tema yang sama: bulan sabit Yagami, ungu dan merah. Semua beranimasi dalam banner. Versi PNG latar telus ada dalam folder <code>logos/</code> untuk gambar profil, thumbnail dan watermark.</p>
+  <div class="logos">
+    <div class="logo"><div class="lbox" data-logo="emblem"></div><b>Emblem</b><small>Monogram S dalam bulan sabit. Untuk ikon kecil &amp; watermark.</small></div>
+    <div class="logo"><div class="lbox wide" data-logo="grunge"></div><b>Wordmark</b><small>Gaya grunge retak. Untuk banner &amp; thumbnail.</small></div>
+    <div class="logo"><div class="lbox" data-logo="mascot"></div><b>Maskot</b><small>Sticker awak main tablet, beranimasi.</small></div>
+    <div class="logo"><div class="lbox" data-logo="avatar"></div><b>Gambar profil</b><small>Maskot dalam bulatan. Untuk TikTok &amp; WhatsApp.</small></div>
+  </div>
+
+  <h2>Naik taraf stream</h2>
+  <p>Perkara yang paling beri kesan pada streamer portrait yang ramai penonton, disusun ikut keutamaan.</p>
+  <div class="tips">
+    <div class="tip"><h4>Belakang kamera</h4><ul>
+      <li><b>Lampu LED strip ungu + merah</b> di dinding belakang atau bawah meja. Latar hitam jadi bergradien dan ikut tema overlay.</li>
+      <li><b>Neon sign / poster</b> logo bulan sabit atau Chou KOF di belakang, biar sikit kabur.</li>
+      <li><b>Lampu depan (ring light / softbox)</b> serong 45°. Muka terang, latar kekal gelap tapi berwarna.</li>
+      <li>Kemas kabel dan barang dalam frame.</li></ul></div>
+    <div class="tip"><h4>Video &amp; audio</h4><ul>
+      <li>Kanvas <b>1080×1920</b>, 30 fps (60 kalau PC mampu), bitrate tertinggi yang TikTok benarkan.</li>
+      <li>Facecam: kunci <b>fokus, exposure &amp; white balance</b> manual supaya warna tak berubah-ubah.</li>
+      <li>Mic: noise suppression + compressor. Muzik latar jauh lebih perlahan dari suara.</li></ul></div>
+    <div class="tip"><h4>Hook penonton</h4><ul>
+      <li><b>Tajuk live jelas</b>: contoh "SOLO PUSH GLOBAL · MABAR VIP RM4".</li>
+      <li>Sebut nama penonton yang masuk dan balas komen. Ajak komen "VIP" untuk queue.</li>
+      <li>Guna <b>LIVE Goal</b> TikTok (like / gift) supaya penonton ada sebab untuk kekal.</li>
+      <li>Tukar layout ikut sesi: <b>Mabar</b> bila ada queue, <b>Solo Push</b> bila tiada.</li></ul></div>
+    <div class="tip"><h4>Konsisten</h4><ul>
+      <li><b>Jadual tetap</b> (contoh setiap malam pukul 9) supaya penonton tahu bila nak datang.</li>
+      <li>Klip momen savage / maniac, post sebagai video TikTok sebelum live.</li>
+      <li>Logo, warna dan nama sama di profil, banner dan thumbnail.</li></ul></div>
   </div>
 
   <h2>Cuba queue Mabar VIP</h2>
@@ -132,6 +202,9 @@
 <script src="assets/config.js"></script>
 <script src="assets/overlay.js"></script>
 <script src="assets/banner-pro.js"></script>
+<script src="assets/ranks3d.js"></script>
+<script src="assets/logos.js"></script>
+<script src="assets/banner-scene.js"></script>
 <script src="assets/control.js"></script>
 <script>
 (function () {
@@ -155,13 +228,31 @@
     return o;
   });
   document.querySelectorAll(".bn-host").forEach(host => {
-    O.mountBanner(host, { style: host.dataset.banner });
+    O.mountBanner(host, { style: host.dataset.banner, accent: host.dataset.acc });
     O.fitStage(host, host.parentElement, 1080, 192);
   });
+  let curStyle = "pro", curAcc = "violet";
+  const apply = () => overlays.forEach(o => o.setBanner(curStyle, curAcc));
   document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => {
     document.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
-    overlays.forEach(o => o.setBanner(b.dataset.style));
+    curStyle = b.dataset.style; apply();
   }));
+  document.querySelectorAll(".acc button").forEach(b => b.addEventListener("click", () => {
+    document.querySelectorAll(".acc button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    curAcc = b.dataset.acc; if (/^scene/.test(curStyle)) apply();
+  }));
+  // animated logos (replay the intro every 5 s)
+  document.querySelectorAll("[data-logo]").forEach(box => {
+    const k = box.dataset.logo;
+    if (k === "grunge") box.innerHTML = O.logos.grungeSVG(O.ACCENTS.violet);
+    else if (k === "emblem") box.innerHTML = O.logos.emblemSVG(O.ACCENTS.violet);
+    else if (k === "mascot") box.innerHTML = O.mascot.svg();
+    else box.innerHTML = `<div style="position:relative;width:86%;aspect-ratio:1;border-radius:50%;border:5px solid #f3eee8;box-shadow:0 0 0 4px #ff2350;background:radial-gradient(circle at 50% 38%,#3a1670,#160a28 62%,#0b0614);overflow:hidden;display:grid;place-items:end center">${O.mascot.svg()}</div>`;
+    const svg = box.querySelector(k === "avatar" ? "div svg" : "svg");
+    if (k === "avatar") Object.assign(svg.style, { width: "82%", height: "88%" });
+    const anim = k === "grunge" ? O.logos.animGrunge : k === "emblem" ? O.logos.animEmblem : (s, p, t) => O.mascot.anim(s, t);
+    O.util.tickers.push(t => anim(svg, t % 5, t));
+  });
   O.mountControl(document.getElementById("cp"));
   document.getElementById("g-sample").addEventListener("click", seed);
   document.getElementById("g-empty").addEventListener("click", () => O.Q.clear());

@@ -21,14 +21,38 @@ Semua dalam HTML, jadi teks, harga dan queue boleh ubah tanpa edit video.
 3. **Solo Push** – game lebih besar, stats W/L besar, tiada queue. Untuk bila skrin dah penuh.
 
 **Banner** (`&banner=...`):
+- `scene-grunge`, `scene-emblem`, `scene-mascot` – **Minimal** (rentak macam SOLOZ): babak jenama → babak servis, teks kabur-pudar, butang Link in Bio diketuk.
+  Tambah `&accent=violet | crimson | lime | ice | gold` untuk tukar warna aksen.
 - `pro` – **Premium Ungu** (default): maskot sticker awak main tablet, teks bergerak huruf demi huruf, ikon kanan beranimasi.
 - `pro-crimson` – Premium Merah: susunan sama, plat merah.
 - `flame`, `slash`, `moon` – gaya lama yang lebih ringkas. `none` untuk tutup banner.
 
-Ikon kanan ikut mesej: diamond berkilat (topup), lencana rank laju EPIC → LEGEND → MYTHIC → GLORY → IMMORTAL (joki), lencana VIP (mabar), link (bio).
+Ikon kanan ikut mesej: diamond berkilat (topup), ikon rank 3D (joki), lencana VIP (mabar), link (bio).
+
+### Ikon rank asli (3D)
+
+Letak ikon rank MLBB asli (PNG latar telus) dalam `assets/ranks/`: `epic.png`, `legend.png`, `mythic.png`, `glory.png`, `immortal.png`.
+Banner akan putar setiap ikon secara 3D (ada ketebalan, bayang lantai, glow ikut warna rank, kilauan) dan berhenti di Immortal dengan sinar.
+Selagi fail tiada, lencana lukisan dipakai. Nama fail & warna glow boleh ubah dalam `config.js` → `ranks.tiers`.
+Lepas letak ikon, render semula video: `node tools/render_banner.js`.
 Nama di bawah maskot diambil dari `storeName` (contoh SYNOSTORE → "SYNO" + "STORE").
 
-Contoh: `overlay.html?layout=2&banner=pro-crimson`
+Contoh: `overlay.html?layout=2&banner=pro-crimson` atau `overlay.html?layout=1&banner=scene-grunge&accent=lime`
+
+**Latar beranimasi**: kawasan gelap overlay ada asap ungu-merah + bara api yang bergerak perlahan (tak tutup kamera). Tutup dengan `&bgfx=0` kalau PC berat.
+
+## Logo
+
+Folder `logos/` (PNG latar telus):
+
+| Fail | Guna |
+|---|---|
+| `logo_emblem.png`, `logo_emblem_crimson.png` | Ikon kecil, watermark, sudut video |
+| `logo_wordmark.png` | Thumbnail, banner, header |
+| `logo_mascot.png` | Sticker, emote, intro |
+| `profile_picture.png` | Gambar profil TikTok / WhatsApp |
+
+Tukar nama/huruf logo dalam `config.js` → `brand`, kemudian `node tools/export_logos.js`.
 
 ## Pasang dalam OBS / TikTok Live Studio
 
@@ -73,6 +97,14 @@ node tools/render_banner.js pro      # satu gaya sahaja
 
 Semua dalam `assets/config.js`: nama kedai, harga mabar, servis lain, mesej banner, device, nilai W/L/MMR permulaan.
 `{store}` dalam mesej akan ditukar jadi nama kedai.
+
+## Naik taraf stream (ringkas)
+
+1. **Belakang kamera**: LED strip ungu + merah di dinding belakang, neon/poster logo sedikit kabur, lampu depan serong 45°. Latar hitam jadi bergradien ikut tema.
+2. **Video**: kanvas 1080×1920, 30/60 fps, bitrate tertinggi yang TikTok benarkan; kunci fokus, exposure & white balance facecam.
+3. **Audio**: noise suppression + compressor; muzik latar jauh lebih perlahan dari suara.
+4. **Hook**: tajuk live jelas ("SOLO PUSH GLOBAL · MABAR VIP RM4"), sebut nama penonton, ajak komen "VIP", guna LIVE Goal, tukar layout ikut sesi.
+5. **Konsisten**: jadual tetap, post klip savage sebelum live, logo & warna sama di semua tempat.
 
 ## Nota TikTok
 

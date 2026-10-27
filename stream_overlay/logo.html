@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<title>Logo</title>
+<link rel="stylesheet" href="assets/overlay.css">
+<style>
+  html, body { margin: 0; background: transparent; }
+  #lg { --f-disp: "OV Anton", "Anton", Impact, sans-serif; --f-hud: "OV Raj", "Rajdhani", sans-serif; }
+  #lg { position: relative; width: 100vw; height: 100vh; display: grid; place-items: center; }
+  #lg > svg, #lg .av svg { width: 100%; height: 100%; overflow: visible; }
+  .av { position: relative; width: 100%; height: 100%; }
+  .av .bg { position: absolute; inset: 4%; border-radius: 50%; border: 2.4vmin solid #f3eee8;
+    background: radial-gradient(circle at 50% 38%, #3a1670 0%, #160a28 62%, #0b0614 100%); box-shadow: 0 0 0 1.4vmin #ff2350; overflow: hidden; }
+  .av .moon { position: absolute; inset: 10%; opacity: .5; }
+  .av .m { position: absolute; left: 13%; top: 10%; width: 74%; height: 80%; }
+</style>
+</head>
+<body>
+<!-- ?kind=emblem | grunge | mascot | avatar  &accent=violet|crimson|lime|ice|gold  (dipakai oleh tools/export_logos.js) -->
+<div id="lg"></div>
+<script src="assets/config.js"></script>
+<script src="assets/overlay.js"></script>
+<script src="assets/banner-pro.js"></script>
+<script src="assets/ranks3d.js"></script>
+<script src="assets/logos.js"></script>
+<script src="assets/banner-scene.js"></script>
+<script>
+  const O = ChouOverlay, p = new URLSearchParams(location.search);
+  const kind = p.get("kind") || "emblem", acc = O.ACCENTS[p.get("accent") || "violet"];
+  const box = document.getElementById("lg");
+  let svg, anim;
+  if (kind === "grunge") { box.innerHTML = O.logos.grungeSVG(acc); anim = O.logos.animGrunge; }
+  else if (kind === "mascot") { box.innerHTML = O.mascot.svg(); anim = (s, q, t) => O.mascot.anim(s, t); }
+  else if (kind === "avatar") {
+    box.innerHTML = `<div class="av"><div class="bg"><svg class="moon" viewBox="0 0 200 200"><mask id="mm"><rect width="200" height="200" fill="#fff"/><circle cx="128" cy="78" r="70" fill="#000"/></mask><circle cx="100" cy="100" r="86" fill="${acc}" mask="url(#mm)"/></svg></div><div class="m">${O.mascot.svg()}</div></div>`;
+    anim = (s, q, t) => O.mascot.anim(s, t);
+  } else { box.innerHTML = O.logos.emblemSVG(acc); anim = O.logos.animEmblem; }
+  svg = box.querySelector(kind === "avatar" ? ".m svg" : "svg");
+  const pose = +(p.get("t") || 1.1);
+  window.__pose = () => anim(svg, 10, pose);
+  document.fonts.ready.then(() => window.__pose());
+  O.tickers = null;
+</script>
+</body>
+</html>

@@ -33,9 +33,41 @@ window.OVERLAY_CONFIG = {
     character: { src: "assets/chou.png", scale: 1.15, x: 0, y: 8 },
     messages: [
       { kicker: "SERVIS TOPUP", main: "TOPUP DIAMOND MURAH", tags: ["LINK DI BIO"], art: "diamond" },
-      { kicker: "EPIC SAMPAI IMMORTAL", main: "JOKI RANK MURAH", tags: ["& TERPERCAYA"], art: "rank" },
+      { kicker: "SERVIS JOKI", main: "JOKI RANK MURAH", tags: ["& TERPERCAYA"], art: "rank" },
       { kicker: "MAIN DENGAN SAYA", main: "MABAR VIP", tags: ["RM4 / GAME", "3 GAME RM10"], art: "mabar" },
       { kicker: "SEMUA DI {store}", main: "TEKAN LINK DI BIO", tags: ["{store}"], art: "link" }
+    ]
+  },
+
+  // Jenama / logo (banner gaya "scene" & logo)
+  brand: {
+    name: "SYNO",                 // teks logo grunge
+    monogram: "S",
+    tagline: "SYNO STORE",        // teks babak jenama
+    sub: "TOPUP · JOKI · MABAR VIP",
+    badge: ["INFO LANJUT", "DI BIO"]
+  },
+
+  // Banner gaya "scene" (minimal, macam rujukan SOLOZ)
+  scene: {
+    brandSeconds: 4.8,
+    itemSeconds: 4.8,
+    items: [
+      { bold: "TOPUP DIAMOND", light: "MURAH · LINK DI BIO", icon: "diamond" },
+      { bold: "JOKI RANK", light: "MURAH & TERPERCAYA", icon: "rank" },
+      { bold: "MABAR VIP", light: "RM4 / GAME · 3 GAME RM10", icon: "mabar" },
+      { bold: "synostore", light: "", pill: "Link in Bio", icon: "link" }
+    ]
+  },
+
+  // Ikon rank untuk mesej joki. Letak PNG asli (latar telus) ikut nama fail ni.
+  ranks: {
+    tiers: [
+      { name: "EPIC", img: "assets/ranks/epic.png", glow: "#45f0bf" },
+      { name: "LEGEND", img: "assets/ranks/legend.png", glow: "#ffcf4a" },
+      { name: "MYTHIC", img: "assets/ranks/mythic.png", glow: "#c995ff" },
+      { name: "GLORY", img: "assets/ranks/glory.png", glow: "#ff96d4" },
+      { name: "IMMORTAL", img: "assets/ranks/immortal.png", glow: "#ff5874" }
     ]
   },
 

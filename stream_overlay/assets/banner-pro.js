@@ -244,7 +244,7 @@ ${TIERS.map((T, i) => badge(T, u, i)).join("")}
 ${msgs.map(m => `<div class="pp-msg"><div class="pp-kick"><span>${esc(fill(m.kicker))}</span></div>
 <div class="pp-main">${letters(fill(m.main))}</div>
 <div class="pp-tags">${(m.tags || []).map(x => `<span class="pp-tag"><span>${priceHL(fill(x))}</span></span>`).join("")}</div></div>`).join("")}
-${msgs.map(m => `<div class="pp-art">${m.art === "rank" ? rankArtSVG() : artSVG(m.art)}</div>`).join("")}
+${msgs.map(m => `<div class="pp-art">${m.art === "rank" ? O.ranks.html() : artSVG(m.art)}</div>`).join("")}
 <div class="pp-mascot">${mascotSVG()}</div>
 <div class="pp-word">${wordmarkSVG()}</div>
 <div class="bn-blade"></div><div class="bn-flash"></div>
@@ -311,7 +311,7 @@ ${msgs.map(m => `<div class="pp-art">${m.art === "rank" ? rankArtSVG() : artSVG(
         a.style.opacity = Math.min(ap * 3, 1 - ax).toFixed(3);
         a.style.transform = `scale(${((.3 + .7 * eBack(ap)) * (1 - .4 * ax)).toFixed(3)}) rotate(${((1 - eOut(ap)) * -25 + ax * 20).toFixed(1)}deg)`;
         const svg = a.firstElementChild;
-        if (msgs[i].art === "rank") animRanks(svg, u, t);
+        if (msgs[i].art === "rank") O.ranks.anim(svg, u, t);
         else { animArt(svg, msgs[i].art, t, LOOP); if (msgs[i].art === "diamond") animDiamondPlus(svg, t); }
       }
       // switch accents
@@ -337,4 +337,8 @@ ${msgs.map(m => `<div class="pp-art">${m.art === "rank" ? rankArtSVG() : artSVG(
   }
 
   O.mountProBanner = mountProBanner;
+  O.mascot = { svg: mascotSVG, anim: animMascot };
+  O.ranks = O.ranks || { html: rankArtSVG, svg: rankArtSVG, anim: animRanks };
+  O.rankBadgeSVG = i => `<svg viewBox="34 4 200 200" style="width:100%;height:100%;overflow:visible">${badge(TIERS[i], uid("rb"), i).replace('opacity="0"', 'opacity="1"').replace(/<text[^>]*>[^<]*<\/text>/, "")}</svg>`;
+  O.diamondPlus = { add: diamondPlus, anim: animDiamondPlus };
 })();

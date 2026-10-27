@@ -22,10 +22,13 @@
 <script src="assets/config.js"></script>
 <script src="assets/overlay.js"></script>
 <script src="assets/banner-pro.js"></script>
+<script src="assets/ranks3d.js"></script>
+<script src="assets/logos.js"></script>
+<script src="assets/banner-scene.js"></script>
 <script>
   const p = new URLSearchParams(location.search);
   const root = document.getElementById("root");
-  const o = ChouOverlay.mount(root, { layout: +p.get("layout") || 1, banner: p.get("banner") || "pro", demo: p.has("demo") });
+  const o = ChouOverlay.mount(root, { layout: +p.get("layout") || 1, banner: p.get("banner") || "pro", accent: p.get("accent") || undefined, bgfx: p.get("bgfx") !== "0", demo: p.has("demo") });
   ChouOverlay.fitStage(o.stage, root);
 </script>
 </body>

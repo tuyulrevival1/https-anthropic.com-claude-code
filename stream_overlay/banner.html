@@ -16,10 +16,13 @@
 <script src="assets/config.js"></script>
 <script src="assets/overlay.js"></script>
 <script src="assets/banner-pro.js"></script>
+<script src="assets/ranks3d.js"></script>
+<script src="assets/logos.js"></script>
+<script src="assets/banner-scene.js"></script>
 <script>
   const p = new URLSearchParams(location.search);
   const stage = document.getElementById("stage");
-  ChouOverlay.mountBanner(stage, { style: p.get("style") || "pro" });
+  ChouOverlay.mountBanner(stage, { style: p.get("style") || "pro", accent: p.get("accent") || undefined });
   ChouOverlay.fitStage(stage, document.getElementById("root"), 1080, 192);
 </script>
 </body>
