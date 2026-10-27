@@ -176,7 +176,7 @@ ${mile ? `<div class="fx-mile">🎁 CUKUP ${n} MVP · CLAIM SKIN!</div>` : info.
     savage:      { t: "SAVAGE",                        a: "#ff6a1f", b: "#701000", lvl: 4, intro: "burn",    bg: ["dim", "heat"],             icon: "horns",  parts: "fire",    dur: 3200 },
     shutdown:    { t: "SHUT DOWN",                     a: "#8ee9ff", b: "#06324a", lvl: 2, intro: "freeze",  bg: ["crt", "frost"],            icon: "power",  parts: "ice",     dur: 2800 },
     spree:       { t: "KILLING SPREE",                 a: "#ffcf4a", b: "#6b4300", lvl: 1, intro: "zoom",    bg: ["speed"],                   icon: "streak", parts: "spark",   dur: 2500 },
-    monster:     { t: "MONSTER KILL",                  a: "#7dff4a", b: "#0f4a00", lvl: 2, intro: "stomp",   bg: ["dim", "claws", "cracks"],  icon: "eye",    parts: "debris",  dur: 2800, shakeAt: 380 },
+    monster:     { t: "MONSTER KILL",                  a: "#7dff4a", b: "#0f4a00", lvl: 2, intro: "stomp",   bg: ["dim", "claws", "cracks"],  icon: "eye",    parts: "debris",  dur: 2800, shakeAt: 220 },
     mega:        { t: "MEGA KILL",                     a: "#ffb02e", b: "#6b3a00", lvl: 3, intro: "blast",   bg: ["white", "rings"],          icon: "bomb",   parts: "debris",  dur: 2800 },
     unstoppable: { t: "UNSTOPPABLE",                   a: "#ff5a7a", b: "#5a0020", lvl: 3, intro: "rush",    bg: ["hspeed"],                  icon: "arrow",  parts: "streak",  dur: 2700 },
     godlike:     { t: "GODLIKE",                       a: "#ffe680", b: "#6b5200", lvl: 3, intro: "rise",    bg: ["heaven"],                  icon: "halo",   parts: "feather", dur: 3400, shake: 0 },
@@ -336,9 +336,9 @@ ${mile ? `<div class="fx-mile">🎁 CUKUP ${n} MVP · CLAIM SKIN!</div>` : info.
       const body = A.createBiquadFilter(); body.type = "peaking"; body.frequency.value = 230; body.Q.value = 1; body.gain.value = 3;
       const pres = A.createBiquadFilter(); pres.type = "peaking"; pres.frequency.value = 3200; pres.Q.value = .9; pres.gain.value = 7;
       const air = A.createBiquadFilter(); air.type = "highshelf"; air.frequency.value = 8500; air.gain.value = 4;
-      const ws = A.createWaveShaper(); ws.curve = driveCurve(3.5); ws.oversample = "4x";
-      const comp = A.createDynamicsCompressor(); comp.threshold.value = -24; comp.knee.value = 4; comp.ratio.value = 10; comp.attack.value = .002; comp.release.value = .12;
-      const out = A.createGain(); out.gain.value = 1.35;
+      const ws = A.createWaveShaper(); ws.curve = driveCurve(9); ws.oversample = "4x";
+      const comp = A.createDynamicsCompressor(); comp.threshold.value = -28; comp.knee.value = 3; comp.ratio.value = 14; comp.attack.value = .001; comp.release.value = .1;
+      const out = A.createGain(); out.gain.value = 1.6;
       // two copies a hair apart = wide, thick "stadium PA" voice
       [[1.02, 0, -.3], [1.008, .014, .3]].forEach(([rate, dl, pan]) => {
         const src = A.createBufferSource(); src.buffer = buf; src.playbackRate.value = rate;
@@ -346,13 +346,20 @@ ${mile ? `<div class="fx-mile">🎁 CUKUP ${n} MVP · CLAIM SKIN!</div>` : info.
         n.connect(mix); src.start(t + dl);
       });
       mix.connect(hp).connect(ws).connect(body).connect(pres).connect(air).connect(comp).connect(out).connect(D);
+      // growl layer: the same voice ring-modulated at 38 Hz = rough, aggressive "beast" edge (no change in timing)
+      const gsrc = A.createBufferSource(), rm = A.createGain(), ro = A.createOscillator(), glp = A.createBiquadFilter(), gws = A.createWaveShaper(), gv = A.createGain();
+      gsrc.buffer = buf; gsrc.playbackRate.value = 1.02; rm.gain.value = 0; ro.frequency.value = 38; ro.connect(rm.gain);
+      glp.type = "lowpass"; glp.frequency.value = 2600; gws.curve = driveCurve(14); gv.gain.value = .5;
+      gsrc.connect(rm).connect(gws).connect(glp).connect(gv).connect(comp); gsrc.start(t); ro.start(t); ro.stop(t + buf.duration + .3);
+      // sub hit under the first word
+      S.tone(D, t, "sine", 75, 32, .55, .9); S.noise(D, t, .12, "highpass", 2500, 1800, .5, 1, x => Math.pow(1 - x, 3));
       // stadium echo ("KILL... kill... kill") + arena reverb
       const d = A.createDelay(1), fb = A.createGain(), el = A.createBiquadFilter(), dw = A.createGain();
       d.delayTime.value = .23; fb.gain.value = .38; el.type = "bandpass"; el.frequency.value = 1500; el.Q.value = .6; dw.gain.value = .42;
       out.connect(d); d.connect(el).connect(fb).connect(d); el.connect(dw).connect(D);
       impulse = impulse || reverbIR(2.2);
       const conv = A.createConvolver(), wet = A.createGain(); conv.buffer = impulse; wet.gain.value = .3; out.connect(conv).connect(wet).connect(D);
-      crowd(t - .05, Math.max(2.4, buf.duration + 1.8), .16, D);
+      crowd(t - .05, Math.max(2.4, buf.duration + 1.8), .24, D);
     });
   }
   // every kill plays through its own master; a newer kill fades the old one out (FIRST BLOOD -> DOUBLE KILL)
@@ -362,7 +369,10 @@ ${mile ? `<div class="fx-mile">🎁 CUKUP ${n} MVP · CLAIM SKIN!</div>` : info.
       const A = kAudio(); if (A.state === "suspended") A.resume();
       if (curMaster) { const old = curMaster; old._cut = true; old.gain.setTargetAtTime(0, A.currentTime, .04); setTimeout(() => { try { old.disconnect(); } catch (e) {} }, 400); }
       const m = A.createGain(); m.connect(A.destination); curMaster = m;
-      const o = bus(voice ? .5 + k.lvl * .04 : .6 + k.lvl * .05, m); (SND[type] || SND.double)(o, A.currentTime + .02);
+      const o = bus(voice ? .66 + k.lvl * .05 : .8 + k.lvl * .06, m), t0 = A.currentTime + .02;
+      // every kill opens with a hard hit: sub kick + crack + distorted thump
+      S.tone(o, t0, "sine", 62, 30, .5, 1.1); S.noise(o, t0, .09, "highpass", 3000, 2000, .9, 1, x => Math.pow(1 - x, 3)); S.growl(o, t0, 80, 45, .35, .35);
+      (SND[type] || SND.double)(o, t0);
       if (voice) speak(type, .05, m);
     } catch (e) {}
   }

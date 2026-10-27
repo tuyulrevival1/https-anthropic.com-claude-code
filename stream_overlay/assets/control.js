@@ -103,8 +103,15 @@ ${embedded ? "" : `<header class="app-top">
       <p class="muted">Jangan minimize tetingkap tu.</p>
     </div>
     <b class="kstep">2 · Kill siapa</b>
-    <div class="row toggles"><label class="fld kteam"><select id="ap-kteam"><option value="me">Kill saya: banner biru + nama saya</option><option value="kda">Kill saya: ikut KDA sahaja</option><option value="ally">Pasukan kita (biru)</option><option value="all">Semua kill</option></select></label>
+    <div class="row toggles"><label class="fld kteam"><select id="ap-kteam"><option value="hero">Kill saya: banner biru + logo hero saya (Chou)</option><option value="me">Kill saya: banner biru + nama saya</option><option value="kda">Kill saya: ikut KDA sahaja</option><option value="ally">Pasukan kita (biru)</option><option value="all">Semua kill</option></select></label>
       <label class="tog ksolo"><input id="ap-ksolo" type="checkbox"><span>Kill biasa = SOLO KILL</span></label></div>
+    <div class="khero">
+      <div class="row khrow"><span class="khimg" id="ap-khimg"></span><span id="ap-khtxt" class="muted">Belum ada logo hero.</span><button class="btn small ghost" type="button" id="ap-khclr" hidden>Padam logo</button></div>
+      <p class="muted">Cara ambil logo (sekali sahaja): main sampai <b>anda</b> dapat kill. Gambar banner kill disimpan di bawah. Tekan gambar yang ada <b>muka Chou</b>, kemudian tekan <b>✎ Pilih logo hero</b> dan lukis kotak kecil tepat di atas muka Chou dalam banner.</p>
+      <div class="kbans" id="ap-kbans"><span class="muted">Belum ada gambar banner. Hidupkan Auto detect kill dan main sekejap.</span></div>
+      <div class="row khrow2"><button class="btn small ghost" type="button" data-draw="hero" disabled>✎ Pilih logo hero</button>
+        <label class="fld khmin">Ketepatan (0.5 longgar · 0.8 ketat)<input id="ap-khmin" type="number" step="0.02" min="0.3" max="0.95" inputmode="decimal"></label></div>
+    </div>
     <div class="row kme"><label class="fld kign">Nama dalam game (IGN) anda, tepat macam dalam MLBB<input id="ap-kign" type="text" maxlength="24" placeholder="contoh: SYNO.Aqil" autocomplete="off"></label></div>
     <b class="kstep">3 · Kotak bacaan</b>
     <div class="kshot" id="ap-kshot"><img id="ap-kimg" alt=""><i class="kbox ban" id="ap-kbban"><em>BANNER</em></i><i class="kbox kda" id="ap-kbkda"><em>KDA</em></i><span class="kmsg" id="ap-kmsg">Tekan “Tunjuk skrin”.</span></div>
@@ -442,7 +449,25 @@ ${embedded ? "" : `<header class="app-top">
     const kHdr = () => ({ "X-Pin": lsGet(PIN_KEY, "") });
     const KNAME = { solo: "SOLO KILL", first: "FIRST BLOOD", double: "DOUBLE KILL", triple: "TRIPLE KILL", maniac: "MANIAC", savage: "SAVAGE", shutdown: "SHUT DOWN", spree: "KILLING SPREE", monster: "MONSTER KILL", mega: "MEGA KILL", unstoppable: "UNSTOPPABLE", godlike: "GODLIKE", legendary: "LEGENDARY", rampage: "RAMPAGE", wiped: "WIPED OUT" };
     const kCard = root.querySelector(".card.killfx");
-    let kCfg = null, kPrev = false, kDraw = null, kImgUrl = "";
+    let kCfg = null, kPrev = false, kDraw = null, kImgUrl = "", kHeroVer = null, kBan = null, kBansKey = "";
+    // hero logo: current picture + banner gallery
+    function kHeroImg() {
+      fetch("api/killhero?t=" + Date.now(), { headers: kHdr(), cache: "no-store" }).then(r => r.ok ? r.blob() : null).then(b => {
+        const box = $("ap-khimg"); box.innerHTML = b ? `<img alt="logo hero" src="${URL.createObjectURL(b)}">` : "";
+        $("ap-khtxt").textContent = b ? "Logo hero saya ✓" : "Belum ada logo hero."; $("ap-khclr").hidden = !b;
+      }).catch(() => {});
+    }
+    function kBans() {
+      if (!kCfg || kCfg.team !== "hero" || kCard.offsetParent === null) return;
+      fetch("api/killbanners", { headers: kHdr(), cache: "no-store" }).then(r => r.ok ? r.json() : null).then(list => {
+        if (!list) return; const key = list.map(x => x.t).join(","); if (key === kBansKey) return; kBansKey = key;
+        const box = $("ap-kbans");
+        if (!list.length) { box.innerHTML = `<span class="muted">Belum ada gambar banner. Hidupkan Auto detect kill dan main sekejap.</span>`; return; }
+        box.innerHTML = list.slice().reverse().map(x => `<button type="button" class="kban" data-ban="${x.i}"><img alt=""><em>${esc(KNAME[x.k] || x.k)} · ${new Date(x.t).toLocaleTimeString("ms-MY", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</em></button>`).join("");
+        box.querySelectorAll(".kban").forEach(b => fetch("api/killshot?ban=" + b.dataset.ban, { headers: kHdr(), cache: "no-store" }).then(r => r.ok ? r.blob() : null).then(bl => { if (bl) b.querySelector("img").src = URL.createObjectURL(bl); }));
+      }).catch(() => {});
+    }
+    setInterval(kBans, 3000);
     const kSave = patch => {
       const body = Object.entries(patch).map(([k2, v]) => k2 + "=" + encodeURIComponent(v)).join("&");
       return fetch("api/killcfg", { method: "POST", headers: kHdr(), body }).then(r => r.ok ? r.json() : null).then(j => { if (j) { kCfg = j; kShow(); } else toast("Perlu START_OVERLAY.bat versi baru / PIN"); }).catch(() => toast("Server tak dapat dihubungi"));
@@ -453,20 +478,24 @@ ${embedded ? "" : `<header class="app-top">
       const put = (el, x, y, w, h) => { el.hidden = !(w > 0 && h > 0); Object.assign(el.style, { left: pct(x), top: pct(y), width: pct(w), height: pct(h) }); };
       put($("ap-kbban"), kCfg.x, kCfg.y, kCfg.w, kCfg.h);
       put($("ap-kbkda"), kCfg.kx, kCfg.ky, kCfg.kw, kCfg.kh);
-      if (!(kCfg.team === "kda" || kCfg.team === "me")) $("ap-kbkda").hidden = true;
+      if (!(kCfg.team === "kda" || kCfg.team === "me" || kCfg.team === "hero")) $("ap-kbkda").hidden = true;
     }
     function kShow() {
       if (!kCfg) return;
       const src = kCfg.src || "win";
-      $("ap-kon").checked = !!kCfg.on; $("ap-kteam").value = kCfg.team || "me"; $("ap-ksolo").checked = kCfg.solo !== false;
+      $("ap-kon").checked = !!kCfg.on; $("ap-kteam").value = kCfg.team || "hero";
+      kCard.querySelector(".khero").hidden = kCfg.team !== "hero";
+      if (root.activeElement !== $("ap-khmin")) $("ap-khmin").value = (+kCfg.heroMin || .62).toFixed(2);
+      if (kCfg.heroVer !== kHeroVer) { kHeroVer = kCfg.heroVer; kHeroImg(); } $("ap-ksolo").checked = kCfg.solo !== false;
       kCard.querySelectorAll("#ap-ksrc button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === src)));
       kCard.querySelectorAll(".ksrc").forEach(d => { d.hidden = d.dataset.src !== src; });
       if (root.activeElement !== $("ap-kign")) $("ap-kign").value = kCfg.ign || "";
       if (root.activeElement !== $("ap-kport")) $("ap-kport").value = kCfg.obsPort || 4455;
       $("ap-kpass").placeholder = kCfg.obsPassSet ? "•••••• (tersimpan) taip untuk tukar" : "tiada (taip kalau OBS ada password)";
       kCard.querySelector(".kme").hidden = kCfg.team !== "me";
-      kCard.querySelector(".ksolo").hidden = !(kCfg.team === "kda" || kCfg.team === "me");
-      kCard.querySelector('[data-draw="kda"]').hidden = !(kCfg.team === "kda" || kCfg.team === "me");
+      const ownM = kCfg.team === "kda" || kCfg.team === "me" || kCfg.team === "hero";
+      kCard.querySelector(".ksolo").hidden = !ownM;
+      kCard.querySelector('[data-draw="kda"]').hidden = !ownM;
       const reg = [kCfg.x, kCfg.y, kCfg.w, kCfg.h].map(v => +(+v).toFixed(3)).join(","), sel = $("ap-kreg");
       [...sel.options].forEach(o => { if (o.dataset.custom) o.remove(); });
       if (![...sel.options].some(o => o.value === reg)) sel.insertAdjacentHTML("beforeend", `<option data-custom="1" value="${esc(reg)}">Kotak sendiri (dilukis)</option>`);
@@ -510,7 +539,7 @@ ${embedded ? "" : `<header class="app-top">
     // screen preview + draw the read boxes with a finger / mouse
     const kshot = $("ap-kshot");
     function kPull() {
-      if (!kPrev || kCard.offsetParent === null) return;
+      if (!kPrev || kBan != null || kCard.offsetParent === null) return;
       fetch("api/killshot", { headers: kHdr(), cache: "no-store" }).then(r => r.ok ? r.blob() : null).then(b => {
         if (!b) { $("ap-kmsg").textContent = "Belum ada gambar: pilih tetingkap / source OBS dulu."; $("ap-kmsg").hidden = false; return; }
         const u = URL.createObjectURL(b), img = $("ap-kimg"); img.onload = () => { if (kImgUrl) URL.revokeObjectURL(kImgUrl); kImgUrl = u; }; img.src = u;
@@ -518,13 +547,24 @@ ${embedded ? "" : `<header class="app-top">
       }).catch(() => {});
     }
     setInterval(kPull, 1200);
-    $("ap-kprev").addEventListener("click", () => { kPrev = !kPrev; $("ap-kprev").textContent = kPrev ? "⏸ Berhenti tunjuk" : "👁 Tunjuk skrin"; $("ap-kmsg").textContent = kPrev ? "Memuat…" : "Tekan “Tunjuk skrin”."; if (kPrev) kPull(); });
+    $("ap-kbans").addEventListener("click", e => {
+      const b = e.target.closest(".kban"); if (!b) return;
+      kBan = +b.dataset.ban; kPrev = false; $("ap-kprev").textContent = "👁 Tunjuk skrin";
+      $("ap-kbans").querySelectorAll(".kban").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+      const img = $("ap-kimg"); img.src = b.querySelector("img").src; kshot.classList.add("on"); $("ap-kmsg").hidden = true;
+      kCard.querySelector('[data-draw="hero"]').disabled = false;
+      kshot.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+    $("ap-khclr").addEventListener("click", () => { if (!confirm("Padam logo hero?")) return; fetch("api/killhero", { method: "POST", headers: kHdr(), body: "clear=1" }).then(() => fetch("api/killcfg", { headers: kHdr(), cache: "no-store" })).then(r => r.json()).then(j => { kCfg = j; kShow(); }).catch(() => {}); });
+    $("ap-khmin").addEventListener("change", e => kSave({ heroMin: e.target.value }));
+    $("ap-kprev").addEventListener("click", () => { kBan = null; kCard.querySelectorAll(".kban").forEach(x => x.setAttribute("aria-pressed", "false")); kCard.querySelector('[data-draw="hero"]').disabled = true; kPrev = !kPrev; $("ap-kprev").textContent = kPrev ? "⏸ Berhenti tunjuk" : "👁 Tunjuk skrin"; $("ap-kmsg").textContent = kPrev ? "Memuat…" : "Tekan “Tunjuk skrin”."; if (kPrev) kPull(); });
     kCard.querySelectorAll("[data-draw]").forEach(b => b.addEventListener("click", () => {
-      if (!kPrev) $("ap-kprev").click();
+      if (b.dataset.draw !== "hero" && !kPrev) $("ap-kprev").click();
       kDraw = kDraw === b.dataset.draw ? null : b.dataset.draw;
       kCard.querySelectorAll("[data-draw]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.draw === kDraw)));
       kshot.classList.toggle("drawing", !!kDraw);
-      $("ap-khint").innerHTML = kDraw ? `Seret di atas gambar untuk lukis kotak <b>${kDraw === "kda" ? "KDA" : "BANNER"}</b>.` : `<b>BANNER</b> = tempat banner kill keluar (tulisan DOUBLE KILL + nama pemain). <b>KDA</b> (pilihan) = nombor K/D/A anda, bantu tangkap kill yang terlepas.`;
+      if (kDraw) kshot.scrollIntoView({ block: "center" });
+      $("ap-khint").innerHTML = kDraw ? (kDraw === "hero" ? `Seret kotak kecil tepat di atas <b>muka Chou</b> dalam banner.` : `Seret di atas gambar untuk lukis kotak <b>${kDraw === "kda" ? "KDA" : "BANNER"}</b>.`) : `<b>BANNER</b> = tempat banner kill keluar (tulisan DOUBLE KILL + nama pemain). <b>KDA</b> (pilihan) = nombor K/D/A anda, bantu tangkap kill yang terlepas.`;
     }));
     let kStart = null;
     const kPt = e => { const r = kshot.getBoundingClientRect(); return [Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), Math.max(0, Math.min(1, (e.clientY - r.top) / r.height))]; };
@@ -537,6 +577,14 @@ ${embedded ? "" : `<header class="app-top">
       if (!kDraw || !kStart) return; const [x, y] = kPt(e), r = [Math.min(x, kStart[0]), Math.min(y, kStart[1]), Math.abs(x - kStart[0]), Math.abs(y - kStart[1])].map(v => v.toFixed(4)); kStart = null;
       if (+r[2] < .01 || +r[3] < .008) { kBoxes(); return; }
       const which = kDraw; kCard.querySelector(`[data-draw="${which}"]`).click();
+      if (which === "hero") {
+        if (kBan == null) { toast("Pilih gambar banner dulu"); return; }
+        fetch("api/killhero", { method: "POST", headers: kHdr(), body: `i=${kBan}&x=${r[0]}&y=${r[1]}&w=${r[2]}&h=${r[3]}` }).then(x => x.json()).then(j => {
+          if (!j.ok) { toast(j.err || "Tak dapat simpan logo", 4000); return; }
+          toast("Logo hero disimpan ✓"); return fetch("api/killcfg", { headers: kHdr(), cache: "no-store" }).then(x => x.json()).then(c => { kCfg = c; kShow(); });
+        }).catch(() => toast("Server tak dapat dihubungi"));
+        return;
+      }
       kSave(which === "kda" ? { kx: r[0], ky: r[1], kw: r[2], kh: r[3] } : { x: r[0], y: r[1], w: r[2], h: r[3] }).then(() => toast("Kotak " + (which === "kda" ? "KDA" : "BANNER") + " disimpan"));
     });
     setInterval(() => {
@@ -552,8 +600,9 @@ ${embedded ? "" : `<header class="app-top">
           : inf.length < 5 ? (j.err || "Menunggu…") : `Membaca ${inf[0]}×${inf[1]} dari ${HOW[inf[5]] || inf[5] || "?"}${+inf[4] > 4000 ? " · skrin GELAP" : ""}`;
         const mex = typeof j.mex === "number" ? j.mex : -1;
         const meTxt = kCfg.team === "me" && ignN.length >= 2 && j.on ? `<span>Nama anda: ${mex < 0 ? "tak nampak" : `<b class="kok">nampak ✓</b>`} · Banner: ${j.ally ? `<b class="kok">biru (pasukan kita)</b>` : "bukan biru"}</span>` : "";
-        const kdaTxt = (kCfg.team === "kda" || kCfg.team === "me") && kCfg.kw > 0 && j.on ? `<span>KDA dibaca: <code>${esc(j.kda || "—")}</code> → kill anda = <b class="kok">${j.k >= 0 ? j.k : "?"}</b></span>` : "";
-        const html = `<b>Status</b><span>${esc(st)}</span>${kdaTxt}${meTxt}${j.hit ? `<span class="khit">Terakhir: <b>${esc(KNAME[j.hit] || j.hit)}</b>${ago != null ? ` · ${ago}s lepas` : ""}</span>` : ""}${j.text ? `<span>Banner dibaca:</span><code>${esc(j.text)}</code>` : ""}${j.err && j.ocr ? `<span class="warn">${esc(j.err)}</span>` : ""}`;
+        const heroTxt = kCfg.team === "hero" && j.on ? (!j.hero ? `<span class="warn">Ambil logo hero dulu (langkah di atas).</span>` : `<span>Logo hero: ${j.hs >= 0 ? `skor <b class="${j.hs >= kCfg.heroMin ? "kok" : ""}">${(+j.hs).toFixed(2)}</b>${j.hs >= kCfg.heroMin ? (j.side === "L" ? " ✓ pembunuh" : " (sebelah yang mati)") : ""}` : "—"} · Banner: ${j.ally ? `<b class="kok">biru</b>` : "bukan biru"}</span>`) : "";
+        const kdaTxt = (kCfg.team === "kda" || kCfg.team === "me" || kCfg.team === "hero") && kCfg.kw > 0 && j.on ? `<span>KDA dibaca: <code>${esc(j.kda || "—")}</code> → kill anda = <b class="kok">${j.k >= 0 ? j.k : "?"}</b></span>` : "";
+        const html = `<b>Status</b><span>${esc(st)}</span>${heroTxt}${kdaTxt}${meTxt}${j.hit ? `<span class="khit">Terakhir: <b>${esc(KNAME[j.hit] || j.hit)}</b>${ago != null ? ` · ${ago}s lepas` : ""}</span>` : ""}${j.text ? `<span>Banner dibaca:</span><code>${esc(j.text)}</code>` : ""}${j.err && j.ocr ? `<span class="warn">${esc(j.err)}</span>` : ""}`;
         if (box._h !== html) { box.innerHTML = html; box._h = html; }
         $("ap-kst").textContent = j.on && need ? "● aktif" : "";
       }).catch(() => {});

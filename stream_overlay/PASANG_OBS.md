@@ -313,7 +313,7 @@ Setiap kill ada efek sendiri:
 | **RAMPAGE** | skrin merah berdegup, tulisan menggeletar, gendang perang |
 | **WIPED OUT** | skrin gelap, kaca pecah, huruf runtuh, gong |
 
-**Cara App tahu kill tu anda punya:** banner kill berwarna **biru** (pasukan kita) **dan** ada **nama anda**. Rakan sepasukan yang bunuh: nama anda tiada. Musuh bunuh anda: banner merah. Kill biasa anda tanpa tulisan streak = **SOLO KILL**. FIRST BLOOD hanya sekali setiap game. Pilihan: kotak **KDA** (nombor K anda naik) tangkap kill yang namanya tak terbaca, tanpa kira dua kali.
+**Cara App tahu kill tu anda punya (paling tepat):** banner kill berwarna **biru** (pasukan kita) **dan muka hero anda (Chou)** ada di sebelah pembunuh. Pilihan lain: banner biru + **nama anda**. Rakan sepasukan yang bunuh: nama anda tiada. Musuh bunuh anda: banner merah. Kill biasa anda tanpa tulisan streak = **SOLO KILL**. FIRST BLOOD hanya sekali setiap game. Pilihan: kotak **KDA** (nombor K anda naik) tangkap kill yang namanya tak terbaca, tanpa kira dua kali.
 
 1. Jalankan **KEMASKINI.bat**, tutup dan buka semula **START_OVERLAY.bat**. Kali ini sahaja, **tutup dan buka semula OBS** (atau Properties › **Refresh** setiap Browser source). Lepas ni overlay muat semula sendiri bila ada versi baru.
 2. MLBB guna bahasa **English** (Settings › Language).
@@ -322,13 +322,15 @@ Setiap kill ada efek sendiri:
      - OBS › **Tools › WebSocket Server Settings** › tanda **Enable WebSocket server** › tekan **Show Connect Info** › salin **Password**.
      - Dalam App: taip password tu, tekan **↻ Sambung OBS**, pilih **source game** (contoh source capture tablet / phone).
      - Atau pilih **Tetingkap di PC** dan pilih tetingkap mirror / OBS Windowed Projector (jangan minimize).
-   - **2 · Kill siapa**: **Kill saya: banner biru + nama saya**, kemudian taip **nama MLBB anda** tepat macam dalam game. Suis **Kill biasa = SOLO KILL** hidup.
+   - **2 · Kill siapa**: **Kill saya: banner biru + logo hero saya (Chou)**. Suis **Kill biasa = SOLO KILL** hidup.
+     - **Ambil logo Chou (sekali sahaja):** hidupkan **Auto detect kill** dan main sampai anda dapat kill. Gambar banner kill (8 terakhir) muncul dalam kad. Tekan gambar yang ada muka Chou › **✎ Pilih logo hero** › lukis kotak kecil tepat di atas muka Chou dalam banner. Tukar skin = ambil logo semula.
+     - **Ketepatan** 0.62 (asal). Status tunjuk **skor** setiap banner: kill anda patut lebih tinggi, kill orang lain lebih rendah. Turunkan kalau kill anda terlepas, naikkan kalau kill orang lain masuk.
    - **3 · Kotak bacaan**: tekan **👁 Tunjuk skrin** (gambar game keluar):
      - tekan **✎ Lukis kotak BANNER** › seret di tempat banner kill keluar, termasuk tulisan DOUBLE KILL **dan nama pemain** (kotak kuning),
      - pilihan: **✎ Lukis kotak KDA** › seret di atas nombor K/D/A anda (kotak hijau).
    - tanda **Auto detect kill** dan **Suara announcer**.
 4. Kotak **Status** tunjuk:
-   - **Nama anda: nampak ✓ · Banner: biru** bila banner kill anda keluar,
+   - **Logo hero: skor 0.84 ✓ pembunuh · Banner: biru** bila banner kill anda keluar,
    - **KDA dibaca: 3/1/4 → kill anda = 3** (kalau kotak KDA dilukis),
    - **Banner dibaca:** teks dari kotak banner,
    - **Terakhir:** efek terakhir yang keluar.
