@@ -892,7 +892,7 @@
   const ROLES = ["EXP", "JUNGLE", "MID", "GOLD", "ROAM"];
   const roleTag = m => m && m.role && ROLES.includes(m.role) ? (window.SYNO_ROLES ? SYNO_ROLES.badge(m.role) : `<span class="rl rl-${m.role.toLowerCase()} rl-txt">${m.role === "JUNGLE" ? "JGL" : m.role}</span>`) : "";
   function queueHTML(s, variant, prevIds, def) {
-    const v = String(variant || ""), wide = v === "wide", compact = /compact/.test(v), tall = /tall/.test(v);
+    const v = String(variant || ""), wide = v === "wide", compact = /compact/.test(v), tall = /tall/.test(v), two = compact && !/narrow/.test(v);
     const max = CFG.mabar.maxPlaying, full = s.playing.length >= max;
     const isNew = id => (prevIds && !prevIds.has(id) ? " is-new" : "");
     let slots = "";
@@ -906,7 +906,10 @@
       `<li class="nx${isNew(p.id)}"><span class="no">${String(i + 1).padStart(2, "0")}</span>${roleTag(mem(s, p))}<span class="nm">${esc(mem(s, p).name)}</span>${mem(s, p).mlid ? `<span class="mid">${esc(mem(s, p).mlid)}</span>` : ""}<span class="g">${p.vip ? "★" : ""}${tot(mem(s, p))}G</span></li>`).join("");
     const extra = s.queue.length - lim;
     if (extra > 0 && !compact) next += `<li class="nx more">+${extra} LAGI</li>`;
-    const nextBlock = s.queue.length ? `<ol${compact && !tall ? ' class="q2"' : ""}>${next}</ol>` : `<p class="q-empty">${full ? "Queue kosong" : "Slot masih ada"}</p>`;
+    // two columns (portrait 2 + 2, landscape column: rows that fit, left then right)
+    const shown = Math.min(s.queue.length, lim), rows = def && def.rows ? Math.max(1, Math.min(def.rows, Math.ceil(shown / 2))) : 0;
+    const rowsCss = two && tall && rows ? ` style="grid-template-rows:repeat(${rows},auto)"` : "";
+    const nextBlock = s.queue.length ? `<ol${two ? ` class="q2"${rowsCss}` : ""}>${next}</ol>` : `<p class="q-empty">${full ? "Queue kosong" : "Slot masih ada"}</p>`;
     return `<div class="q-head">${titleHTML(s)}<div class="q-prices">${chipsHTML()}</div></div>
 <div class="q-cols"><section><h4 class="ov-lbl">Sedang main <i>${s.playing.length}/${max}</i></h4><ol class="slots">${slots}</ol></section>
 <section><h4 class="ov-lbl">Queue ${compact && extra > 0 ? `<em class="q-more">+${extra} lagi</em>` : ""}<i>${s.queue.length}</i></h4>${nextBlock}</section></div>`;
@@ -1111,7 +1114,7 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
       // landscape column: move panels / banner up when something above is switched off
       const sk = stackLayout(L, hid, s.showBanner);
       if (sk) {
-        for (const { def, e } of panels) { const r = sk.panels[def.type]; if (r) { Object.assign(def, r); pos(e, def); if (def.type === "queue") def.max = Math.max(2, Math.min(12, Math.floor((r.h - 280) / 29))); } }
+        for (const { def, e } of panels) { const r = sk.panels[def.type]; if (r) { Object.assign(def, r); pos(e, def); if (def.type === "queue") { def.rows = Math.max(2, Math.min(8, Math.floor((r.h - 280) / 29))); def.max = def.rows * 2; } } }
         if (api.banner && sk.bannerY != null) api.banner.el.style.top = sk.bannerY + "px";
       }
       buildLayers(visibleSlots(hid, s));
