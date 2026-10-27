@@ -73,8 +73,10 @@
 <linearGradient id="${u}te" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cfc8d6"/></linearGradient>
 <linearGradient id="${u}hp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a4352"/><stop offset="1" stop-color="#0d0b11"/></linearGradient>
 <radialGradient id="${u}cup" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#4b4453"/><stop offset="1" stop-color="#0b090e"/></radialGradient>
-<linearGradient id="${u}tb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a4352"/><stop offset=".55" stop-color="#211c27"/><stop offset="1" stop-color="#121016"/></linearGradient>
-<linearGradient id="${u}te2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2a2530"/><stop offset=".5" stop-color="#8a8294"/><stop offset="1" stop-color="#2a2530"/></linearGradient>
+<linearGradient id="${u}tb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#e3e4ea"/><stop offset="1" stop-color="#a9abb4"/></linearGradient>
+<linearGradient id="${u}strip" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c1d24"/><stop offset="1" stop-color="#060609"/></linearGradient>
+<filter id="${u}cg" x="-10%" y="-60%" width="120%" height="220%"><feGaussianBlur stdDeviation="1.3"/></filter>
+<linearGradient id="${u}te2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7d808a"/><stop offset=".5" stop-color="#f4f5f8"/><stop offset="1" stop-color="#7d808a"/></linearGradient>
 <radialGradient id="${u}rim" cx="1" cy=".45" r=".7"><stop offset="0" stop-color="#ff2346" stop-opacity=".95"/><stop offset=".55" stop-color="#ff2346" stop-opacity=".25"/><stop offset="1" stop-color="#ff2346" stop-opacity="0"/></radialGradient>
 <radialGradient id="${u}rimL" cx="0" cy=".5" r=".6"><stop offset="0" stop-color="#ffb08a" stop-opacity=".35"/><stop offset="1" stop-color="#ffb08a" stop-opacity="0"/></radialGradient>
 <radialGradient id="${u}bl" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ff6f86" stop-opacity=".6"/><stop offset="1" stop-color="#ff6f86" stop-opacity="0"/></radialGradient>
@@ -130,25 +132,29 @@
   <rect x="147" y="70" width="27" height="44" rx="13" fill="url(#${u}cup)"/><rect x="160" y="78" width="9" height="28" rx="4.5" fill="#ff2346"/>
  </g>
  <g class="m-tab">
-  <path class="m-edgeglow" d="M50 138 H150" stroke="#ff4d66" stroke-width="7" stroke-linecap="round" opacity=".55" filter="url(#${u}gb)"/>
+  <path class="m-edgeglow" d="M50 138 H150" stroke="#3d8bff" stroke-width="7" stroke-linecap="round" opacity=".55" filter="url(#${u}gb)"/>
   <path d="M53 139 H147 L153 184 H47 Z" fill="url(#${u}tb)"/>
   <path d="M47 184 H153 L152 188.5 H48 Z" fill="url(#${u}te2)"/>
-  <path d="M53 139 H147 L147.6 142 H52.4Z" fill="#ff6b80" opacity=".8"/>
-  <path d="M56 143.5 H144" stroke="#fff" stroke-opacity=".28" stroke-width="1.2"/>
-  <path d="M53 139 L80 139 L64 184 L47 184Z" fill="#fff" opacity=".07"/>
-  <rect x="84" y="149" width="21" height="19" rx="5.5" fill="#0d0b11" stroke="#5a5363" stroke-width="1.2"/>
-  <circle cx="90" cy="155" r="3.4" fill="#1f1b26" stroke="#8a8294" stroke-width="1"/><circle cx="90" cy="155" r="1.3" fill="#52d8ff" opacity=".6"/>
-  <circle cx="99" cy="162" r="3.4" fill="#1f1b26" stroke="#8a8294" stroke-width="1"/><circle cx="99" cy="162" r="1.3" fill="#52d8ff" opacity=".6"/>
-  <circle cx="99" cy="154" r="1.4" fill="#ffd34d" opacity=".8"/>
-  <path d="M126 139 L115 184" stroke="#ff2346" stroke-width="5"/><path d="M131 139 L120 184" stroke="#ff2346" stroke-width="1.5" opacity=".6"/>
-  <text x="95" y="180" text-anchor="middle" style="font-family:var(--f-disp,Impact);font-size:8px;letter-spacing:2px" fill="#fff" fill-opacity=".18">SYNO</text>
+  <path d="M53 139 H147 L147.6 141.2 H52.4Z" fill="#fff" opacity=".9"/>
+  <path d="M53 139 L84 139 L70 184 L47 184Z" fill="#fff" opacity=".35"/>
+  <path d="M120 139 H147 L153 184 H112Z" fill="#7e818c" opacity=".18"/>
+  <rect x="66" y="146" width="68" height="20" rx="4" fill="url(#${u}strip)" stroke="#3a3c46" stroke-width=".8"/>
+  <circle cx="73.5" cy="156" r="5" fill="#0b0b0f" stroke="#9a9ca6" stroke-width="1.3"/><circle cx="73.5" cy="156" r="2.4" fill="#10131c" stroke="#3a3f4f" stroke-width=".8"/><circle cx="72.6" cy="155" r=".9" fill="#7fd0ff"/>
+  <rect x="80.5" y="154.4" width="4.6" height="3.2" rx="1.6" fill="#e9e6da" stroke="#777" stroke-width=".5"/>
+  <path class="m-cool-glow" d="${coolPath(90, 162, 150, 4, 6.4, 126)}" fill="none" stroke="#1e7bff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" filter="url(#${u}cg)" opacity=".8"/>
+  <path d="${coolPath(90, 162, 150, 4, 6.4, 126)}" fill="none" stroke="#2a8cff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path class="m-cool-flow" d="${coolPath(90, 162, 150, 4, 6.4, 126)}" pathLength="100" fill="none" stroke="#d9f3ff" stroke-width="1.3" stroke-linecap="round" stroke-dasharray="7 43"/>
+  <path d="M116 149.5 H129 M116 151.8 H124" stroke="#ff9a2e" stroke-width=".7" opacity=".85"/>
  </g>
  <g class="m-tablow" opacity="0" transform="translate(40 186) rotate(-16)">
   <rect x="-30" y="-19" width="60" height="38" rx="5" fill="url(#${u}tb)"/>
-  <rect x="-30" y="-19" width="60" height="4" rx="2" fill="#ff6b80" opacity=".6"/>
-  <rect x="-24" y="-12" width="14" height="13" rx="4" fill="#0d0b11" stroke="#5a5363" stroke-width="1"/><circle cx="-20" cy="-8" r="2.4" fill="#1f1b26" stroke="#8a8294" stroke-width=".8"/><circle cx="-14" cy="-3" r="2.4" fill="#1f1b26" stroke="#8a8294" stroke-width=".8"/>
-  <path d="M14 -19 L6 19" stroke="#ff2346" stroke-width="4"/>
-  <path d="M-30 -19 H-14 L-26 19 H-30Z" fill="#fff" opacity=".07"/>
+  <rect x="-30" y="-19" width="60" height="2.4" rx="1.2" fill="#fff" opacity=".9"/>
+  <rect x="-24" y="-12" width="48" height="14" rx="3" fill="url(#${u}strip)"/>
+  <circle cx="-19" cy="-5" r="3.6" fill="#0b0b0f" stroke="#9a9ca6" stroke-width="1"/><circle cx="-19" cy="-5" r="1.6" fill="#7fd0ff" opacity=".7"/>
+  <path class="m-cool-glow2" d="${coolPath(-10, -1, -9, 3, 5.2, 18)}" fill="none" stroke="#1e7bff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" filter="url(#${u}cg)" opacity=".8"/>
+  <path d="${coolPath(-10, -1, -9, 3, 5.2, 18)}" fill="none" stroke="#2a8cff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path class="m-cool-flow2" d="${coolPath(-10, -1, -9, 3, 5.2, 18)}" pathLength="100" fill="none" stroke="#d9f3ff" stroke-width="1.1" stroke-linecap="round" stroke-dasharray="7 43"/>
+  <path d="M-30 -19 H-14 L-26 19 H-30Z" fill="#fff" opacity=".3"/>
  </g>
  <g class="arm-game">
   <path d="M48 150 C36 156 32 164 34 172" stroke="url(#${u}jk)" stroke-width="20" fill="none" stroke-linecap="round"/>
@@ -176,6 +182,17 @@
  <g class="m-spk"><path d="M0 -9 L2 -2 L9 0 L2 2 L0 9 L-2 2 L-9 0 L-2 -2Z" fill="#fff"/></g>
  <circle class="m-burst" cx="100" cy="104" r="40" fill="none" stroke="#ffd34d" stroke-width="3" opacity="0"/>
 </g></svg>`;
+  }
+
+  // liquid-cooling tube (slanted hairpin loops, then a long run) on the black strip
+  function coolPath(x0, yb, yt, n, step, run) {
+    let x = x0, d = `M${x0 - 3} ${yb + 2} L${x0} ${yb}`;
+    for (let k = 0; k < n; k++) {
+      d += ` L${x + 4} ${yt} A1.6 1.6 0 0 1 ${x + 7.2} ${yt} L${x + 3.2} ${yb}`;
+      if (k < n - 1) d += ` A1.6 1.6 0 0 0 ${x + step} ${yb}`;
+      x += step;
+    }
+    return d + ` L${run} ${yb} L${run + 3} ${yb - 3}`;
   }
 
   const SCR = [[255, 35, 70], [255, 200, 61], [255, 255, 255], [255, 35, 70]];
@@ -222,6 +239,10 @@
       q(".m-tapR").setAttribute("opacity", (pr * .9).toFixed(3));
       q(".m-edgeglow").setAttribute("opacity", (.4 + .3 * Math.max(pl, pr) + .15 * Math.sin(t * TAU / 1.5)).toFixed(3));
     }
+    // liquid cooling: bright slugs flow through the tube, glow pulses
+    const flow = (-frac(t / 1.6) * 100).toFixed(2), pulse = (.55 + .35 * Math.sin(t * TAU / 1.2)).toFixed(3);
+    [".m-cool-flow", ".m-cool-flow2"].forEach(c => { const e = q(c); if (e) e.setAttribute("stroke-dashoffset", flow); });
+    [".m-cool-glow", ".m-cool-glow2"].forEach(c => { const e = q(c); if (e) e.setAttribute("opacity", pulse); });
     // blink (open eyes only)
     const bp = frac(t / 3), bl = bp > .9 && bp < .955 ? .1 : 1;
     q(".e-open").setAttribute("transform", `translate(0 94) scale(1 ${bl}) translate(0 -94)`);
