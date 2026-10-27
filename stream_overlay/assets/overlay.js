@@ -589,8 +589,8 @@
       // paused / finished = quiet for ~2 s -> Spotify comes back right away
       const active = !!sm || (MEDIA.loudAt > 0 && now - MEDIA.loudAt < 1900 && now - MEDIA.loudSince >= 2000);
       // title + requester as shown inside the IndoFinity window (read by the PC server), else Windows media title
-      const ifx = ifxNow(j.ifx);
-      const title = ifx ? ifx.title : songTitleOf(sm, (j.audio || []).find(x => hit(x.name)), want), user = ifx ? ifx.user : "";
+      const ifx = ifxFind(j.ifx, sm);
+      const title = ifx && ifx.title ? ifx.title : songTitleOf(sm, (j.audio || []).find(x => hit(x.name)), want), user = ifx ? ifx.user : "";
       const s0 = Store.state, curT = s0.songNow ? s0.songNow.title || "" : "", curU = s0.songNow ? s0.songNow.user || "" : "";
       if (active && (!s0.songNow || ((title !== curT || user !== curU) && (title || /indofinity/i.test(curT))))) {
         Store.set(s => {
@@ -629,6 +629,23 @@
     }
     return best ? { title: best.title, user: best.user } : null;
   }
+  // second way: Windows gives title + channel; find that title in the IndoFinity window text and take the
+  // name right after the channel (works when the requester is shown without "@")
+  function ifxBySmtc(texts, sm) {
+    if (!Array.isArray(texts) || !sm || !sm.title) return null;
+    const T = texts.map(String).filter(t => !/^\[tetingkap\]/.test(t)), key = String(sm.title).toLowerCase().slice(0, 24), ch = String(sm.artist || "").toLowerCase();
+    for (let i = T.length - 1; i >= 0; i--) {
+      if (!T[i].toLowerCase().includes(key)) continue;
+      for (let k = i + 1; k < Math.min(T.length, i + 5); k++) {
+        const x = T[k].trim(); if (!x || x.toLowerCase() === ch || /^\d{1,2}:\d{2}/.test(x)) continue;
+        const m = x.match(/^@?([\w.]{2,32})$/); if (m) return { title: tidyTitle(T[i]).slice(0, 90), user: m[1] };
+        if (k > i + 2) break;
+      }
+      return { title: tidyTitle(T[i]).slice(0, 90), user: "" };
+    }
+    return null;
+  }
+  const ifxFind = (texts, sm) => ifxNow(texts) || ifxBySmtc(texts, sm);
   // song title only: never the app's own name ("IndoFinity"), a web address or "YouTube"
   function songTitleOf(sm, au, want) {
     const clean = t => String(t || "").replace(/\s*[-|–—:•·]\s*(indofinity|youtube music|youtube|google chrome|microsoft edge)\b.*$/i, "").replace(/^(indofinity|youtube music|youtube)\s*[-|–—:•·]\s*/i, "").trim();
@@ -670,12 +687,12 @@
           try { o = parseOrder(e); }
           catch (err) {
             let raw = ""; try { raw = atob(e.b || "").slice(0, 500); } catch (x) {}
-            Q._log(s, { key: "", name: "Order could not be read", mlid: "", games: 0, at: e.t || Date.now(), src: "sociabuzz", warn: "Check the raw data", raw });
+            Q._log(s, { key: "", name: "Order tak dapat dibaca", mlid: "", games: 0, at: e.t || Date.now(), src: "sociabuzz", warn: "Semak Data asal", raw });
             continue;
           }
           // Sociabuzz sends the same id on every Test Notification: never drop a test as a duplicate
           const info = { amount: o.amount, cur: o.cur, note: o.msg, vip: !!o.vip, raw: o.raw, svc: o.svc, trial: !!o.trial };
-          if (!o.test && !o.trial && s.seenOrders.includes(o.dk)) { Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz", warn: "Same order as before, ignored" }, info)); continue; }
+          if (!o.test && !o.trial && s.seenOrders.includes(o.dk)) { Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz", warn: "Order sama dengan sebelum ni, diabaikan" }, info)); continue; }
           if (!o.test && !o.trial) s.seenOrders.unshift(o.dk);
           if (o.test) { Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "test" }, info)); continue; }
           if (o.svc === "album") { const albumId = Q._albumAdd(s, o.name, o.mlid, albumNote(o.msg), o.at, "sociabuzz"); Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz", albumId }, info)); continue; }
@@ -683,7 +700,7 @@
           if (o.svc === "akaun") { Q._akaunBook(s, o.name, o.at); Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz" }, info)); continue; }
           const k = keyOf(o.name);
           if (o.games > 0 && k) Q._add(s, k, o.name, o.games, SB.autoQueue, o.at, o.mlid, "sociabuzz", info);
-          else Q._log(s, Object.assign({ key: k, name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz", warn: "Amount too low for 1 game" }, info));
+          else Q._log(s, Object.assign({ key: k, name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz", warn: "Jumlah tak cukup untuk 1 game" }, info));
         }
         s.seenOrders = s.seenOrders.slice(0, 300);
         const top = Math.max(from, res.last || 0, ...list.map(e => +e.n || 0));
@@ -1246,5 +1263,5 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
 
   requestAnimationFrame(loop);
   const util = { el, esc, clamp, seg, eOut, eBack, frac, rnd, TAU, fill, priceHL, uid, tickers, now };
-  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util, keyOf, liveElapsed, fmtTime, parseOrder, NP, MEDIA, ifxNow, songText, stackLayout, layoutOf: n => LAYOUTS[n], ACTIONS, ROLES: ["EXP", "JUNGLE", "MID", "GOLD", "ROAM"], roleTag };
+  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util, keyOf, liveElapsed, fmtTime, parseOrder, NP, MEDIA, ifxNow, ifxFind, songText, stackLayout, layoutOf: n => LAYOUTS[n], ACTIONS, ROLES: ["EXP", "JUNGLE", "MID", "GOLD", "ROAM"], roleTag };
 })();
