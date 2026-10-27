@@ -11,6 +11,7 @@ Semua dalam HTML: tak perlu edit video, tak perlu install Python.
 |---|---|
 | `START_OVERLAY.bat` | Hidupkan server kecil (PowerShell Windows) + buka App Kawalan. Biar terbuka masa live. |
 | `BUKA_APP.bat` | Buka semula tetingkap App Kawalan |
+| `deck/` | Fail .bat untuk butang Stream Deck (Menang, Kalah, …) |
 | `PASANG_LINK_KEKAL.bat` | Sekali sahaja: pasang Tailscale & hidupkan link kekal untuk admin / penonton di luar Wi-Fi |
 | `rank_tool.html` | Potong logo rank dari satu gambar (latar putih) dan simpan ke overlay |
 | `AMBIL_LOGO_RANK.bat` | Muat turun logo rank MLBB asli (Epic hingga Immortal) dari wiki |

@@ -1,0 +1,9 @@
+Butang Stream Deck untuk SYNO
+
+Cara 1 (paling bersih): Stream Deck > Website > URL http://127.0.0.1:8787/api/do/end-win
+  > tanda 'GET request in background'.
+Cara 2: Stream Deck > System > Open > pilih fail .bat dalam folder ni.
+
+end-win = Menang, end-lose = Kalah, end = Game habis (W/L + tolak baki + rotation).
+win / lose = tambah W/L sahaja. win-1 / lose-1 = tolak.
+START_OVERLAY.bat dan overlay (OBS) atau App mesti terbuka.

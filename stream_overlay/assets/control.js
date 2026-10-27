@@ -9,14 +9,7 @@
   const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 
-  const ACTIONS = {
-    "win": () => Q.wl("wins", 1), "lose": () => Q.wl("losses", 1),
-    "win-1": () => Q.wl("wins", -1), "lose-1": () => Q.wl("losses", -1),
-    "end-win": () => Q.endGame("W"), "end-lose": () => Q.endGame("L"), "end": () => Q.endGame("X"),
-    "timer-start": () => Q.timer("start"), "timer-pause": () => Q.timer("pause"), "timer-reset": () => Q.timer("reset"),
-    "queue-on": () => Q.patch({ showQueue: true }), "queue-off": () => Q.patch({ showQueue: false }),
-    "banner-on": () => Q.patch({ showBanner: true }), "banner-off": () => Q.patch({ showBanner: false })
-  };
+  const ACTIONS = O.ACTIONS;
 
   function mountControl(root, opts = {}) {
     Store.init();
@@ -144,7 +137,8 @@ ${embedded ? "" : `<header class="app-top">
   ${embedded ? "" : `<section class="card links">
     <h3>Link</h3>
     <div id="ap-links" class="links-list"></div>
-    <details class="quick"><summary>Link pantas (bookmark / Stream Deck)</summary>
+    <details class="quick"><summary>Butang Stream Deck</summary>
+    <p class="muted">Stream Deck › <b>Website</b> › tampal link › tanda <b>GET request in background</b>. Atau guna fail dalam folder <b>deck</b> (System › Open). Overlay atau App mesti terbuka.</p>
     <div id="ap-quick" class="links-list small"></div></details>
   </section>`}
 </div>
@@ -329,6 +323,9 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
     }
     root.addEventListener("focusout", () => setTimeout(() => { if (Object.values(pending).some(Boolean) && !busyIn(root)) render(Store.state); }, 50));
     render(Store.state); Store.on(render);
+    const ACT_LABEL = { "win": "Win +1", "lose": "Lose +1", "win-1": "Win −1", "lose-1": "Lose −1", "end-win": "Menang", "end-lose": "Kalah", "end": "Game habis",
+      "timer-start": "Timer mula", "timer-pause": "Timer jeda", "timer-reset": "Timer reset", "queue-on": "Queue on", "queue-off": "Queue off", "banner-on": "Banner on", "banner-off": "Banner off" };
+    window.addEventListener("ov-cmd", e => { const d = e.detail || {}, rot = Array.isArray(d.res) && d.res.length ? ` · rotate: ${d.res.join(", ")}` : ""; toast(`Stream Deck: ${ACT_LABEL[d.a] || d.a}${rot}`); });
     $("ap-mvpsearch").addEventListener("input", () => render(Store.state, true));
     $("ap-mvpadd").addEventListener("submit", e => { e.preventDefault(); const n = $("ap-mvpname").value.trim(); if (!n) return; Q.mvpAdd(n); $("ap-mvpname").value = ""; toast(`${n} ditambah`); });
     $("ap-mvprules").addEventListener("change", e => { Q.patch({ mvpRules: e.target.value.trim() }); toast("Peraturan MVP disimpan"); });
@@ -463,7 +460,9 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
         ["Penonton dari phone (Wi-Fi sama)", lan ? `${lan}/viewer.html` : "-"]
       ];
       $("ap-links").innerHTML = rows.map(([t, u]) => `<div class="lk"><span>${esc(t)}</span><code>${esc(u)}</code>${/^http/.test(u) ? `<button class="btn sq" type="button" data-copy="${esc(u)}" aria-label="Salin">⧉</button>` : ""}</div>`).join("");
-      $("ap-quick").innerHTML = Object.keys(ACTIONS).map(k => { const u = `${base}/control.html?do=${k}`; return `<div class="lk"><code>${esc(u)}</code><button class="btn sq" type="button" data-copy="${esc(u)}" aria-label="Salin">⧉</button></div>`; }).join("");
+      const DECK = [["end-win", "Menang (W +1, tolak baki)"], ["end-lose", "Kalah (L +1, tolak baki)"], ["end", "Game habis (tak kira W/L)"], ["win", "Win +1 sahaja"], ["lose", "Lose +1 sahaja"], ["win-1", "Win −1"], ["lose-1", "Lose −1"],
+        ["timer-start", "Timer mula"], ["timer-pause", "Timer jeda"], ["timer-reset", "Timer reset"], ["queue-on", "Queue on"], ["queue-off", "Queue off"], ["banner-on", "Banner on"], ["banner-off", "Banner off"]];
+      $("ap-quick").innerHTML = DECK.map(([k, t]) => { const u = `http://127.0.0.1:${(a && a.port) || 8787}/api/do/${k}`; return `<div class="lk"><span>${esc(t)}</span><code>${esc(u)}</code><button class="btn sq" type="button" data-copy="${esc(u)}" aria-label="Salin">⧉</button></div>`; }).join("");
     }
     root.addEventListener("click", e => {
       const b = e.target.closest("[data-copy]"); if (!b) return;

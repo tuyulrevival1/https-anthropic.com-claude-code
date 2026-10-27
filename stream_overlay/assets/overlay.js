@@ -86,6 +86,7 @@
         if (txt && txt.trim()) this.onRemote(txt, true); else this.push(this.state);
         setInterval(() => this.pull(), 700);
         setInterval(pullOrders, 3000); setTimeout(pullOrders, 800);
+        setInterval(pullCmds, 700);
         window.dispatchEvent(new CustomEvent("ov-remote", { detail: true }));
       }).catch(() => window.dispatchEvent(new CustomEvent("ov-remote", { detail: false })));
     },
@@ -276,6 +277,28 @@
       });
     }
   };
+  /* ---------- quick actions: App buttons, ?do= links and Stream Deck (/api/do/<action>) ---------- */
+  const ACTIONS = {
+    "win": () => Q.wl("wins", 1), "lose": () => Q.wl("losses", 1),
+    "win-1": () => Q.wl("wins", -1), "lose-1": () => Q.wl("losses", -1),
+    "end-win": () => Q.endGame("W"), "end-lose": () => Q.endGame("L"), "end": () => Q.endGame("X"),
+    "timer-start": () => Q.timer("start"), "timer-pause": () => Q.timer("pause"), "timer-reset": () => Q.timer("reset"),
+    "queue-on": () => Q.patch({ showQueue: true }), "queue-off": () => Q.patch({ showQueue: false }),
+    "banner-on": () => Q.patch({ showBanner: true }), "banner-off": () => Q.patch({ showBanner: false })
+  };
+  // Stream Deck presses wait on the PC server; whichever open overlay / app asks first runs them once
+  let cmdBusy = false;
+  function pullCmds() {
+    if (cmdBusy || !Store.remote || !Store.canWrite) return; cmdBusy = true;
+    const pin = Store.pin();
+    fetch("api/cmds", { cache: "no-store", headers: pin ? { "X-Pin": pin } : {} }).then(r => r.ok ? r.json() : []).then(list => {
+      (Array.isArray(list) ? list : []).forEach(c => {
+        const f = ACTIONS[c && c.a]; if (!f) return;
+        const res = f(); window.dispatchEvent(new CustomEvent("ov-cmd", { detail: { a: c.a, res } }));
+      });
+    }).catch(() => {}).finally(() => { cmdBusy = false; });
+  }
+
   /* ---------- automatic orders (Sociabuzz webhook -> server -> here) ---------- */
   const SB = Object.assign({ autoQueue: true, toMYR: { MYR: 1, RM: 1 }, packs: [{ rm: 10, games: 3 }, { rm: 4, games: 1 }], immortalPerGame: 6 }, CFG.sociabuzz || {});
   const pick = (o, keys) => { for (const k of keys) if (o[k] != null && String(o[k]).trim() !== "") return o[k]; return null; };
@@ -746,5 +769,5 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
 
   requestAnimationFrame(loop);
   const util = { el, esc, clamp, seg, eOut, eBack, frac, rnd, TAU, fill, priceHL, uid, tickers, now };
-  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util, keyOf, liveElapsed, fmtTime, parseOrder, NP, songText };
+  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util, keyOf, liveElapsed, fmtTime, parseOrder, NP, songText, ACTIONS };
 })();

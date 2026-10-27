@@ -176,6 +176,32 @@ Bilangan penonton TikTok tak boleh diambil (TikTok tiada API untuk ni).
 
 Boleh juga letak PNG sendiri: `epic.png`, `legend.png`, `mythic.png`, `honor.png`, `glory.png`, `immortal.png` dalam `assets\ranks\`.
 
+## 11. Butang Stream Deck (Menang / Kalah terus ke sistem)
+
+Perlu: `START_OVERLAY.bat` jalan dan overlay (OBS) atau App terbuka.
+
+**Cara 1 (disyorkan): Website**
+1. Stream Deck app › seret **Website** (bahagian System) ke satu butang.
+2. URL: `http://127.0.0.1:8787/api/do/end-win`
+3. Tanda **GET request in background** (supaya browser tak terbuka).
+4. Tukar ikon / tajuk: MENANG. Ulang untuk butang lain.
+
+| Butang | URL hujung | Apa jadi |
+|---|---|---|
+| Menang | `/api/do/end-win` | W +1, semua yang main tolak 1 game, rotation |
+| Kalah | `/api/do/end-lose` | L +1, tolak baki, rotation |
+| Game habis | `/api/do/end` | Tolak baki tanpa W/L |
+| Win +1 / Lose +1 | `/api/do/win`, `/api/do/lose` | W/L sahaja (tak tolak baki) |
+| Win −1 / Lose −1 | `/api/do/win-1`, `/api/do/lose-1` | Betulkan tersalah tekan |
+| Timer | `/api/do/timer-start`, `timer-pause`, `timer-reset` | Timer live |
+| Queue / Banner | `/api/do/queue-on`, `queue-off`, `banner-on`, `banner-off` | Tunjuk / sorok |
+
+Semua link ada dalam App › Link › **Butang Stream Deck** (butang ⧉ untuk salin).
+
+**Cara 2: fail .bat** (kalau tiada pilihan GET background): Stream Deck › **System › Open** › pilih fail dalam folder `deck\` (MENANG.bat, KALAH.bat, …).
+
+Setiap tekan keluar dalam tetingkap hitam ("Stream Deck: end-win") dan App tunjuk notifikasi.
+
 ---
 
 ## Masalah biasa
@@ -188,5 +214,6 @@ Boleh juga letak PNG sendiri: `epic.png`, `legend.png`, `mythic.png`, `honor.png
 | Order Sociabuzz tak masuk | Ikut **bahagian 8 › Test langkah demi langkah**. App › Order masuk › Status webhook tunjuk punca. |
 | Timer tak mula sendiri | Overlay › Properties › Page permissions › Read access to OBS status information. Atau tekan **Mula** dalam app. |
 | PC lag | Tambah `?bgfx=0` pada URL overlay. |
+| Stream Deck tak kira | Overlay / App terbuka? Tetingkap hitam tulis "Stream Deck: …"? URL mesti `http://127.0.0.1:8787/api/do/...` |
 | Ubah harga / teks | `assets\config.js` (Notepad) › save › Refresh overlay & app. |
 | Backup data | Salin folder `data\` (baki VIP, queue, order, PIN). |

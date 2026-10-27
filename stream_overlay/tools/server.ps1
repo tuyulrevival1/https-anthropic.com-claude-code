@@ -137,7 +137,9 @@ function Get-NowPlaying {
   }
   return $t
 }
-$hookHits = New-Object System.Collections.ArrayList   # 15 cubaan webhook terakhir (untuk App > Status webhook)
+$hookHits = New-Object System.Collections.ArrayList
+$cmds = New-Object System.Collections.ArrayList       # arahan Stream Deck menunggu overlay / App ambil
+$deckActs = @('win', 'lose', 'win-1', 'lose-1', 'end-win', 'end-lose', 'end', 'timer-start', 'timer-pause', 'timer-reset', 'queue-on', 'queue-off', 'banner-on', 'banner-off')   # 15 cubaan webhook terakhir (untuk App > Status webhook)
 $fwdHeaders = @('x-forwarded-for', 'cf-connecting-ip', 'x-forwarded-host', 'forwarded', 'x-real-ip', 'tailscale-funnel-request')
 
 while ($true) {
@@ -239,6 +241,23 @@ while ($true) {
           Write-Host ("  Order baru diterima ({0})" -f (Get-Date -Format 'h:mm tt')) -ForegroundColor Green
           $body = ToBytes 'OK'   # isi 'Webhook HTTP Test Response' di Sociabuzz dengan: OK
         }
+      } elseif ($path -like 'api/do/*') {
+        # Stream Deck: GET http://127.0.0.1:8787/api/do/end-win  (dari PC ni bebas; dari luar perlu ?pin=PIN)
+        $act = $path.Substring(7).ToLower(); $qp = ''
+        foreach ($pair in $query -split '&') { if ($pair -like 'pin=*') { $qp = [Uri]::UnescapeDataString($pair.Substring(4)) } }
+        $okDo = $okPin -or (-not $locked -and $qp -and $qp -eq $pin)
+        if ($deckActs -notcontains $act) { $status = '404 Not Found'; $body = ToBytes ('Arahan tak dikenali: ' + $act) }
+        elseif (-not $okDo) { $status = '401 Unauthorized'; $body = ToBytes 'PIN salah'; if ($qp) { $fails++ } }
+        else {
+          [void]$cmds.Add('{"a":' + (JsonStr $act) + ',"t":' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() + '}')
+          while ($cmds.Count -gt 30) { $cmds.RemoveAt(0) }
+          Write-Host ("  Stream Deck: {0} ({1})" -f $act, (Get-Date -Format 'h:mm:ss tt')) -ForegroundColor Cyan
+          $body = ToBytes ('OK ' + $act)
+        }
+      } elseif ($path -eq 'api/cmds') {
+        $type = 'application/json'
+        if (-not $okPin) { $status = '401 Unauthorized'; $body = ToBytes '[]' }
+        else { $body = ToBytes ('[' + ($cmds -join ',') + ']'); $cmds.Clear() }
       } elseif ($path -eq 'api/nowplaying') {
         $type = 'application/json'
         if (((Get-Date) - $npAt).TotalSeconds -ge 2.5) { $npText = Get-NowPlaying; $npAt = Get-Date }
