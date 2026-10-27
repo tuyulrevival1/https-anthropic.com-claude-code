@@ -179,6 +179,48 @@ ${embedded ? "" : `<header class="app-top">
         c.querySelectorAll("[data-lw]").forEach(b => { b.hidden = +b.dataset.lw > n; });
       });
     }
+    /* ---------- undo / redo per card ---------- */
+    const HIST_FIELDS = {
+      live: ["live", "song", "showQueue", "showBanner"], wl: ["wins", "losses", "streak"],
+      end: ["wins", "losses", "streak", "playing", "queue", "members"], queue: ["playing", "queue", "members"],
+      vip: ["members", "playing", "queue"], mvp: ["mvp", "mvpRules"], akaun: ["akaun"], rules: ["rules"]
+    };
+    layCards().forEach(c => {
+      const f = HIST_FIELDS[c.dataset.card], h = c.querySelector("h3"); if (!f || !h) return;
+      h.insertAdjacentHTML("beforeend", `<span class="hist"><button type="button" class="hb" data-hist="undo" data-card="${c.dataset.card}" aria-label="Undo" disabled>↶</button><button type="button" class="hb" data-hist="redo" data-card="${c.dataset.card}" aria-label="Redo" disabled>↷</button></span>`);
+    });
+    const histLabel = e => e ? (e.label || e.keys.join(", ")) : "";
+    function histPaint() {
+      root.querySelectorAll("[data-hist]").forEach(b => {
+        const e = Store.peek(b.dataset.hist, HIST_FIELDS[b.dataset.card]);
+        b.disabled = !e; b.title = e ? `${b.dataset.hist === "undo" ? "Undo" : "Redo"}: ${histLabel(e)}` : (b.dataset.hist === "undo" ? "Tiada untuk undo" : "Tiada untuk redo");
+      });
+    }
+    function histDo(kind, fields) {
+      const e = kind === "undo" ? Store.undo(fields) : Store.redo(fields);
+      toast(e ? `${kind === "undo" ? "Undo" : "Redo"}: ${histLabel(e)}` : (kind === "undo" ? "Tiada untuk undo" : "Tiada untuk redo"), 2500);
+    }
+    root.addEventListener("click", e => { const b = e.target.closest("[data-hist]"); if (b) { e.stopPropagation(); histDo(b.dataset.hist, HIST_FIELDS[b.dataset.card]); } }, true);
+    window.addEventListener("ov-hist", histPaint);
+    // name each change after the button / field that made it (shown in the undo tooltip)
+    const nameIt = el => {
+      const card = el.closest(".card"), h = card && card.querySelector("h3"), sec = h ? (h.firstChild && h.firstChild.textContent || "").trim() : "";
+      const who = el.closest("li") && el.closest("li").querySelector(".nm");
+      const what = (el.getAttribute("aria-label") || el.textContent || el.placeholder || "").trim().replace(/\s+/g, " ").slice(0, 40);
+      Store.nextLabel = [sec, who ? who.textContent.trim().split(" ")[0] : "", what].filter(Boolean).join(" · ");
+      setTimeout(() => { Store.nextLabel = ""; }, 0);
+    };
+    root.addEventListener("click", e => { const b = e.target.closest("button"); if (b && !b.closest("[data-hist]")) nameIt(b); }, true);
+    root.addEventListener("change", e => { if (e.target.matches("input, select, textarea")) nameIt(e.target); }, true);
+    root.addEventListener("submit", e => nameIt(e.target.querySelector("[type=submit]") || e.target), true);
+    // Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z): last change anywhere, when not typing
+    document.addEventListener("keydown", e => {
+      if (!(e.ctrlKey || e.metaKey) || /INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || "")) return;
+      const k = e.key.toLowerCase();
+      if (k === "z" && !e.shiftKey) { e.preventDefault(); histDo("undo"); }
+      else if (k === "y" || (k === "z" && e.shiftKey)) { e.preventDefault(); histDo("redo"); }
+    });
+    histPaint();
     layApply();
     window.addEventListener("resize", () => { clearTimeout(layApply._t); layApply._t = setTimeout(layApply, 120); });
     const layBtn = root.querySelector("#ap-lay"), layReset = root.querySelector("#ap-layreset");

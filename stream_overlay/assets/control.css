@@ -223,3 +223,11 @@
   .app .card.vip .addform > .row { grid-column: 1 / -1; }
   .app .card.vip .search { max-width: 420px; }
 }
+
+/* ---- undo / redo in card titles ---- */
+.app h3 .hist { margin-left: auto; display: inline-flex; gap: 4px; letter-spacing: 0; }
+.app .hb { font: 700 16px/1 "Segoe UI Symbol", system-ui, sans-serif; width: 32px; height: 28px; padding: 0; cursor: pointer; color: var(--c-fg); background: #1a0b10; border: 1px solid var(--c-line); }
+.app .hb:hover:not(:disabled) { border-color: var(--c-gold); color: var(--c-gold); }
+.app .hb:disabled { opacity: .3; cursor: default; }
+.app .hb:focus-visible { outline: 2px solid var(--c-gold); }
+.app.editing .card h3 .hist { pointer-events: none; }

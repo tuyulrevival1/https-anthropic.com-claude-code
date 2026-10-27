@@ -112,9 +112,10 @@
         .catch(() => {});
     },
     apply(s) { if (!s || s.rev === this.state.rev) return; const prev = this.state; this.state = s; this.subs.forEach(f => f(s, prev)); },
-    set(mut) {
+    set(mut, opt) {
       if (this.remote && !this.canWrite) { window.dispatchEvent(new CustomEvent("ov-auth", { detail: false })); return; }
       const s = JSON.parse(JSON.stringify(this.state)); mut(s);
+      if (!(opt && opt.noHist)) this._record(this.state, s);
       s.rev = Date.now() + Math.random(); s.updated = Date.now();
       const prev = this.state; this.state = s;
       try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {}
@@ -122,8 +123,35 @@
       else { try { this.bc && this.bc.postMessage(s); } catch (e) {} }
       this.subs.forEach(f => f(s, prev));
     },
-    on(f) { this.subs.push(f); }
+    on(f) { this.subs.push(f); },
+    /* ---------- undo / redo (changes made on this device) ----------
+       Each change remembers the top-level fields it touched; undo(fields) reverts the latest
+       change touching any of those fields (one card's own history), redo puts it back. */
+    hist: [], redoList: [], nextLabel: "",
+    _record(prev, s) {
+      const keys = Object.keys(s).filter(k => !HIST_SKIP.has(k) && JSON.stringify(prev[k]) !== JSON.stringify(s[k]));
+      if (!keys.length) return;
+      const pick = o => JSON.parse(JSON.stringify(keys.reduce((a, k) => (a[k] = o[k], a), {})));
+      this.hist.push({ id: uid("h"), at: Date.now(), label: this.nextLabel || "", keys, before: pick(prev), after: pick(s) });
+      if (this.hist.length > 80) this.hist.shift();
+      this.redoList = this.redoList.filter(e => !e.keys.some(k => keys.includes(k)));
+      this.nextLabel = "";
+      window.dispatchEvent(new CustomEvent("ov-hist"));
+    },
+    _find(list, fields) { for (let i = list.length - 1; i >= 0; i--) if (!fields || list[i].keys.some(k => fields.includes(k))) return i; return -1; },
+    peek(kind, fields) { const L = kind === "undo" ? this.hist : this.redoList, i = this._find(L, fields); return i < 0 ? null : L[i]; },
+    undo(fields) { return this._step(this.hist, this.redoList, fields, "before"); },
+    redo(fields) { return this._step(this.redoList, this.hist, fields, "after"); },
+    _step(from, to, fields, side) {
+      if (this.remote && !this.canWrite) return null;
+      const i = this._find(from, fields); if (i < 0) return null;
+      const e = from.splice(i, 1)[0];
+      this.set(st => { e.keys.forEach(k => { st[k] = JSON.parse(JSON.stringify(e[side][k])); }); }, { noHist: true });
+      to.push(e); window.dispatchEvent(new CustomEvent("ov-hist"));
+      return e;
+    }
   };
+  const HIST_SKIP = new Set(["rev", "updated", "orders", "seenOrders", "yt", "docImported"]);
 
   /* ---------- queue, VIP balance, W/L, timer ---------- */
   const inLine = (s, k) => s.playing.some(p => p.key === k) || s.queue.some(p => p.key === k);

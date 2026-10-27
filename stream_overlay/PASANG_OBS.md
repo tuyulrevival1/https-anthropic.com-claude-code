@@ -75,6 +75,8 @@ Banner minimal: `http://127.0.0.1:8787/overlay.html?banner=minimal` · tanpa han
 | **YouTube** | Penonton live YouTube pada bar LIVE (perlu API key, bahagian 9). |
 | **Link** | Link kekal penonton & admin, Sociabuzz Webhook URL, link pantas. |
 
+**Undo / Redo**: butang **↶ / ↷** di tajuk setiap kad (Live, Win/Lose, Game habis, Queue, Hutang Mabar, MVP, Slot Akaun, Peraturan). Setiap kad undo perubahannya sendiri sahaja (contoh undo MVP tak sentuh baki). Tuding pada butang untuk lihat apa yang akan diundo. Papan kekunci: **Ctrl+Z** / **Ctrl+Y**. Sejarah disimpan selagi App tu terbuka.
+
 **Tab** di atas App: Live · Hutang Mabar · MVP · Slot Akaun · Peraturan · Order · Tetapan · Semua (link terus: `control.html#mvp`).
 **Susun layout**: tekan **⠿ Susun layout** › tarik **⠿ Tarik** untuk pindah kad, tarik bucu kanan bawah untuk ubah saiz, atau tekan 1 / 2 / 3 untuk lebar › **✓ Siap**. Disimpan dalam peranti tu (PC dan phone boleh lain). **Reset** = susunan asal.
 
