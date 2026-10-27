@@ -311,10 +311,12 @@
 /* song now playing in the LIVE band */
 .ov-band .np { color: #fff; text-transform: none; letter-spacing: .03em; font: 700 17px/1 var(--f-hud); min-width: 0; }
 .ov-band .np svg { color: var(--flame); flex: none; width: 15px; height: 15px; margin-top: -1px; }
-.ov-band .np .npw { max-width: 400px; overflow: hidden; white-space: nowrap; }
-.ov-band .np .npt { display: inline-block; font-weight: 700; padding-top: 2px; }
-.ov-band .np.scroll .npw { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 16px), transparent); mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 16px), transparent); }
-.ov-band .np.scroll .npt { padding-left: 12px; animation: np-scroll var(--np-dur, 10s) ease-in-out infinite alternate; }
-@keyframes np-scroll { 0%, 18% { transform: translateX(0); } 82%, 100% { transform: translateX(var(--np-d, 0)); } }
+.ov-band .np .npw { width: 360px; overflow: hidden; white-space: nowrap;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent); mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent); }
+.ov-band .np .npt { display: inline-flex; padding-top: 2px; animation: np-marq var(--np-dur, 8s) linear infinite; will-change: transform; }
+.ov-band .np .nps { display: inline-block; min-width: 360px; padding-right: 64px; font-weight: 700; }
+@keyframes np-marq { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .ov-band .np .npt { animation-duration: 0s; } }
+.ov-band .live .timer.paused { opacity: .55; }
 /* VVIP star in the overlay queue */
 .ov-card .bal .vv, .vv { color: #ffd84f; font-style: normal; margin-right: 2px; }

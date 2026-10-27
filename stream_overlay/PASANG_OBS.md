@@ -42,8 +42,8 @@ Position = x, y · Bounding Box Type = **Scale to outer bounds** · Bounding Box
 Susunan skrin (atas ke bawah): facecam › bar LIVE › gameplay › banner › queue Mabar (kiri, bawahnya kosong), handcam + DEVICE + W/L (kanan).
 
 **Bar LIVE** di bawah facecam:
-- **● LIVE 01:23:45** = berapa lama live sudah berjalan (timer stream)
-- **♪ Artis - Lagu** = lagu yang sedang dimainkan Spotify di PC (IndoFinity pun guna Spotify). Tajuk panjang bergerak sendiri.
+- **● LIVE 01:23:45** = berapa lama live sudah berjalan (timer stream). Sebelum live tunjuk 00:00:00 (pudar).
+- **♪ Artis - Lagu** = lagu yang sedang dimainkan Spotify di PC (IndoFinity pun guna Spotify). Bergerak dari kanan ke kiri tanpa henti.
 - **🕒 9:41 PM** = jam sekarang (format 12 jam)
 - **▶ 1,284** = penonton YouTube (kalau diset)
 

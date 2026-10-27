@@ -715,18 +715,18 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
         const d = new Date(), h = d.getHours(), c = `${h % 12 || 12}:${String(d.getMinutes()).padStart(2, "0")}`, ap = h < 12 ? "AM" : "PM";
         if (c + ap !== lastClock) { clockB.textContent = c; clockAp.textContent = ap; lastClock = c + ap; }
       }
-      const el_ = liveElapsed(st, nowMs), tt = el_ > 0 || st.live.running ? fmtTime(el_) : "";
-      if (tt !== lastTimer) { timerTxt.textContent = tt; timerEl.hidden = !tt; timerEl.classList.toggle("paused", !st.live.running); lastTimer = tt; }
+      // stream timer is always shown: 00:00:00 (dim) until the live starts
+      const tt = fmtTime(liveElapsed(st, nowMs)) + (st.live.running ? "" : "·");
+      if (tt !== lastTimer) { timerTxt.textContent = tt.replace("·", ""); timerEl.hidden = false; timerEl.classList.toggle("paused", !st.live.running); lastTimer = tt; }
       const fresh = st.yt && st.yt.viewers != null && nowMs - (st.yt.at || 0) < 180000;
       const yv = fresh ? Number(st.yt.viewers).toLocaleString("en-US") : "";
       if (yv !== lastYt) { ytTxt.textContent = yv; ytEl.hidden = !yv; lastYt = yv; }
       const np = songText(st);
       if (np !== lastNp) {
-        lastNp = np; npT.textContent = np; npEl.hidden = !np; npEl.classList.remove("scroll");
-        if (np) requestAnimationFrame(() => {
-          const d = npT.scrollWidth - npW.clientWidth;
-          if (d > 4) { npEl.style.setProperty("--np-d", -(d + 12) + "px"); npEl.style.setProperty("--np-dur", Math.max(6, d / 22 + 4).toFixed(1) + "s"); npEl.classList.add("scroll"); }
-        });
+        // ticker: two copies scroll right to left without a break, short titles too
+        lastNp = np; npEl.hidden = !np;
+        npT.innerHTML = np ? `<span class="nps">${esc(np)}</span><span class="nps" aria-hidden="true">${esc(np)}</span>` : "";
+        if (np) requestAnimationFrame(() => { const w = npT.firstChild.offsetWidth || 400; npEl.style.setProperty("--np-dur", Math.max(5, w / 60).toFixed(2) + "s"); });
       }
     });
 
