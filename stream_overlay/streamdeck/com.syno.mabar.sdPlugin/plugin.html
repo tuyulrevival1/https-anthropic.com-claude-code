@@ -81,7 +81,7 @@ function run(ctx, k, name) {
   fetch(base(k) + "/api/do/" + name, { mode: "no-cors", cache: "no-store" })
     .then(() => send({ event: "showOk", context: ctx }))
     .catch(() => send({ event: "showAlert", context: ctx }))
-    .finally(() => setTimeout(refresh, 1200));
+    .finally(() => { setTimeout(refresh, 350); setTimeout(refresh, 900); });
 }
 function keyDown(ctx, k) {
   if (kind(k.action) === "toggle") return;
@@ -122,6 +122,6 @@ function connectElgatoStreamDeckSocket(inPort, inUUID, inRegisterEvent) {
     else if (m.event === "keyUp" && keys[ctx]) keyUp(ctx, keys[ctx]);
   };
 }
-setInterval(refresh, 2000);
+setInterval(refresh, 1000);
 </script>
 </body></html>

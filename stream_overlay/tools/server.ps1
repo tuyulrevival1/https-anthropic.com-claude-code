@@ -228,6 +228,17 @@ namespace SynoAudio {
 "@
 $audioOk = $false
 try { Add-Type -TypeDefinition $audioCs -Language CSharp -ErrorAction Stop; $audioOk = $true } catch { Write-Host 'Pengesan bunyi app tak dapat dimuat (lagu IndoFinity cuma dikesan ikut tajuk).' -ForegroundColor DarkYellow }
+# teks yang tertera dalam tetingkap IndoFinity (tajuk lagu + @peminta), dibaca guna Windows UI Automation
+$uiaOk = $false
+try { Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes -ErrorAction Stop; $uiaOk = $true } catch { }
+$ifxJson = '[]'; $ifxAt = [DateTime]::MinValue
+# Fungsi baca media / IndoFinity. Dijalankan di thread belakang supaya server tak lambat (butang on / off terus laju).
+$mediaDefs = @'
+function JsonStr([string]$s) { return '"' + ($s -replace '\\', '\\' -replace '"', '\"') + '"' }
+function NpAwait($op, [Type]$t) {
+  $task = $npAsTask.MakeGenericMethod($t).Invoke($null, @($op))
+  if ($task.Wait(1500)) { return $task.Result } else { return $null }
+}
 function CleanTxt([string]$s) { return ($s -replace '[\x00-\x1f]', ' ').Trim() }
 function Get-MediaJson {
   $sm = @()
@@ -266,10 +277,6 @@ function Get-MediaJson {
   elseif (-not $ifLoud -and ((Get-Date) - $script:ifxAt).TotalSeconds -ge 20) { $script:ifxJson = '[]' }
   return '{"winrt":' + ([string][bool]$npWinRT).ToLower() + ',"audioOk":' + ([string]$audioOk).ToLower() + ',"uia":' + ([string]$uiaOk).ToLower() + ',"smtc":[' + ($sm -join ',') + '],"audio":[' + ($au -join ',') + '],"ifx":' + $script:ifxJson + '}'
 }
-# teks yang tertera dalam tetingkap IndoFinity (tajuk lagu + @peminta), dibaca guna Windows UI Automation
-$uiaOk = $false
-try { Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes -ErrorAction Stop; $uiaOk = $true } catch { }
-$ifxJson = '[]'; $ifxAt = [DateTime]::MinValue
 function Get-IfxTexts {
   if (-not $uiaOk) { return '[]' }
   $out = New-Object System.Collections.ArrayList
@@ -293,9 +300,26 @@ function Get-IfxTexts {
   } catch { }
   return '[' + ($out -join ',') + ']'
 }
+'@
+. ([ScriptBlock]::Create($mediaDefs))
+$mediaShared = [hashtable]::Synchronized(@{ json = ''; want = [DateTime]::MinValue })
+$mediaBg = $null
+try {
+  $mediaPS = [PowerShell]::Create()
+  [void]$mediaPS.AddScript('param($shared, $npAsTask, $npWinRT, $audioOk, $uiaOk)' + "`n" + $mediaDefs + @'
+$script:ifxJson = '[]'; $script:ifxAt = [DateTime]::MinValue
+while ($true) {
+  if (((Get-Date) - $shared.want).TotalSeconds -lt 15) { try { $shared.json = Get-MediaJson } catch { } ; Start-Sleep -Milliseconds 450 }
+  else { Start-Sleep -Milliseconds 400 }
+}
+'@)
+  [void]$mediaPS.AddArgument($mediaShared).AddArgument($npAsTask).AddArgument($npWinRT).AddArgument($audioOk).AddArgument($uiaOk)
+  $mediaBg = $mediaPS.BeginInvoke()
+} catch { $mediaBg = $null }
 $mediaJson = ''; $mediaAt = [DateTime]::MinValue
 $hookHits = New-Object System.Collections.ArrayList   # 15 cubaan webhook terakhir (untuk App > Status webhook)
 $cmds = New-Object System.Collections.ArrayList       # arahan Stream Deck menunggu overlay / App ambil
+$stateRev = [long]((Get-Date) - [DateTime]'2026-01-01').TotalMilliseconds   # naik setiap kali state disimpan (/api/rev)
 $deckActs = @('win', 'lose', 'win-1', 'lose-1', 'end-win', 'end-lose', 'end', 'timer-start', 'timer-pause', 'timer-reset', 'queue-on', 'queue-off', 'mabar-open', 'mabar-close', 'mabar-toggle', 'facecam-on', 'facecam-off', 'facecam-toggle', 'handcam-on', 'handcam-off', 'handcam-toggle', 'banner-on', 'banner-off', 'wl-reset', 'win-reset', 'lose-reset')
 $fwdHeaders = @('x-forwarded-for', 'cf-connecting-ip', 'x-forwarded-host', 'forwarded', 'x-real-ip', 'tailscale-funnel-request')
 
@@ -369,7 +393,7 @@ while ($true) {
         if ($method -eq 'POST') {
           if ($locked -and -not $isLocal) { $status = '429 Too Many Requests'; $body = ToBytes 'Dikunci sementara' }
           elseif (-not $okPin) { $status = '401 Unauthorized'; $body = ToBytes 'PIN salah' }
-          else { [System.IO.File]::WriteAllBytes($stateFile, $bodyBytes); $body = ToBytes 'ok' }
+          else { [System.IO.File]::WriteAllBytes($stateFile, $bodyBytes); $stateRev++; $body = ToBytes 'ok' }
         } elseif (Test-Path -LiteralPath $stateFile) { $body = [System.IO.File]::ReadAllBytes($stateFile) }
       } elseif ($path -eq 'api/order-hook' -or $path -like 'api/order-hook/*') {
         # Sociabuzz (atau servis lain) POST order ke sini. Kunci rahsia: /api/order-hook/KUNCI, ?key=KUNCI, atau header token
@@ -413,6 +437,9 @@ while ($true) {
           Write-Host ("  Stream Deck: {0} ({1})" -f $act, (Get-Date -Format 'h:mm:ss tt')) -ForegroundColor Cyan
           $body = ToBytes ('OK ' + $act)
         }
+      } elseif ($path -eq 'api/rev') {
+        # semakan pantas (5 kali sesaat): nombor state + arahan Stream Deck menunggu
+        $type = 'application/json'; $body = ToBytes ('{"s":' + $stateRev + ',"c":' + $cmds.Count + '}')
       } elseif ($path -eq 'api/cmds') {
         $type = 'application/json'
         if (-not $okPin) { $status = '401 Unauthorized'; $body = ToBytes '[]' }
@@ -451,8 +478,14 @@ while ($true) {
         $type = 'application/json'
         if (-not $okPin) { $status = '401 Unauthorized'; $body = ToBytes '{}' }
         else {
-          if (((Get-Date) - $mediaAt).TotalSeconds -ge 0.7) { $mediaJson = Get-MediaJson; $mediaAt = Get-Date }
-          $body = ToBytes $mediaJson
+          if ($mediaBg -and -not $mediaBg.IsCompleted) {
+            $mediaShared.want = Get-Date; $mj = [string]$mediaShared.json
+            if (-not $mj) { $mj = '{"winrt":false,"audioOk":false,"smtc":[],"audio":[],"ifx":[]}' }
+            $body = ToBytes $mj
+          } else {
+            if (((Get-Date) - $mediaAt).TotalSeconds -ge 0.7) { $mediaJson = Get-MediaJson; $mediaAt = Get-Date }
+            $body = ToBytes $mediaJson
+          }
         }
       } elseif ($path -eq 'api/hooklog') {
         $type = 'application/json'

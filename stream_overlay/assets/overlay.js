@@ -89,9 +89,19 @@
       fetch("api/state", { cache: "no-store" }).then(r => r.ok ? r.text() : Promise.reject(r.status)).then(txt => {
         this.remote = true;
         if (txt && txt.trim()) this.onRemote(txt, true); else this.push(this.state);
-        setInterval(() => this.pull(), 700);
+        // fast change check (~7x a second): fetch the full state / Stream Deck commands only when something changed.
+        // Older server without /api/rev: plain polling every 700 ms.
+        let lastRev = null, revBusy = false, legacy = false, lastFull = 0;
+        setInterval(() => {
+          if (legacy || revBusy) return; revBusy = true;
+          fetch("api/rev", { cache: "no-store" }).then(r => { if (r.status === 404) { legacy = true; return null; } return r.ok ? r.json() : null; }).then(j => {
+            if (!j) return;
+            if (j.s !== lastRev || Date.now() - lastFull > 5000) { lastRev = j.s; lastFull = Date.now(); this.pull(); }
+            if (j.c > 0) pullCmds();
+          }).catch(() => {}).finally(() => { revBusy = false; });
+        }, 150);
+        setInterval(() => { if (legacy) { this.pull(); pullCmds(); } }, 700);
         setInterval(pullOrders, 3000); setTimeout(pullOrders, 800);
-        setInterval(pullCmds, 700);
         window.dispatchEvent(new CustomEvent("ov-remote", { detail: true }));
       }).catch(() => window.dispatchEvent(new CustomEvent("ov-remote", { detail: false })));
     },
