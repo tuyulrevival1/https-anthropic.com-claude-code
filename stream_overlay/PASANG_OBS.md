@@ -327,6 +327,7 @@ Setiap kill ada efek sendiri:
        - **✎ Lukis kotak BANNER** › seret di sekeliling tulisan DOUBLE KILL / SAVAGE pada gambar tu (kuning),
        - **✎ Pilih logo hero** › lukis kotak kecil tepat di atas muka Chou (ungu).
      - Server cari Chou **hanya di sekitar kotak ungu** (tempat pembunuh dalam banner MLBB). Chou yang mati muncul di tempat lain, jadi tak dikira. Tukar skin = ambil logo semula.
+     - **Jenis kill:** tulisan banner kalau terbaca (FIRST BLOOD, KILLING SPREE, LEGENDARY…). Kalau tak terbaca, ikut kill berturut anda macam MLBB: kill ke-2 dalam 10 saat = DOUBLE, ke-3 = TRIPLE, ke-4 = MANIAC, ke-5 = SAVAGE (terus keluar, tak tunggu). SOLO KILL hanya untuk kill pertama.
      - **Ketepatan** 0.80 (asal). Masa live, kotak **hijau** tunjuk tempat Chou dikesan dan skornya. Kill anda biasanya 0.85+. Turunkan sikit kalau kill anda terlepas, naikkan kalau efek keluar sendiri.
      - **KDA sebagai sandaran** (pilihan): hidupkan dan lukis kotak KDA kalau nak tangkap kill yang logonya terlepas.
    - **3 · Kotak bacaan**: tekan **👁 Tunjuk skrin** (gambar game keluar):
