@@ -698,8 +698,44 @@
         { type: "score", x: 548, y: 1798, w: 508, h: 108 }
       ],
       tags: [{ slot: "hand" }]
+    },
+    // ---- landscape 1920x1080: gameplay 3:2 + black column for the overlay (kiri / kanan), or both sides (tengah)
+    kiri: landSide("kiri"),
+    kanan: landSide("kanan"),
+    tengah: {
+      name: "Landscape tengah", w: 1920, h: 1080,
+      band: 1048, bandX: 0, bandW: 1920,
+      bannerY: 922, bannerX: 622, bannerScale: .625,
+      slots: [
+        { id: "game", x: 288, y: 14, w: 1344, h: 896, frame: false },
+        { id: "face", x: 1644, y: 14, w: 264, h: 198, cut: 14, corners: true, optional: true }
+      ],
+      panels: [
+        { type: "queue", variant: "compact tall narrow", x: 12, y: 14, w: 264, h: 720, max: 11 },
+        { type: "score", x: 12, y: 750, w: 264, h: 56 },
+        { type: "prices", variant: "compact tall narrow", x: 1644, y: 228, w: 264, h: 420 }
+      ],
+      tags: []
     }
   };
+  // landscape with the overlay column on one side: game 1536x1024 (3:2), column 384 wide
+  function landSide(side) {
+    const colX = side === "kiri" ? 0 : 1536, gx = side === "kiri" ? 384 : 0, px = colX + 12;
+    return {
+      name: "Landscape " + side, w: 1920, h: 1080,
+      band: 1048, bandX: 0, bandW: 1920,
+      bannerY: 954, bannerX: px, bannerScale: 360 / 1080,
+      slots: [
+        { id: "game", x: gx, y: 14, w: 1536, h: 1024, frame: false },
+        { id: "face", x: px, y: 14, w: 360, h: 252, cut: 16, corners: true, optional: true }
+      ],
+      panels: [
+        { type: "queue", variant: "compact tall", x: px, y: 282, w: 360, h: 560, max: 8 },
+        { type: "score", x: px, y: 858, w: 360, h: 77 }
+      ],
+      tags: []
+    };
+  }
   const THEMES = {
     red: { a: "#ff2346", hi: "#ff7088", glow: "255,35,70", deep: "150,0,24", ember: "255,190,170", bg: ["#0d0507", "#1c070d", "#080305"] },
     violet: { a: "#7b2cff", hi: "#b98aff", glow: "123,44,255", deep: "255,35,80", ember: "205,170,255", bg: ["#0d0716", "#140a25", "#09050f"] }
@@ -708,7 +744,7 @@
   const SLOT_NAMES = { face: "FACECAM", game: "GAMEPLAY", hand: "HANDCAM" };
   // copy a layout, dropping the optional handcam when ?hand=0
   function resolveLayout(n, opts) {
-    const L = JSON.parse(JSON.stringify(LAYOUTS[1]));
+    const L = JSON.parse(JSON.stringify(LAYOUTS[n] || LAYOUTS[1]));
     if (opts.hand === false) { L.slots = L.slots.filter(s => !s.optional); L.tags = L.tags.filter(t => L.slots.some(s => s.id === t.slot)); }
     return L;
   }
@@ -719,9 +755,9 @@
     return `M${x + c} ${y}H${x + w}V${y + h - c}L${x + w - c} ${y + h}H${x}V${y + c}Z`;
   }
   function bgSVG(L) {
-    const m = uid("holes"), c1 = uid("cr"), g = uid("g");
+    const m = uid("holes"), c1 = uid("cr"), g = uid("g"), SW = L.w || W, SH = L.h || H;
     const holes = L.slots.map(s => `<path d="${slotPath(s)}" fill="#000"/>`).join("");
-    return `<svg class="ov-layer" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">
+    return `<svg class="ov-layer" viewBox="0 0 ${SW} ${SH}" width="${SW}" height="${SH}" aria-hidden="true">
 <defs>
  <linearGradient id="${g}a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${TH.bg[0]}"/><stop offset=".55" stop-color="${TH.bg[1]}"/><stop offset="1" stop-color="${TH.bg[2]}"/></linearGradient>
  <radialGradient id="${g}b" cx=".08" cy=".82" r=".55"><stop offset="0" stop-color="${TH.a}" stop-opacity=".3"/><stop offset="1" stop-color="${TH.a}" stop-opacity="0"/></radialGradient>
@@ -729,14 +765,14 @@
  <linearGradient id="${g}d" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b98aff" stop-opacity=".16"/><stop offset="1" stop-color="#ff2350" stop-opacity=".05"/></linearGradient>
  <pattern id="${g}h" width="18" height="18" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><rect width="1.6" height="18" fill="${TH.hi}" fill-opacity=".06"/></pattern>
  <filter id="${g}n" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .075 0"/></filter>
- <mask id="${m}"><rect width="${W}" height="${H}" fill="#fff"/>${holes}</mask>
+ <mask id="${m}"><rect width="${SW}" height="${SH}" fill="#fff"/>${holes}</mask>
 </defs>
 <g mask="url(#${m})">
- <rect width="${W}" height="${H}" fill="url(#${g}a)"/>
- <rect width="${W}" height="${H}" fill="url(#${g}b)"/>
- <rect width="${W}" height="${H}" fill="url(#${g}c)"/>
- <rect width="${W}" height="${H}" fill="url(#${g}h)"/>
- <rect width="${W}" height="${H}" filter="url(#${g}n)"/>
+ <rect width="${SW}" height="${SH}" fill="url(#${g}a)"/>
+ <rect width="${SW}" height="${SH}" fill="url(#${g}b)"/>
+ <rect width="${SW}" height="${SH}" fill="url(#${g}c)"/>
+ <rect width="${SW}" height="${SH}" fill="url(#${g}h)"/>
+ <rect width="${SW}" height="${SH}" filter="url(#${g}n)"/>
  ${L.chatSafe ? `<linearGradient id="${g}s" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#050309" stop-opacity=".78"/><stop offset=".75" stop-color="#050309" stop-opacity=".45"/><stop offset="1" stop-color="#050309" stop-opacity="0"/></linearGradient>
  <rect x="${L.chatSafe.x}" y="${L.chatSafe.y}" width="${L.chatSafe.w}" height="${L.chatSafe.h}" fill="url(#${g}s)"/>` : ""}
 </g>
@@ -744,7 +780,7 @@
   }
 
   function frameSVG(L) {
-    const f = uid("blur");
+    const f = uid("blur"), SW = L.w || W, SH = L.h || H;
     let out = "";
     for (const s of L.slots) {
       if (s.frame === false) continue;
@@ -758,30 +794,31 @@
       const k = 28, i = 12, x0 = s.x + i, y0 = s.y + i, x1 = s.x + s.w - i, y1 = s.y + s.h - i;
       const cuts = s.cut ? [`M${x1 - k} ${y0}H${x1}V${y0 + k}`, `M${x0} ${y1 - k}V${y1}H${x0 + k}`]
         : [`M${x0} ${y0 + k}V${y0}H${x0 + k}`, `M${x1 - k} ${y0}H${x1}V${y0 + k}`, `M${x1} ${y1 - k}V${y1}H${x1 - k}`, `M${x0 + k} ${y1}H${x0}V${y1 - k}`];
-      if (s.id === "hand") out += cuts.map(p => `<path class="ov-corner" d="${p}"/>`).join("");
+      if (s.id === "hand" || s.corners) out += cuts.map(p => `<path class="ov-corner" d="${p}"/>`).join("");
     }
-    return `<svg class="ov-layer" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">
+    return `<svg class="ov-layer" viewBox="0 0 ${SW} ${SH}" width="${SW}" height="${SH}" aria-hidden="true">
 <defs><filter id="${f}" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur stdDeviation="5"/></filter></defs>${out}</svg>`;
   }
 
 
   /* ---------- animated backdrop: purple/crimson smoke + embers, masked out of the camera holes ---------- */
   function bgFx(L) {
-    const c = el("canvas", "ov-layer ov-bgfx"); c.width = 270; c.height = 480;
+    const SW = L.w || W, SH = L.h || H, CW = Math.round(SW / 4), CH = Math.round(SH / 4);
+    const c = el("canvas", "ov-layer ov-bgfx"); c.width = CW; c.height = CH;
     const holes = L.slots.map(s => slotPath(s)).join("");
-    const mask = "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><path fill-rule="evenodd" d="M0 0H${W}V${H}H0Z${holes}"/></svg>`);
+    const mask = "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${SH}" preserveAspectRatio="none"><path fill-rule="evenodd" d="M0 0H${SW}V${SH}H0Z${holes}"/></svg>`);
     c.style.webkitMaskImage = c.style.maskImage = `url("${mask}")`;
     c.style.webkitMaskSize = c.style.maskSize = "100% 100%";
     const ctx = c.getContext("2d"); let last = -1;
     const LOOP = 24;
     tickers.push(t => {
       if (manualT == null && t - last < 1 / 30) return; last = t;
-      ctx.clearRect(0, 0, 270, 480);
+      ctx.clearRect(0, 0, CW, CH);
       ctx.globalCompositeOperation = "lighter";
       for (let i = 0; i < 18; i++) {
         const r1 = rnd(i + 2001), r2 = rnd(i + 2101), r3 = rnd(i + 2201);
-        const x = frac(r1 + t * (1 + (i % 2)) / LOOP) * 360 - 45;
-        const y = 300 + r2 * 180 + Math.sin(t / LOOP * TAU * (1 + (i % 3)) + i) * 26;
+        const x = frac(r1 + t * (1 + (i % 2)) / LOOP) * (CW * 1.33) - 45;
+        const y = CH * .625 + r2 * CH * .375 + Math.sin(t / LOOP * TAU * (1 + (i % 3)) + i) * 26;
         const rad = 40 + r3 * 60, red = i % 3 === 0;
         const g = ctx.createRadialGradient(x, y, 0, x, y, rad);
         g.addColorStop(0, red ? `rgba(${TH.deep},.08)` : `rgba(${TH.glow},.10)`);
@@ -790,8 +827,8 @@
       }
       for (let i = 0; i < 40; i++) {
         const ph = frac(t * (2 + Math.floor(rnd(i + 2301) * 4)) / LOOP + rnd(i + 2401));
-        const x = rnd(i + 2501) * 270 + Math.sin(ph * TAU * 2 + i) * 6;
-        const y = 480 - ph * 300;
+        const x = rnd(i + 2501) * CW + Math.sin(ph * TAU * 2 + i) * 6;
+        const y = CH - ph * CH * .625;
         if (L.chatSafe && x < (L.chatSafe.w / 4) && y > L.chatSafe.y / 4) continue;
         const a = Math.sin(ph * Math.PI) * .8;
         ctx.fillStyle = i % 4 ? `rgba(${TH.ember},${a})` : `rgba(255,110,140,${a})`;
@@ -800,7 +837,7 @@
       const sw = frac(t / 8), sx = sw * 600 - 200;
       const g = ctx.createLinearGradient(sx, 0, sx + 90, 60);
       g.addColorStop(0, "rgba(185,138,255,0)"); g.addColorStop(.5, "rgba(185,138,255,.05)"); g.addColorStop(1, "rgba(185,138,255,0)");
-      ctx.fillStyle = g; ctx.fillRect(0, 0, 270, 480);
+      ctx.fillStyle = g; ctx.fillRect(0, 0, CW, CH);
       ctx.globalCompositeOperation = "source-over";
     });
     return c;
@@ -813,8 +850,8 @@
   const mem = (s, p) => s.members[p.key] || { name: p.key, bal: 0 };
   const ROLES = ["EXP", "JUNGLE", "MID", "GOLD", "ROAM"];
   const roleTag = m => m && m.role && ROLES.includes(m.role) ? (window.SYNO_ROLES ? SYNO_ROLES.badge(m.role) : `<span class="rl rl-${m.role.toLowerCase()} rl-txt">${m.role === "JUNGLE" ? "JGL" : m.role}</span>`) : "";
-  function queueHTML(s, variant, prevIds) {
-    const wide = variant === "wide", compact = variant === "compact";
+  function queueHTML(s, variant, prevIds, def) {
+    const v = String(variant || ""), wide = v === "wide", compact = /compact/.test(v), tall = /tall/.test(v);
     const max = CFG.mabar.maxPlaying, full = s.playing.length >= max;
     const isNew = id => (prevIds && !prevIds.has(id) ? " is-new" : "");
     let slots = "";
@@ -823,12 +860,12 @@
       if (p) { const m = mem(s, p); slots += `<li class="slot${isNew(p.id)}"><span class="ix">${i + 1}</span>${roleTag(m)}<span class="nm">${esc(m.name)}</span>${m.mlid ? `<span class="mid">${esc(m.mlid)}</span>` : ""}<span class="bal">${p.vip ? "<i class=\"vv\">★</i>" : ""}${tot(m)}<small>G</small></span></li>`; }
       else slots += `<li class="slot is-empty"><span class="ix">${i + 1}</span><span class="nm">SLOT KOSONG</span></li>`;
     }
-    const lim = wide ? 6 : compact ? 4 : 3; // compact: 2 columns x 2 rows
+    const lim = def && def.max || (wide ? 6 : compact ? 4 : 3); // compact: 2 columns x 2 rows; tall: one long list
     let next = s.queue.slice(0, lim).map((p, i) =>
       `<li class="nx${isNew(p.id)}"><span class="no">${String(i + 1).padStart(2, "0")}</span>${roleTag(mem(s, p))}<span class="nm">${esc(mem(s, p).name)}</span>${mem(s, p).mlid ? `<span class="mid">${esc(mem(s, p).mlid)}</span>` : ""}<span class="g">${p.vip ? "★" : ""}${tot(mem(s, p))}G</span></li>`).join("");
     const extra = s.queue.length - lim;
     if (extra > 0 && !compact) next += `<li class="nx more">+${extra} LAGI</li>`;
-    const nextBlock = s.queue.length ? `<ol${compact ? ' class="q2"' : ""}>${next}</ol>` : `<p class="q-empty">${full ? "Queue kosong" : "Slot masih ada"}</p>`;
+    const nextBlock = s.queue.length ? `<ol${compact && !tall ? ' class="q2"' : ""}>${next}</ol>` : `<p class="q-empty">${full ? "Queue kosong" : "Slot masih ada"}</p>`;
     return `<div class="q-head">${titleHTML(s)}<div class="q-prices">${chipsHTML()}</div></div>
 <div class="q-cols"><section><h4 class="ov-lbl">Sedang main <i>${s.playing.length}/${max}</i></h4><ol class="slots">${slots}</ol></section>
 <section><h4 class="ov-lbl">Queue ${compact && extra > 0 ? `<em class="q-more">+${extra} lagi</em>` : ""}<i>${s.queue.length}</i></h4>${nextBlock}</section></div>`;
@@ -837,7 +874,7 @@
   // title + OPEN / CLOSED badge (App switch / Stream Deck), same on the queue and the prices card
   const titleHTML = s => `<div class="q-tt"><h3 class="ov-h">${esc(CFG.mabar.title)}</h3><span class="oc-b ${s && s.mabarClosed ? "closed" : "open"}">${s && s.mabarClosed ? "CLOSED" : "OPEN"}</span></div>`;
   function pricesHTML(variant, s) {
-    if (variant === "compact") {
+    if (/compact/.test(String(variant || ""))) {
       const tiles = CFG.mabar.prices.map(p => `<div class="pt"><span>${esc(p.qty)}</span><b>${esc(p.price)}${p.note ? `<small>${esc(p.note)}</small>` : ""}</b></div>`).join("");
       const sv = CFG.services.map(v => `<span>${esc(v.label)} <b>${esc(v.price)}</b></span>`).join("");
       return `<div class="q-head">${titleHTML(s)}</div>
@@ -943,7 +980,9 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
   function mount(root, opts = {}) {
     Store.init();
     const L = resolveLayout(opts.layout, opts);
-    const stage = el("div", `ov-stage ov-l1 theme-${CFG.theme || "violet"}`);
+    const land = (L.w || W) > (L.h || H);
+    const stage = el("div", `ov-stage ov-l1 theme-${CFG.theme || "violet"}${land ? " land" : ""}`);
+    if (L.w) { stage.style.width = L.w + "px"; stage.style.height = L.h + "px"; }
 
     if (opts.demo) for (const s of L.slots) {
       const d = el("div", "ov-demo"); pos(d, s);
@@ -963,7 +1002,8 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
 <span class="itm np" hidden><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="currentColor" stroke-width="2.6"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="17" cy="16" r="3" fill="currentColor"/></svg><span class="npw"><b class="npt"></b></span></span>
 <span class="itm clock"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg><b>--:--</b><small></small></span>
 <span class="itm yt" hidden><svg viewBox="0 0 24 24"><rect x="1" y="5" width="22" height="14" rx="4" fill="#ff0000"/><path d="M10 9l5 3-5 3z" fill="#fff"/></svg><b></b></span>`);
-    band.style.top = L.band + "px"; if (L.band != null) stage.appendChild(band);
+    band.style.top = L.band + "px"; if (L.bandX != null) { band.style.left = L.bandX + "px"; band.style.width = L.bandW + "px"; }
+    if (L.band != null) stage.appendChild(band);
     const clockB = band.querySelector(".clock b"), clockAp = band.querySelector(".clock small"), timerEl = band.querySelector(".timer"), timerTxt = timerEl;
     const ytEl = band.querySelector(".yt"), ytTxt = ytEl.querySelector("b");
     const npEl = band.querySelector(".np"), npW = band.querySelector(".npw"), npT = band.querySelector(".npt");
@@ -996,6 +1036,7 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
     api.setBanner = (st, acc) => {
       if (api.banner) api.banner.destroy();
       api.banner = st === "none" ? null : mountBanner(stage, { style: st, accent: acc || opts.accent, y: L.bannerY, inStage: true });
+      if (api.banner && L.bannerScale) Object.assign(api.banner.el.style, { left: (L.bannerX || 0) + "px", transformOrigin: "0 0", transform: `scale(${L.bannerScale})` });
       if (api.banner) api.banner.el.style.display = Store.state.showBanner ? "" : "none";
     };
     api.setBanner(opts.banner || "pro");
@@ -1007,7 +1048,11 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
         const v = def.variant ? " " + def.variant : "";
         if (def.type === "queue") {
           e.className = "ov-card " + (s.showQueue ? "ov-queue" : "ov-prices") + v + (s.mabarClosed ? " is-closed" : "");
-          e.innerHTML = s.showQueue ? queueHTML(s, def.variant, prevIds) : pricesHTML(def.variant, s);
+          e.innerHTML = s.showQueue ? queueHTML(s, def.variant, prevIds, def) : pricesHTML(def.variant, s);
+        } else if (def.type === "prices") {
+          // landscape: prices always visible (hidden while the queue card already shows them)
+          e.className = "ov-card ov-prices" + v; e.style.display = s.showQueue ? "" : "none";
+          const html = pricesHTML(def.variant, s); if (e._h !== html) { e.innerHTML = html; e._h = html; }
         } else if (def.type === "score") {
           e.className = "ov-score"; e.innerHTML = scoreSVG(s);
           if (prev) e.querySelectorAll("[data-k]").forEach(g => { const k = g.dataset.k; if (prev[k] !== s[k]) { g.classList.remove("sb-pop"); void g.getBBox(); g.classList.add("sb-pop"); } });
@@ -1034,7 +1079,7 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
         if (qc) {
           const al = el("div", "q-alert", `<b>TERIMA KASIH</b><span>${esc(o.name)}</span><i>${o.src === "test" ? "TEST ✓" : o.svc === "album" ? "KOMEN ALBUM" : o.svc === "akaun" ? "MAIN AKAUN" : o.svc === "joki" ? "JOKI" : o.games > 0 ? `+${o.games} GAME` : "SOCIABUZZ"}</i>`);
           qc.e.parentNode.appendChild(al);
-          Object.assign(al.style, { left: qc.def.x + "px", top: (qc.def.y - 26) + "px", width: qc.def.w + "px" });
+          Object.assign(al.style, { left: qc.def.x + "px", top: Math.max(4, qc.def.y - 26) + "px", width: qc.def.w + "px" });
           setTimeout(() => al.remove(), 6000);
         }
       }

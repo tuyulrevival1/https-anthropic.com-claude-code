@@ -372,3 +372,24 @@
 .ov-queue.compact .oc-b { font-size: 10px; padding: 3px 7px 2px; }
 .ov-queue.compact .oc-b::before { width: 6px; height: 6px; }
 .ov-queue.compact { padding-bottom: 8px; gap: 4px; }
+
+/* ---------- landscape 1920x1080 (?layout=kiri | kanan | tengah) ---------- */
+.ov-stage.land .ov-layer { width: 1920px; height: 1080px; }
+/* tall queue card for the side column: header stacked, one long list */
+.ov-queue.tall .q-head { flex-direction: column; align-items: stretch; gap: 8px; }
+.ov-queue.tall .q-prices { flex-direction: row; flex-wrap: wrap; justify-content: flex-start; max-width: none; }
+.ov-queue.tall section:last-child ol { gap: 3px; }
+.ov-queue.tall .nx { height: 26px; }
+.ov-queue.tall .nx .nm { max-width: none; }
+.ov-queue.tall .q-cols { gap: 10px; }
+.ov-queue.tall .ov-h, .ov-prices.tall .ov-h { font-size: 38px; }
+/* narrow column (tengah, 264 wide): no ML ID, smaller chips */
+.ov-queue.narrow .mid { display: none; }
+.ov-queue.narrow .ov-chip { font-size: 12px; padding: 3px 6px 2px; }
+.ov-queue.narrow .ov-chip b { font-size: 15px; }
+.ov-queue.narrow .slot .nm, .ov-queue.narrow .nx .nm { flex: 1; }
+.ov-prices.tall .pt-grid { grid-template-columns: 1fr; }
+.ov-prices.tall .pt:last-child:nth-child(odd) { grid-column: auto; }
+.ov-prices.tall .pt-svc { flex-direction: column; gap: 6px; }
+.ov-prices.tall .q-tt { flex-direction: column-reverse; align-items: flex-start; gap: 4px; }
+.ov-prices.tall .q-tt .ov-h { white-space: nowrap; }

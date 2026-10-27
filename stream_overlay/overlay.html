@@ -11,8 +11,9 @@
 </head>
 <body>
 <!--
-  Browser source OBS / TikTok Live Studio: 1080 x 1920
-  Satu layout sahaja (1080x1920). &hand=0 buang handcam, &bgfx=0 matikan asap latar.
+  Browser source OBS / TikTok Live Studio: 1080 x 1920 (portrait)
+  Landscape 1920 x 1080: ?layout=kiri (overlay kiri, game kanan) | kanan | tengah (hitam kiri & kanan)
+  &hand=0 buang handcam / kamera, &bgfx=0 matikan asap latar.
   &banner=power | minimal | none
   &demo      tunjuk gambar contoh dalam lubang kamera (untuk preview sahaja)
 -->
@@ -30,10 +31,10 @@
   new URLSearchParams(location.search).forEach((v, k) => { P[k] = v; });
   const root = document.getElementById("root");
   const o = ChouOverlay.mount(root, {
-    layout: 1, banner: P.banner || "power", accent: P.accent || undefined,
+    layout: P.layout || 1, banner: P.banner || "power", accent: P.accent || undefined,
     bgfx: String(P.bgfx) !== "0", hand: String(P.hand) !== "0", demo: "demo" in P
   });
-  ChouOverlay.fitStage(o.stage, root);
+  ChouOverlay.fitStage(o.stage, root, o.layout.w || 1080, o.layout.h || 1920);
 
   // Shortcut keyboard (OBS: klik kanan source > Interact, kemudian tekan kekunci)
   //  W / L = tambah win / lose     Shift+W / Shift+L = tolak 1
