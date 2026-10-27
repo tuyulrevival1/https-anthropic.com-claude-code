@@ -571,9 +571,9 @@
       if (loud) { if (now - MEDIA.loudAt > 3000) MEDIA.loudSince = now; MEDIA.loudAt = now; }
       // a song = title reported by Windows, or sound for 6 s non-stop (short alerts / TTS don't count)
       const active = !!sm || (MEDIA.loudAt > 0 && now - MEDIA.loudAt < 4000 && now - MEDIA.loudSince >= 6000);
-      const title = sm ? String(sm.artist && sm.title && !sm.title.includes(sm.artist) ? `${sm.artist} - ${sm.title}` : sm.title || "").trim().slice(0, 90) : "";
+      const title = songTitleOf(sm, (j.audio || []).find(x => hit(x.name)), want);
       const s0 = Store.state, curT = s0.songNow ? s0.songNow.title || "" : "";
-      if (active && (!s0.songNow || (title && title !== curT))) {
+      if (active && (!s0.songNow || (title !== curT && (title || /indofinity/i.test(curT))))) {
         Store.set(s => {
           s.songNow = { title, at: now };
           (s.songs || []).forEach(x => { if (x.src === "app" && !x.done) { x.done = true; x.doneAt = now; } });
@@ -589,6 +589,17 @@
     }).catch(() => {}).finally(() => { MEDIA.busy = false; });
   }
   setInterval(mediaTick, 1500);
+  // song title only: never the app's own name ("IndoFinity"), a web address or "YouTube"
+  function songTitleOf(sm, au, want) {
+    const clean = t => String(t || "").replace(/\s*[-|–—:•·]\s*(indofinity|youtube music|youtube|google chrome|microsoft edge)\b.*$/i, "").replace(/^(indofinity|youtube music|youtube)\s*[-|–—:•·]\s*/i, "").trim();
+    const bad = t => !t || t.length < 2 || /indofinity|^https?:|\.(com|net|io|id)\b|^(youtube( music)?|widget|player|song request|now playing)$/i.test(t) || (want && t.toLowerCase().includes(want));
+    const tidy = t => t.replace(/\s*[(\[](official|lirik|lyrics?|lyric video|audio|music video|mv|video klip|visualizer|hd|4k)[^)\]]*[)\]]/gi, "").replace(/\s{2,}/g, " ").trim();
+    let ti = tidy(clean(sm && sm.title)), ar = clean(sm && sm.artist).replace(/vevo$/i, "").trim();
+    if (bad(ar) || ar.toLowerCase().endsWith(" - topic") && (ar = ar.slice(0, -8).trim()) && bad(ar)) ar = "";
+    if (!bad(ti)) return (ar && !/\s[-–]\s/.test(ti) && !ti.toLowerCase().includes(ar.toLowerCase()) ? `${ar} - ${ti}` : ti).slice(0, 90);
+    const wt = tidy(clean(au && au.win));
+    return bad(wt) ? "" : wt.slice(0, 90);
+  }
 
   let ordersBusy = false, songPause = false;
   // Orders stay in the server journal with a number; the shared state remembers the last number

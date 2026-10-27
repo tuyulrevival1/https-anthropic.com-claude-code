@@ -134,7 +134,7 @@ ${embedded ? "" : `<header class="app-top">
     <ol class="list sglist" id="ap-songs"></ol>
     <div class="row"><button class="btn ghost" type="button" id="ap-sgclear" data-confirm="Tekan lagi: buang yang dah main">Buang yang dah main</button></div>
     <div class="sgdet">
-      <b class="ctest-h">Kesan lagu dari app IndoFinity (tanpa webhook)</b>
+      <b class="ctest-h">Kesan lagu dari app player (tanpa webhook)</b>
       <div class="row"><label class="tog"><input id="ap-sgdetect" type="checkbox"><span>Jeda Spotify bila app ni main lagu</span></label>
       <label class="fld sgapp">Nama app<input id="ap-sgplayer" maxlength="40" placeholder="indofinity" autocomplete="off"></label></div>
       <p class="muted">Spotify dijeda bila app tu berbunyi 6 saat tanpa henti (alert / TTS pendek tak dikira), dan main semula bila senyap. Tajuk lagu keluar kalau app tu beritahu Windows.</p>
@@ -702,7 +702,7 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
       const hit = x => want && String(x || "").toLowerCase().includes(want);
       const rows = [];
       (j.smtc || []).forEach(x => rows.push(`<li class="${hit(x.app) ? "me" : ""}"><span class="who"><span class="nm">🎵 ${esc(appNm(x.app))} · ${x.playing ? "sedang main" : "berhenti"}</span><span class="sub">${esc([x.artist, x.title].filter(Boolean).join(" - ") || "tiada tajuk")}</span></span>${/spotify/i.test(x.app) ? "" : `<button class="btn small ghost" type="button" data-a="sgplayer" data-v="${esc(appNm(x.app).toLowerCase())}">Guna ni</button>`}</li>`));
-      (j.audio || []).filter(x => !/^(audiodg|system|idle)$/i.test(x.name)).sort((a, b) => b.peak - a.peak).forEach(x => rows.push(`<li class="${hit(x.name) ? "me" : ""}"><span class="who"><span class="nm">🔊 ${esc(x.name)}</span><span class="sub"><i class="vu"><i style="width:${Math.min(100, Math.round(x.peak * 160))}%"></i></i>${x.peak > 0.015 ? "berbunyi" : "senyap"}</span></span>${/spotify/i.test(x.name) ? "" : `<button class="btn small ghost" type="button" data-a="sgplayer" data-v="${esc(x.name.toLowerCase())}">Guna ni</button>`}</li>`));
+      (j.audio || []).filter(x => !/^(audiodg|system|idle)$/i.test(x.name)).sort((a, b) => b.peak - a.peak).forEach(x => rows.push(`<li class="${hit(x.name) ? "me" : ""}"><span class="who"><span class="nm">🔊 ${esc(x.name)}</span><span class="sub"><i class="vu"><i style="width:${Math.min(100, Math.round(x.peak * 160))}%"></i></i>${x.peak > 0.015 ? "berbunyi" : "senyap"}${x.win ? ` · tetingkap: ${esc(x.win)}` : ""}</span></span>${/spotify/i.test(x.name) ? "" : `<button class="btn small ghost" type="button" data-a="sgplayer" data-v="${esc(x.name.toLowerCase())}">Guna ni</button>`}</li>`));
       const now = st.songNow;
       const head = cfg.detect === false ? "Kesan app dimatikan." : !want ? "Isi nama app dulu." : now ? `<b class="on">▶ ${esc(cfg.player)} sedang main${now.title ? `: ${esc(now.title)}` : ""}</b>${st.spotAuto ? " · Spotify dijeda auto" : ""}` : (j.audio || []).concat(j.smtc || []).some(x => hit(x.name || x.app)) ? `${esc(cfg.player)} dikesan, senyap sekarang.` : `<b class="warn">${esc(cfg.player)} tak dikesan.</b> Buka app tu dan main satu lagu, kemudian tekan <b>Guna ni</b> pada app yang betul di bawah.`;
       const html = `<p class="sgst">${head}</p>${!j.audioOk && !j.winrt ? `<p class="muted">Windows tak benarkan server baca bunyi app. Buka semula START_OVERLAY.bat.</p>` : ""}<ol class="list">${rows.join("") || `<li class="empty">Tiada app berbunyi sekarang.</li>`}</ol>`;

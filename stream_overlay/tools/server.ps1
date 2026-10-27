@@ -253,7 +253,11 @@ function Get-MediaJson {
         $nm = ''; try { $nm = (Get-Process -Id $id -ErrorAction Stop).ProcessName } catch { $nm = 'pid' + $id }
         if (-not $by.ContainsKey($nm) -or $by[$nm] -lt $pk) { $by[$nm] = $pk }
       }
-      foreach ($k in $by.Keys) { $au += '{"name":' + (JsonStr (CleanTxt $k)) + ',"peak":' + $by[$k].ToString('0.####', [Globalization.CultureInfo]::InvariantCulture) + '}' }
+      foreach ($k in $by.Keys) {
+        # tajuk tetingkap app (sesetengah player tulis tajuk lagu di situ)
+        $wt = ''; try { $wt = [string](Get-Process -Name $k -ErrorAction Stop | Where-Object { $_.MainWindowTitle } | Select-Object -First 1).MainWindowTitle } catch { }
+        $au += '{"name":' + (JsonStr (CleanTxt $k)) + ',"peak":' + $by[$k].ToString('0.####', [Globalization.CultureInfo]::InvariantCulture) + ',"win":' + (JsonStr (CleanTxt $wt)) + '}'
+      }
     } catch { }
   }
   return '{"winrt":' + ([string][bool]$npWinRT).ToLower() + ',"audioOk":' + ([string]$audioOk).ToLower() + ',"smtc":[' + ($sm -join ',') + '],"audio":[' + ($au -join ',') + ']}'
