@@ -257,10 +257,10 @@ ${mile ? `<div class="fx-mile">🎁 CUKUP ${n} MVP · CLAIM SKIN!</div>` : info.
     gong(out, t, vol) { [98, 147, 209, 286, 391, 523].forEach((fq, i) => S.tone(out, t, "sine", fq * 1.02, fq, 3.2 - i * .35, vol * (1 - i * .13), .006)); S.noise(out, t, .4, "bandpass", 600, 300, vol * .4, 2, x => 1 - x); }
   };
   // master bus: compressor so stacked layers stay loud but clean
-  function bus(vol) {
+  function bus(vol, dest) {
     const A = kAudio(), g = A.createGain(), c = A.createDynamicsCompressor(); g.gain.value = vol;
     c.threshold.value = -16; c.knee.value = 8; c.ratio.value = 5; c.attack.value = .003; c.release.value = .2;
-    g.connect(c).connect(A.destination); return g;
+    g.connect(c).connect(dest || A.destination); return g;
   }
   // each kill has its own sound identity
   const SND = {
@@ -292,7 +292,8 @@ ${mile ? `<div class="fx-mile">🎁 CUKUP ${n} MVP · CLAIM SKIN!</div>` : info.
   const VOICE = {}; let impulse = null;
   function loadVoice(type) {
     if (!VOICE[type]) VOICE[type] = fetch("voice/" + type + ".wav").then(r => r.ok && /audio|wav|octet/.test(r.headers.get("content-type") || "") ? r.arrayBuffer() : null)
-      .then(b => b ? new Promise(res => kAudio().decodeAudioData(b, res, () => res(null))) : null).catch(() => null);
+      .then(b => b ? new Promise(res => kAudio().decodeAudioData(b, res, () => res(null))) : null).catch(() => null)
+      .then(buf => { if (!buf) setTimeout(() => { delete VOICE[type]; }, 4000); return buf; });   // not made yet on the PC: try again later
     return VOICE[type];
   }
   function reverbIR(sec) { const A = kAudio(), n = A.sampleRate * sec | 0, b = A.createBuffer(2, n, A.sampleRate); for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3); } return b; }
@@ -306,8 +307,8 @@ ${mile ? `<div class="fx-mile">🎁 CUKUP ${n} MVP · CLAIM SKIN!</div>` : info.
     } catch (e) {}
   }
   // crowd roar that swells with the announcer (many voices = filtered noise bands that wobble, plus "wooo" shouts)
-  function crowd(t, dur, vol) {
-    const A = kAudio(), out = A.createGain(); out.connect(A.destination);
+  function crowd(t, dur, vol, dest) {
+    const A = kAudio(), out = A.createGain(); out.connect(dest || A.destination);
     out.gain.setValueAtTime(.0001, t); out.gain.linearRampToValueAtTime(vol, t + .45); out.gain.setValueAtTime(vol, t + dur * .45); out.gain.exponentialRampToValueAtTime(.0001, t + dur);
     for (let i = 0; i < 6; i++) {
       const src = A.createBufferSource(), bp = A.createBiquadFilter(), g = A.createGain(), lfo = A.createOscillator(), lg = A.createGain();
@@ -323,10 +324,12 @@ ${mile ? `<div class="fx-mile">🎁 CUKUP ${n} MVP · CLAIM SKIN!</div>` : info.
       env(g, t + d, .2, .05, 1.5); o.connect(f1).connect(g); o.connect(f2).connect(g); g.connect(out); o.start(t + d); o.stop(t + d + 1.6);
     }
   }
-  function speak(type, delay) {
+  function speak(type, delay, dest) {
+    const asked = kAudio().currentTime;
     loadVoice(type).then(buf => {
       if (!buf) return browserVoice(type);
-      const A = kAudio(), t = A.currentTime + (delay || 0);
+      const A = kAudio(), t = Math.max(A.currentTime, asked + (delay || 0)), D = dest || A.destination;
+      if (dest && dest._cut) return;   // a newer kill already took over
       // bright, hyped arena announcer: normal speed (no slow-down), body + presence + air, hard compression
       const mix = A.createGain(); mix.gain.value = 1.1;
       const hp = A.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 85;
@@ -342,25 +345,38 @@ ${mile ? `<div class="fx-mile">🎁 CUKUP ${n} MVP · CLAIM SKIN!</div>` : info.
         let n = src; if (A.createStereoPanner) { const p = A.createStereoPanner(); p.pan.value = pan; n = src.connect(p); }
         n.connect(mix); src.start(t + dl);
       });
-      mix.connect(hp).connect(ws).connect(body).connect(pres).connect(air).connect(comp).connect(out).connect(A.destination);
+      mix.connect(hp).connect(ws).connect(body).connect(pres).connect(air).connect(comp).connect(out).connect(D);
       // stadium echo ("KILL... kill... kill") + arena reverb
       const d = A.createDelay(1), fb = A.createGain(), el = A.createBiquadFilter(), dw = A.createGain();
       d.delayTime.value = .23; fb.gain.value = .38; el.type = "bandpass"; el.frequency.value = 1500; el.Q.value = .6; dw.gain.value = .42;
-      out.connect(d); d.connect(el).connect(fb).connect(d); el.connect(dw).connect(A.destination);
+      out.connect(d); d.connect(el).connect(fb).connect(d); el.connect(dw).connect(D);
       impulse = impulse || reverbIR(2.2);
-      const conv = A.createConvolver(), wet = A.createGain(); conv.buffer = impulse; wet.gain.value = .3; out.connect(conv).connect(wet).connect(A.destination);
-      crowd(t - .05, Math.max(2.4, buf.duration + 1.8), .16);
+      const conv = A.createConvolver(), wet = A.createGain(); conv.buffer = impulse; wet.gain.value = .3; out.connect(conv).connect(wet).connect(D);
+      crowd(t - .05, Math.max(2.4, buf.duration + 1.8), .16, D);
     });
   }
+  // every kill plays through its own master; a newer kill fades the old one out (FIRST BLOOD -> DOUBLE KILL)
+  let curMaster = null;
   function killSound(type, k, voice) {
     try {
       const A = kAudio(); if (A.state === "suspended") A.resume();
-      const o = bus(voice ? .5 + k.lvl * .04 : .6 + k.lvl * .05); (SND[type] || SND.double)(o, A.currentTime + .02);
-      if (voice) speak(type, .05);
+      if (curMaster) { const old = curMaster; old._cut = true; old.gain.setTargetAtTime(0, A.currentTime, .04); setTimeout(() => { try { old.disconnect(); } catch (e) {} }, 400); }
+      const m = A.createGain(); m.connect(A.destination); curMaster = m;
+      const o = bus(voice ? .5 + k.lvl * .04 : .6 + k.lvl * .05, m); (SND[type] || SND.double)(o, A.currentTime + .02);
+      if (voice) speak(type, .05, m);
     } catch (e) {}
   }
   // load all voices once so a kill speaks instantly
-  if (/^https?:$/.test(location.protocol)) setTimeout(() => { if (window.ChouOverlay || document.querySelector(".ov-stage")) Object.keys(VTXT).forEach(loadVoice); }, 2500);
+  // and wake the audio up once so the very first kill (FIRST BLOOD) is not silent
+  if (/^https?:$/.test(location.protocol)) {
+    let tries = 0;
+    const pre = () => {
+      if (!document.querySelector(".ov-stage")) return;
+      try { const A = kAudio(), b = A.createBuffer(1, 1, 22050), src = A.createBufferSource(); src.buffer = b; src.connect(A.destination); src.start(); if (A.state === "suspended") A.resume(); } catch (e) {}
+      Promise.all(Object.keys(VTXT).map(loadVoice)).then(list => { if (list.some(x => !x) && ++tries < 12) setTimeout(pre, 5000); });
+    };
+    setTimeout(pre, 2000);
+  }
 
   // ---------- icons (120x120) ----------
   function kIcon(k) {

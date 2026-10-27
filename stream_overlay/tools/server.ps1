@@ -522,7 +522,7 @@ try { Add-Type -TypeDefinition $capCs -ReferencedAssemblies System.Drawing -Erro
 $killFile = Join-Path $dataDir 'killfx.json'
 $killOld = Join-Path $dataDir 'killfx.txt'
 # tetapan: src = 'win' (tetingkap) / 'obs' (source dalam OBS). team = 'kda' (kill saya ikut KDA) / 'me' (ikut nama) / 'ally' / 'all'
-$killShared = [hashtable]::Synchronized(@{ on = $false; win = ''; x = 0.2; y = 0.08; w = 0.6; h = 0.32; team = 'kda'; ign = ''; solo = $true; src = 'win'; obsSrc = ''; obsPort = 4455; obsPass = ''; kx = 0.0; ky = 0.0; kw = 0.0; kh = 0.0; last = '{}'; shot = $null; shotWant = [DateTime]::MinValue; events = [System.Collections.ArrayList]::Synchronized((New-Object System.Collections.ArrayList)) })
+$killShared = [hashtable]::Synchronized(@{ on = $false; win = ''; x = 0.2; y = 0.08; w = 0.6; h = 0.32; team = 'me'; ign = ''; solo = $true; src = 'win'; obsSrc = ''; obsPort = 4455; obsPass = ''; kx = 0.0; ky = 0.0; kw = 0.0; kh = 0.0; last = '{}'; lastEv = ''; shot = $null; shotWant = [DateTime]::MinValue; events = [System.Collections.ArrayList]::Synchronized((New-Object System.Collections.ArrayList)) })
 $killKeys = @('on', 'win', 'x', 'y', 'w', 'h', 'team', 'ign', 'solo', 'src', 'obsSrc', 'obsPort', 'obsPass', 'kx', 'ky', 'kw', 'kh')
 function KillNum([string]$v, [double]$d) { $o = 0.0; if ([double]::TryParse($v, [Globalization.NumberStyles]::Float, [Globalization.CultureInfo]::InvariantCulture, [ref]$o)) { return [Math]::Max(0.0, [Math]::Min(1.0, $o)) } return $d }
 function KillSet([string]$k, $v) {
@@ -576,15 +576,22 @@ function Score([string]$txt, [string]$key) {
   }
   return 0
 }
-# kedudukan nama dalam teks (boleh beza 1 huruf kalau nama 6 huruf ke atas); -1 = tiada
+# kedudukan nama dalam teks; -1 = tiada. Font MLBB susah dibaca: boleh salah 1 huruf (5+ huruf) atau 2 huruf (9+),
+# atau sebahagian nama sahaja (70% nama, sekurang-kurangnya 4 huruf berturut)
 function FindAt([string]$txt, [string]$key) {
   $i0 = $txt.IndexOf($key); if ($i0 -ge 0) { return $i0 }
   $n = $key.Length
-  if ($n -lt 6 -or $txt.Length -lt $n) { return -1 }
-  for ($i = 0; $i -le $txt.Length - $n; $i++) {
-    $d = 0
-    for ($j = 0; $j -lt $n; $j++) { if ($txt[$i + $j] -ne $key[$j]) { $d++; if ($d -gt 1) { break } } }
-    if ($d -le 1) { return $i }
+  $tol = $(if ($n -ge 9) { 2 } elseif ($n -ge 5) { 1 } else { 0 })
+  if ($tol -gt 0 -and $txt.Length -ge $n) {
+    for ($i = 0; $i -le $txt.Length - $n; $i++) {
+      $d = 0
+      for ($j = 0; $j -lt $n; $j++) { if ($txt[$i + $j] -ne $key[$j]) { $d++; if ($d -gt $tol) { break } } }
+      if ($d -le $tol) { return $i }
+    }
+  }
+  $L = [Math]::Max(4, [int][Math]::Ceiling($n * 0.7))
+  if ($n -gt $L) {
+    for ($o = 0; $o -le $n - $L; $o++) { $sub = $key.Substring($o, $L); $ix = $txt.IndexOf($sub); if ($ix -ge 0) { return [Math]::Max(0, $ix - $o) } }
   }
   return -1
 }
@@ -616,8 +623,25 @@ function Ocr([byte[]]$png) {
 }
 $words = @('FIRSTBLOOD=first', 'DOUBLEKILL=double', 'TRIPLEKILL=triple', 'MANIAC=maniac', 'SAVAGE=savage', 'SHUTDOWN=shutdown', 'KILLINGSPREE=spree', 'MONSTERKILL=monster', 'MEGAKILL=mega', 'UNSTOPPABLE=unstoppable', 'GODLIKE=godlike', 'LEGENDARY=legendary', 'RAMPAGE=rampage', 'WIPEDOUT=wiped')
 $lastAt = @{}; $lastAny = [DateTime]::MinValue; $firstAt = [DateTime]::MinValue; $hitName = ''; $hitAt = 0
-$obs = $null; $obsNext = [DateTime]::MinValue; $frame = 0
-$kStable = -1; $kRead = -2; $kSame = 0; $pendAt = $null; $prevFound = ''; $wordType = ''; $wordAt = [DateTime]::MinValue; $kdaTxt = ''
+$obs = $null; $obsNext = [DateTime]::MinValue; $frame = 0; $evId = 0
+$kStable = -1; $dStable = -1; $aStable = -1; $kRead = -2; $kSame = 0; $pendAt = $null; $soloAt = $null; $credit = 0; $creditAt = [DateTime]::MinValue
+$prevFound = ''; $wordType = ''; $wordAt = [DateTime]::MinValue; $kdaTxt = ''
+# jenis kill dari teks banner: padanan tepat menang, kemudian perkataan paling panjang
+function MatchWord([string]$t) {
+  $n = ($t.ToUpper() -replace '[^A-Z]', ''); $f = ''; $best = 0; $bl = 0
+  foreach ($w in $words) { $p = $w.Split('='); $sc = Score $n $p[0]; if ($sc -gt $best -or ($sc -eq $best -and $sc -gt 0 -and $p[0].Length -gt $bl)) { $best = $sc; $bl = $p[0].Length; $f = $p[1] } }
+  return $f
+}
+# K/D/A dari teks: @(k, d, a, bersih). bersih = tiga nombor dibaca
+function ParseKda([string]$t) {
+  $t2 = $t -replace '[Il|\\]', '/'
+  $m3 = [regex]::Match($t2, '(\d{1,2})\s*/\s*(\d{1,2})\s*/\s*(\d{1,2})')
+  if ($m3.Success) { return @([int]$m3.Groups[1].Value, [int]$m3.Groups[2].Value, [int]$m3.Groups[3].Value, $true) }
+  $ns = [regex]::Matches($t2, '\d{1,2}')
+  if ($ns.Count -ge 3) { return @([int]$ns[0].Value, [int]$ns[1].Value, [int]$ns[2].Value, $true) }
+  if ($ns.Count -ge 1) { return @([int]$ns[0].Value, -1, -1, $false) }
+  return @(-1, -1, -1, $false)
+}
 while ($true) {
   $mode = [string]$K.team; $srcObs = ([string]$K.src -eq 'obs')
   $need = $(if ($srcObs) { [string]$K.obsSrc } else { [string]$K.win })
@@ -628,7 +652,9 @@ while ($true) {
     Start-Sleep -Milliseconds 800; continue
   }
   $frame++
-  $info = ''; $txt = ''; $e2 = ''; $res = $null; $imgW = 1.0; $meX = -1.0; $other = $false; $how = ''; $bmp = $null; $kNow = -1
+  $info = ''; $txt = ''; $e2 = ''; $res = $null; $imgW = 1.0; $meX = -1.0; $other = $false; $how = ''; $bmp = $null
+  $kNow = -1; $dNow = -1; $aNow = -1; $kClean = $false; $png = $null; $pngE = $null; $found = ''
+  $useKda = (-not $previewOnly -and ($mode -eq 'kda' -or $mode -eq 'me') -and [double]$K.kw -gt 0.003 -and [double]$K.kh -gt 0.003)
   try {
     if ($srcObs) {
       $how = 'obs'
@@ -636,7 +662,7 @@ while ($true) {
         if (-not $obs) { $obs = New-Object SynoCap.Obs }
         if (-not $obs.Connect([int]$K.obsPort, [string]$K.obsPass)) { $obsNext = (Get-Date).AddSeconds(4) }
       }
-      if ($obs -and $obs.Ok) { $bmp = $obs.Shot($need, 1600) }
+      if ($obs -and $obs.Ok) { $bmp = $obs.Shot($need, 1440) }
       if (-not $bmp) { if ($obs) { $e2 = $obs.Error } else { $e2 = 'OBS tak bersambung' } }
     } else {
       $bmp = [SynoCap.Cap]::Snap($need, [ref]$how)
@@ -644,23 +670,31 @@ while ($true) {
     }
     if ($bmp) {
       $stat = ''
-      # selang-seli: gambar asal / versi kontras tinggi
-      $png = [SynoCap.Cap]::Crop($bmp, [double]$K.x, [double]$K.y, [double]$K.w, [double]$K.h, 1.6, (($frame % 2) -eq 0), [ref]$stat)
+      $bsc = $(if ($mode -eq 'me') { 1.7 } else { 1.25 })
+      $png = [SynoCap.Cap]::Crop($bmp, [double]$K.x, [double]$K.y, [double]$K.w, [double]$K.h, $bsc, $false, [ref]$stat)
       $info = '' + $bmp.Width + ',' + $bmp.Height + ',' + $stat + ',' + $how
-      if (-not $previewOnly -and $mode -eq 'kda' -and [double]$K.kw -gt 0.003 -and [double]$K.kh -gt 0.003) {
+      if ($useKda) {
+        # KDA dibaca setiap frame (gambar asal; versi kontras hanya kalau gagal)
         $st2 = ''
-        $png2 = [SynoCap.Cap]::Crop($bmp, [double]$K.kx, [double]$K.ky, [double]$K.kw, [double]$K.kh, 4.0, (($frame % 2) -eq 1), [ref]$st2)
-        $o2 = Ocr $png2
+        $o2 = Ocr ([SynoCap.Cap]::Crop($bmp, [double]$K.kx, [double]$K.ky, [double]$K.kw, [double]$K.kh, 4.0, $false, [ref]$st2))
         if ($o2) { $kdaTxt = (([string]$o2.res.Text) -replace '[\x00-\x1f]', ' ').Trim() } else { $kdaTxt = '' }
-        # nombor pertama dalam kotak KDA = bilangan kill anda
-        $mm = [regex]::Match(($kdaTxt -replace '[Il|]', '/'), '\d+')
-        if ($mm.Success -and $mm.Value.Length -le 2) { $kNow = [int]$mm.Value }
+        $pk = ParseKda $kdaTxt
+        if ($pk[0] -lt 0 -or -not $pk[3]) {
+          $o3 = Ocr ([SynoCap.Cap]::Crop($bmp, [double]$K.kx, [double]$K.ky, [double]$K.kw, [double]$K.kh, 4.0, $true, [ref]$st2))
+          if ($o3) { $t3 = (([string]$o3.res.Text) -replace '[\x00-\x1f]', ' ').Trim(); $pk3 = ParseKda $t3; if ($pk3[3] -or ($pk[0] -lt 0 -and $pk3[0] -ge 0)) { $pk = $pk3; $kdaTxt = $t3 } }
+        }
+        $kNow = $pk[0]; $dNow = $pk[1]; $aNow = $pk[2]; $kClean = $pk[3]
       }
+      # versi kontras tinggi untuk banner: bila kill sedang menunggu jenisnya, atau setiap 3 frame
+      if (-not $previewOnly -and ($pendAt -or $soloAt -or ($frame % 3) -eq 0)) { $pngE = [SynoCap.Cap]::Crop($bmp, [double]$K.x, [double]$K.y, [double]$K.w, [double]$K.h, $bsc, $true, [ref]$stat) }
       if ((Get-Date) -lt $K.shotWant) { try { $K.shot = [SynoCap.Cap]::Thumb($bmp, 720) } catch { } }
       $bmp.Dispose(); $bmp = $null
-      if ($previewOnly) { $png = $null; $txt = '' }
-      $o1 = Ocr $png
-      if ($o1) { $res = $o1.res; $imgW = $o1.w; $txt = [string]$res.Text }
+      if (-not $previewOnly) {
+        $o1 = Ocr $png
+        if ($o1) { $res = $o1.res; $imgW = $o1.w; $txt = [string]$res.Text }
+        $found = MatchWord $txt
+        if (-not $found -and $pngE) { $oE = Ocr $pngE; if ($oE) { $tE = [string]$oE.res.Text; $fE = MatchWord $tE; if ($fE) { $found = $fE; $txt = ($txt + ' | ' + $tE).Trim(' |'); $res = $oE.res; $imgW = $oE.w } } }
+      }
     }
   } catch { $e2 = $_.Exception.Message; if ($bmp) { try { $bmp.Dispose() } catch { } } }
   $now = Get-Date
@@ -668,68 +702,93 @@ while ($true) {
     $K.last = '{"on":false,"ocr":true,"preview":true,"how":' + (JsonStr $how) + ',"info":' + (JsonStr $info) + ',"hit":' + (JsonStr $hitName) + ',"hitAt":' + $hitAt + ',"err":' + (JsonStr $e2) + '}'
     Start-Sleep -Milliseconds 500; continue
   }
-  # banner kill: padanan tepat menang, kemudian perkataan paling panjang
-  $norm = ($txt.ToUpper() -replace '[^A-Z]', '')
-  $found = ''; $best = 0; $bestLen = 0
-  foreach ($w in $words) { $p = $w.Split('='); $sc = Score $norm $p[0]; if ($sc -gt $best -or ($sc -eq $best -and $sc -gt 0 -and $p[0].Length -gt $bestLen)) { $best = $sc; $bestLen = $p[0].Length; $found = $p[1] } }
-  # FIRST BLOOD hanya sekali setiap game
-  if ($found -eq 'first' -and ((($now - $firstAt).TotalMinutes -lt 8) -or ($mode -eq 'kda' -and $kStable -gt 1))) { $found = '' }
-  # kill saya ikut nama: Banner MLBB, pembunuh di kiri, yang mati di kanan
-  $ign = NormT ([string]$K.ign)
+  # FIRST BLOOD hanya sekali setiap game (dan hanya bila K anda 1)
+  if ($found -eq 'first' -and ((($now - $firstAt).TotalMinutes -lt 5) -or ($mode -eq 'kda' -and $kStable -gt 1))) { $found = '' }
+  # kill saya ikut nama: banner MLBB, pembunuh di kiri, yang mati di kanan.
+  # Kiri / kanan dibanding dengan tulisan banner (DOUBLE KILL ...) itu sendiri; tiada tulisan = tengah kotak.
+  $ign = NormT ([string]$K.ign); $side = ''
   if ($mode -eq 'me' -and $res -and $ign.Length -ge 2) {
     try {
-      $all = @(); foreach ($ln in $res.Lines) { $acc = ''; $st = @(); $lw = @(); foreach ($wd in $ln.Words) { $st += $acc.Length; $acc += (NormT ([string]$wd.Text)); $lw += $wd; $all += $wd }
+      $all = @(); $wx = -1.0
+      $key = ''; foreach ($w in $words) { $pp = $w.Split('='); if ($pp[1] -eq $found) { $key = $pp[0] } }
+      $wl = 1e9; $wr = -1.0
+      foreach ($ln in $res.Lines) { $acc = ''; $st = @(); $lw = @(); foreach ($wd in $ln.Words) { $st += $acc.Length; $acc += (NormT ([string]$wd.Text)); $lw += $wd; $all += $wd
+          $wn = NormT ([string]$wd.Text); if ($key -and $wn.Length -ge 3 -and $key.Contains($wn)) { $bb = $wd.BoundingRect; if ($bb.X -lt $wl) { $wl = $bb.X }; if ($bb.X + $bb.Width -gt $wr) { $wr = $bb.X + $bb.Width } } }
         if ($meX -ge 0) { continue }
         $at = FindAt $acc $ign; if ($at -lt 0) { continue }
-        $endAt = $at + $ign.Length - 1; $l = 1e9; $r = -1.0; $cy = 0.0; $hh = 0.0
+        $endAt = [Math]::Min($acc.Length - 1, $at + $ign.Length - 1); $l = 1e9; $r = -1.0; $cy = 0.0; $hh = 0.0
         for ($q = 0; $q -lt $lw.Count; $q++) {
           $s1 = $(if ($q + 1 -lt $lw.Count) { $st[$q + 1] } else { $acc.Length }) - 1
           if ($s1 -ge $at -and $st[$q] -le $endAt) { $b = $lw[$q].BoundingRect; if ($b.X -lt $l) { $l = $b.X }; if ($b.X + $b.Width -gt $r) { $r = $b.X + $b.Width }; $cy = $b.Y + $b.Height / 2; $hh = $b.Height }
         }
         if ($r -ge 0) { $meX = (($l + $r) / 2) / $imgW; $meR = $r; $meCy = $cy; $meH = [Math]::Max($hh, 8) }
       }
-      if ($meX -ge 0) { foreach ($o in $all) { $b = $o.BoundingRect; if ($b.X -gt ($meR + 6) -and [Math]::Abs(($b.Y + $b.Height / 2) - $meCy) -lt $meH -and (NormT ([string]$o.Text)).Length -ge 2) { $other = $true; break } } }
+      if ($wr -ge 0) { $wx = (($wl + $wr) / 2) / $imgW }
+      if ($meX -ge 0) {
+        # nama lain pada baris yang sama (nama lawan) = banner kill sebenar, bukan nama di atas kepala hero
+        foreach ($o in $all) { $b = $o.BoundingRect; if (($b.X -gt ($meR + 6) -or $b.X + $b.Width -lt ($meX * $imgW) - ($meR - $meX * $imgW) - 6) -and [Math]::Abs(($b.Y + $b.Height / 2) - $meCy) -lt $meH -and (NormT ([string]$o.Text)).Length -ge 2) { $other = $true; break } }
+        $mid = $(if ($wx -ge 0) { $wx } else { 0.5 })
+        $side = $(if ($meX -lt $mid - 0.02) { 'L' } elseif ($meX -gt $mid + 0.02) { 'R' } else { 'C' })
+      }
     } catch { $e2 = $_.Exception.Message }
   }
-  $mine = ($meX -ge 0 -and $meX -lt 0.5)
+  # kill saya = banner warna pasukan kita (biru lebih banyak dari merah) DAN nama saya ada pada banner.
+  # Rakan sepasukan yang bunuh: nama saya tiada. Musuh bunuh saya: banner merah.
+  $ci = $info.Split(','); $allyCol = ($ci.Count -ge 4 -and [int]$ci[2] -gt [int]$ci[3])
+  $mine = ($meX -ge 0 -and $allyCol)
   $fire = ''
-  if ($mode -eq 'kda') {
-    # banner yang baru muncul (bukan yang masih tertinggal di skrin)
-    if ($found -and $found -ne $prevFound) { $wordType = $found; $wordAt = $now }
-    if ($kNow -ge 0) {
-      if ($kNow -eq $kRead) { $kSame++ } else { $kRead = $kNow; $kSame = 1 }
-      # pantas: K naik 1 serentak dengan banner baru = terus terima (tak tunggu bacaan kedua)
-      $quick = ($kStable -ge 0 -and $kNow -eq $kStable + 1 -and $wordType -and ($now - $wordAt).TotalSeconds -le 2.5)
-      if ($kSame -ge 2 -or $quick) {
-        if ($kStable -lt 0 -or $kNow -lt $kStable) { $kStable = $kNow; $pendAt = $null }
-        elseif ($kNow -gt $kStable -and $kNow -le $kStable + 3) { $kStable = $kNow; $pendAt = $now }
-        elseif ($kNow -gt $kStable + 3 -and $kSame -ge 4) { $kStable = $kNow }
-      }
+  $rising = ($found -and $found -ne $prevFound)
+  if ($rising) { $wordType = $found; $wordAt = $now }
+  # K dalam KDA (mod KDA, atau sandaran dalam mod nama bila kotak KDA dilukis)
+  $kInc = $false
+  if ($kNow -ge 0) {
+    if ($kNow -eq $kRead) { $kSame++ } else { $kRead = $kNow; $kSame = 1 }
+    $validInc = ($kClean -and $kStable -ge 0 -and $kNow -gt $kStable -and $kNow -le $kStable + 3 -and ($dStable -lt 0 -or ($dNow -ge $dStable -and $dNow -le $dStable + 1)) -and ($aStable -lt 0 -or ($aNow -ge $aStable -and $aNow -le $aStable + 2)))
+    if ($validInc -or $kSame -ge 2) {
+      if ($kStable -lt 0 -or $kNow -lt $kStable) { $kStable = $kNow; $pendAt = $null; $soloAt = $null; if ($kNow -eq 0) { $firstAt = [DateTime]::MinValue } }
+      elseif ($kNow -gt $kStable -and $kNow -le $kStable + 3) { $kStable = $kNow; $kInc = $true }
+      elseif ($kNow -gt $kStable + 3 -and $kSame -ge 4) { $kStable = $kNow }
+      if ($kClean) { $dStable = $dNow; $aStable = $aNow }
     }
+  }
+  if ($mode -eq 'me') {
+    # utama: banner baru (belum dikeluarkan, < 2.5 saat) + banner biru + nama saya = terus keluar.
+    # Nama kadang baru terbaca pada frame kedua / ketiga, jadi bukan frame pertama sahaja.
+    if ($wordType -and $found -eq $wordType -and $mine -and ($now - $wordAt).TotalSeconds -le 2.5) { $fire = $found; $wordType = ''; $soloAt = $null; if ($pendAt) { $pendAt = $null } else { $credit = 1; $creditAt = $now } }
+    elseif (-not $found -and $K.solo -and $mine -and $other -and ($now - $lastAny).TotalSeconds -ge 3) { $fire = 'solo'; if ($pendAt) { $pendAt = $null } else { $credit = 1; $creditAt = $now } }
+  }
+  if ($kInc) {
+    # kill yang dah keluar ikut nama tak dikira dua kali
+    if ($mode -eq 'me' -and $credit -gt 0 -and ($now - $creditAt).TotalSeconds -le 3) { $credit = 0 } else { $pendAt = $now; $soloAt = $null }
+  }
+  if (-not $fire -and ($mode -eq 'kda' -or $mode -eq 'me')) {
     if ($pendAt) {
       if ($wordType -and ($pendAt - $wordAt).TotalSeconds -le 2.5 -and -not ($wordType -eq 'first' -and $kStable -gt 1)) { $fire = $wordType; $wordType = ''; $pendAt = $null }
-      elseif (($now - $pendAt).TotalSeconds -ge 0.9) { if ($K.solo) { $fire = 'solo' }; $pendAt = $null }
+      elseif (($now - $pendAt).TotalSeconds -ge 1.1) { if ($K.solo) { $fire = 'solo'; $soloAt = $now }; $pendAt = $null }
+    } elseif ($soloAt) {
+      # banner sampai lambat: tukar SOLO KILL kepada jenis sebenar (DOUBLE KILL ...)
+      if ($wordType -and $wordType -ne 'first' -and ($wordAt - $soloAt).TotalSeconds -ge -1.2) { $fire = $wordType; $wordType = ''; $soloAt = $null }
+      elseif (($now - $soloAt).TotalSeconds -ge 1.4) { $soloAt = $null }
     }
-  } elseif ($found) {
-    if ($found -ne $prevFound) {
-      $teamOk = $true
-      if ($mode -eq 'ally') { $ci = $info.Split(','); if ($ci.Count -ge 4) { $teamOk = ([int]$ci[2] -gt [int]$ci[3]) } }
-      elseif ($mode -eq 'me') { $teamOk = $mine }
-      if ($teamOk) { $fire = $found }
-    }
-  } elseif ($mode -eq 'me' -and $K.solo -and $mine -and $meX -lt 0.45 -and $other -and ($now - $lastAny).TotalSeconds -ge 3) { $fire = 'solo' }
+  } elseif (-not $fire -and $found -and $rising) {
+    $teamOk = $true
+    if ($mode -eq 'ally') { $ci = $info.Split(','); if ($ci.Count -ge 4) { $teamOk = ([int]$ci[2] -gt [int]$ci[3]) } }
+    if ($teamOk) { $fire = $found }
+  }
   if ($found -or $frame % 3 -eq 0) { $prevFound = $found }
   if ($fire) {
     # kill lain terus keluar (FIRST BLOOD -> DOUBLE KILL 1 saat kemudian); jenis sama dalam 4 saat = banner yang sama
     $fresh = ($mode -eq 'kda') -or (-not $lastAt.ContainsKey($fire)) -or (($now - $lastAt[$fire]).TotalSeconds -ge 4)
     if ($fresh) {
-      [void]$K.events.Add($fire); $lastAt[$fire] = $now; $lastAny = $now
+      $lastAt[$fire] = $now; $lastAny = $now
       if ($fire -eq 'first') { $firstAt = $now }
       $hitName = $fire; $hitAt = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+      # terus ke semua overlay melalui /api/rev (tak lalu App / state)
+      $evId++; $K.lastEv = '' + $evId + ',' + $fire + ',' + $hitAt
     }
   }
-  $K.last = '{"on":true,"ocr":true,"how":' + (JsonStr $how) + ',"k":' + $kStable + ',"kda":' + (JsonStr $kdaTxt) + ',"mex":' + [Math]::Round($meX, 2).ToString([Globalization.CultureInfo]::InvariantCulture) + ',"info":' + (JsonStr $info) + ',"text":' + (JsonStr (($txt -replace '[\x00-\x1f]', ' ').Trim())) + ',"hit":' + (JsonStr $hitName) + ',"hitAt":' + $hitAt + ',"err":' + (JsonStr $e2) + '}'
-  if ($e2 -and -not $res) { Start-Sleep -Milliseconds 700 } else { Start-Sleep -Milliseconds 120 }
+  $K.last = '{"on":true,"ocr":true,"how":' + (JsonStr $how) + ',"k":' + $kStable + ',"kda":' + (JsonStr $kdaTxt) + ',"mex":' + [Math]::Round($meX, 2).ToString([Globalization.CultureInfo]::InvariantCulture) + ',"side":"' + $side + '","ally":' + ([string][bool]$allyCol).ToLower() + ',"info":' + (JsonStr $info) + ',"text":' + (JsonStr (($txt -replace '[\x00-\x1f]', ' ').Trim())) + ',"hit":' + (JsonStr $hitName) + ',"hitAt":' + $hitAt + ',"err":' + (JsonStr $e2) + '}'
+  if ($e2 -and -not $res) { Start-Sleep -Milliseconds 700 } else { Start-Sleep -Milliseconds 60 }
 }
 '@)
     [void]$killPS.AddArgument($killShared).AddArgument($npAsTask)
@@ -750,6 +809,7 @@ function SiteVer {
 # suara announcer: teks setiap kill
 $voiceText = @{ solo = 'Solo kill!'; first = 'First blood!'; double = 'Double kill!'; triple = 'Triple kill!'; maniac = 'Maniac!'; savage = 'Savage!'; shutdown = 'Shut down!'; spree = 'Killing spree!'; monster = 'Monster kill!'; mega = 'Mega kill!'; unstoppable = 'Unstoppable!'; godlike = 'Godlike!'; legendary = 'Legendary!'; rampage = 'Rampage!'; wiped = 'Wiped out!' }
 $voiceVer = 'v2'   # tukar bila gaya suara berubah (fail lama dijana semula)
+$voiceDefs = @'
 # SSML gaya announcer bersemangat: perkataan awal laju, perkataan akhir dihentak tinggi dan kuat
 function Voice-Ssml([string]$text, [string]$lang) {
   $wds = @($text.Split(' ') | Where-Object { $_ })
@@ -778,21 +838,42 @@ function Make-Voice([string]$text, [string]$file) {
     }
     if (-not $vst) { throw 'tiada suara' }
     $vin = [System.IO.WindowsRuntimeStreamExtensions]::AsStreamForRead($vst.GetInputStreamAt(0))
-    $vfs = [System.IO.File]::Create($file)
+    $tmp = $file + '.tmp'
+    $vfs = [System.IO.File]::Create($tmp)
     try { $vin.CopyTo($vfs) } finally { $vfs.Close(); $vin.Dispose() }
-    if ((Get-Item -LiteralPath $file).Length -gt 1000) { return }
+    if ((Get-Item -LiteralPath $tmp).Length -gt 1000) { Move-Item -LiteralPath $tmp -Destination $file -Force; return }
   } catch { }
   Add-Type -AssemblyName System.Speech
   $syn = New-Object System.Speech.Synthesis.SpeechSynthesizer
   try {
     try { $syn.SelectVoiceByHints([System.Speech.Synthesis.VoiceGender]::Male, [System.Speech.Synthesis.VoiceAge]::Adult) } catch { }
     $fmt = New-Object System.Speech.AudioFormat.SpeechAudioFormatInfo 44100, ([System.Speech.AudioFormat.AudioBitsPerSample]::Sixteen), ([System.Speech.AudioFormat.AudioChannel]::Mono)
-    $syn.SetOutputToWaveFile($file, $fmt)
+    $tmp = $file + '.tmp'
+    $syn.SetOutputToWaveFile($tmp, $fmt)
     $syn.Volume = 100; $syn.Rate = 2
     try { $syn.SpeakSsml((Voice-Ssml $text 'en-US')) } catch { $syn.Speak($text) }
     $syn.SetOutputToNull()
+    Move-Item -LiteralPath $tmp -Destination $file -Force
   } finally { $syn.Dispose() }
 }
+'@
+. ([ScriptBlock]::Create($voiceDefs))
+# jana semua suara di thread belakang masa server mula (supaya FIRST BLOOD awal game terus bersuara)
+$voiceShared = [hashtable]::Synchronized(@{ done = $false; err = '' })
+$voiceDir = Join-Path $dataDir 'voice'
+try {
+  if (-not (Test-Path -LiteralPath $voiceDir)) { New-Item -ItemType Directory -Path $voiceDir | Out-Null }
+  $voicePS = [PowerShell]::Create()
+  [void]$voicePS.AddScript('param($npAsTask, $voiceText, $voiceDir, $voiceVer, $VS)' + "`n" + $voiceDefs + "`n" + @'
+foreach ($vk in @($voiceText.Keys)) {
+  $vf = Join-Path $voiceDir ($vk + '-' + $voiceVer + '.wav')
+  if (-not (Test-Path -LiteralPath $vf)) { try { Make-Voice $voiceText[$vk] $vf } catch { $VS.err = $_.Exception.Message } }
+}
+$VS.done = $true
+'@)
+  [void]$voicePS.AddArgument($npAsTask).AddArgument($voiceText).AddArgument($voiceDir).AddArgument($voiceVer).AddArgument($voiceShared)
+  $voiceBg = $voicePS.BeginInvoke()
+} catch { $voiceShared.done = $true }
 $hookHits = New-Object System.Collections.ArrayList   # 15 cubaan webhook terakhir (untuk App > Status webhook)
 $cmds = New-Object System.Collections.ArrayList       # arahan Stream Deck menunggu overlay / App ambil
 $stateRev = [long]((Get-Date) - [DateTime]'2026-01-01').TotalMilliseconds   # naik setiap kali state disimpan (/api/rev)
@@ -915,7 +996,9 @@ while ($true) {
         }
       } elseif ($path -eq 'api/rev') {
         # semakan pantas (5 kali sesaat): nombor state + arahan Stream Deck menunggu
-        $type = 'application/json'; $body = ToBytes ('{"s":' + $stateRev + ',"c":' + ($cmds.Count + $killShared.events.Count) + ',"v":"' + (SiteVer) + '"}')
+        $type = 'application/json'; $kev = ''
+        if ($killShared.lastEv) { $kp = ([string]$killShared.lastEv).Split(','); $kev = ',"k":"' + $kp[0] + ',' + $kp[1] + '","ka":' + ([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() - [long]$kp[2]) }
+        $body = ToBytes ('{"s":' + $stateRev + ',"c":' + ($cmds.Count + $killShared.events.Count) + ',"v":"' + (SiteVer) + '"' + $kev + '}')
       } elseif ($path -eq 'api/cmds') {
         $type = 'application/json'
         if (-not $okPin) { $status = '401 Unauthorized'; $body = ToBytes '[]' }
@@ -971,7 +1054,8 @@ while ($true) {
           $vdir = Join-Path $dataDir 'voice'
           if (-not (Test-Path -LiteralPath $vdir)) { New-Item -ItemType Directory -Path $vdir | Out-Null }
           $vfile = Join-Path $vdir ($vk + '-' + $voiceVer + '.wav')
-          if (-not (Test-Path -LiteralPath $vfile)) { try { Make-Voice $vt $vfile } catch { Write-Host ('Suara announcer gagal: ' + $_.Exception.Message) -ForegroundColor DarkYellow } }
+          # biasanya dah dijana masa server mula; kalau belum siap, App / overlay cuba lagi sekejap lagi
+          if (-not (Test-Path -LiteralPath $vfile) -and $voiceShared.done) { try { Make-Voice $vt $vfile } catch { Write-Host ('Suara announcer gagal: ' + $_.Exception.Message) -ForegroundColor DarkYellow } }
           if ((Test-Path -LiteralPath $vfile) -and (Get-Item -LiteralPath $vfile).Length -gt 1000) { $body = [System.IO.File]::ReadAllBytes($vfile); $type = 'audio/wav' }
           else { $status = '404 Not Found'; $body = ToBytes 'Suara tak dapat dijana' }
         }

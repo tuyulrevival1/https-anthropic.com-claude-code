@@ -92,7 +92,7 @@
         // change check every 0.4 s: fetch the full state / Stream Deck commands only when something changed.
         // (the PC server is single-threaded PowerShell, so every page keeps its requests light)
         // Older server without /api/rev: plain polling every 700 ms.
-        let lastRev = null, revBusy = false, legacy = false, lastFull = 0, revTick = 0, verSeen = null, reloading = false;
+        let lastRev = null, revBusy = false, legacy = false, lastFull = 0, revTick = 0, verSeen = null, reloading = false, killSeen = null;
         // new files from KEMASKINI.bat: reload (OBS browser sources otherwise keep running the old code)
         const reloadNow = () => { const a = document.activeElement; if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && !window.obsstudio) { setTimeout(reloadNow, 4000); return; } location.reload(); };
         setInterval(() => {
@@ -101,11 +101,13 @@
           revBusy = true;
           fetch("api/rev", { cache: "no-store" }).then(r => { if (r.status === 404) { legacy = true; return null; } return r.ok ? r.json() : null; }).then(j => {
             if (!j) return;
+            if (j.k) { if (killSeen != null && j.k !== killSeen && (j.ka || 0) < 3000) window.dispatchEvent(new CustomEvent("ov-kill", { detail: String(j.k).split(",")[1] })); killSeen = j.k; }
+            else if (killSeen == null) killSeen = "";
             if (j.v) { if (verSeen == null) verSeen = j.v; else if (j.v !== verSeen && !reloading) { reloading = true; setTimeout(reloadNow, 3000); } }
             if (j.s !== lastRev || Date.now() - lastFull > 5000) { lastRev = j.s; lastFull = Date.now(); this.pull(); }
             if (j.c > 0) pullCmds();
           }).catch(() => {}).finally(() => { revBusy = false; });
-        }, 400);
+        }, window.obsstudio ? 250 : 400);
         setInterval(() => { if (legacy) { this.pull(); pullCmds(); } }, 700);
         setInterval(pullOrders, 3000); setTimeout(pullOrders, 800);
         window.dispatchEvent(new CustomEvent("ov-remote", { detail: true }));
@@ -1282,6 +1284,9 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
       window.addEventListener("obsStreamingStopped", () => Q.timer("pause"));
       try { window.obsstudio.getStatus(st => { if (st && st.streaming && !Store.state.live.running && !liveElapsed(Store.state)) Q.timer("start"); }); } catch (e) {}
     }
+
+    // auto kill from the PC screen reader: played straight away on every overlay (no trip through the App / state)
+    window.addEventListener("ov-kill", e => { const s = Store.state; if (s.fx !== false && window.SynoFX && SynoFX.kill && stage.isConnected) SynoFX.kill(stage, L, s, e.detail); });
 
     root.appendChild(stage);
     return api;

@@ -103,13 +103,13 @@ ${embedded ? "" : `<header class="app-top">
       <p class="muted">Jangan minimize tetingkap tu.</p>
     </div>
     <b class="kstep">2 · Kill siapa</b>
-    <div class="row toggles"><label class="fld kteam"><select id="ap-kteam"><option value="kda">Kill saya: ikut KDA (paling tepat)</option><option value="me">Kill saya: ikut nama di banner</option><option value="ally">Pasukan kita (biru)</option><option value="all">Semua kill</option></select></label>
+    <div class="row toggles"><label class="fld kteam"><select id="ap-kteam"><option value="me">Kill saya: banner biru + nama saya</option><option value="kda">Kill saya: ikut KDA sahaja</option><option value="ally">Pasukan kita (biru)</option><option value="all">Semua kill</option></select></label>
       <label class="tog ksolo"><input id="ap-ksolo" type="checkbox"><span>Kill biasa = SOLO KILL</span></label></div>
-    <div class="row kme"><label class="fld kign">Nama dalam game (IGN) anda<input id="ap-kign" type="text" maxlength="24" placeholder="contoh: SYNO.Aqil" autocomplete="off"></label></div>
+    <div class="row kme"><label class="fld kign">Nama dalam game (IGN) anda, tepat macam dalam MLBB<input id="ap-kign" type="text" maxlength="24" placeholder="contoh: SYNO.Aqil" autocomplete="off"></label></div>
     <b class="kstep">3 · Kotak bacaan</b>
     <div class="kshot" id="ap-kshot"><img id="ap-kimg" alt=""><i class="kbox ban" id="ap-kbban"><em>BANNER</em></i><i class="kbox kda" id="ap-kbkda"><em>KDA</em></i><span class="kmsg" id="ap-kmsg">Tekan “Tunjuk skrin”.</span></div>
     <div class="row kdraw"><button class="btn small" type="button" id="ap-kprev">👁 Tunjuk skrin</button><button class="btn small ghost" type="button" data-draw="ban">✎ Lukis kotak BANNER</button><button class="btn small ghost" type="button" data-draw="kda">✎ Lukis kotak KDA</button></div>
-    <p class="muted" id="ap-khint"><b>BANNER</b> = tempat tulisan DOUBLE KILL / SAVAGE keluar. <b>KDA</b> = nombor K/D/A anda (contoh 3/1/4) di skrin game.</p>
+    <p class="muted" id="ap-khint"><b>BANNER</b> = tempat banner kill keluar (tulisan DOUBLE KILL + nama pemain). <b>KDA</b> (pilihan) = nombor K/D/A anda, bantu tangkap kill yang terlepas.</p>
     <label class="fld">Kotak banner (pilihan cepat)<select id="ap-kreg">
       <option value="0.2,0.08,0.6,0.32">Atas tengah (banner kill MLBB, asal)</option>
       <option value="0.15,0.15,0.7,0.45">Atas tengah lebih besar</option>
@@ -453,12 +453,12 @@ ${embedded ? "" : `<header class="app-top">
       const put = (el, x, y, w, h) => { el.hidden = !(w > 0 && h > 0); Object.assign(el.style, { left: pct(x), top: pct(y), width: pct(w), height: pct(h) }); };
       put($("ap-kbban"), kCfg.x, kCfg.y, kCfg.w, kCfg.h);
       put($("ap-kbkda"), kCfg.kx, kCfg.ky, kCfg.kw, kCfg.kh);
-      if (kCfg.team !== "kda") $("ap-kbkda").hidden = true;
+      if (!(kCfg.team === "kda" || kCfg.team === "me")) $("ap-kbkda").hidden = true;
     }
     function kShow() {
       if (!kCfg) return;
       const src = kCfg.src || "win";
-      $("ap-kon").checked = !!kCfg.on; $("ap-kteam").value = kCfg.team || "kda"; $("ap-ksolo").checked = kCfg.solo !== false;
+      $("ap-kon").checked = !!kCfg.on; $("ap-kteam").value = kCfg.team || "me"; $("ap-ksolo").checked = kCfg.solo !== false;
       kCard.querySelectorAll("#ap-ksrc button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === src)));
       kCard.querySelectorAll(".ksrc").forEach(d => { d.hidden = d.dataset.src !== src; });
       if (root.activeElement !== $("ap-kign")) $("ap-kign").value = kCfg.ign || "";
@@ -466,7 +466,7 @@ ${embedded ? "" : `<header class="app-top">
       $("ap-kpass").placeholder = kCfg.obsPassSet ? "•••••• (tersimpan) taip untuk tukar" : "tiada (taip kalau OBS ada password)";
       kCard.querySelector(".kme").hidden = kCfg.team !== "me";
       kCard.querySelector(".ksolo").hidden = !(kCfg.team === "kda" || kCfg.team === "me");
-      kCard.querySelector('[data-draw="kda"]').hidden = kCfg.team !== "kda";
+      kCard.querySelector('[data-draw="kda"]').hidden = !(kCfg.team === "kda" || kCfg.team === "me");
       const reg = [kCfg.x, kCfg.y, kCfg.w, kCfg.h].map(v => +(+v).toFixed(3)).join(","), sel = $("ap-kreg");
       [...sel.options].forEach(o => { if (o.dataset.custom) o.remove(); });
       if (![...sel.options].some(o => o.value === reg)) sel.insertAdjacentHTML("beforeend", `<option data-custom="1" value="${esc(reg)}">Kotak sendiri (dilukis)</option>`);
@@ -524,7 +524,7 @@ ${embedded ? "" : `<header class="app-top">
       kDraw = kDraw === b.dataset.draw ? null : b.dataset.draw;
       kCard.querySelectorAll("[data-draw]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.draw === kDraw)));
       kshot.classList.toggle("drawing", !!kDraw);
-      $("ap-khint").innerHTML = kDraw ? `Seret di atas gambar untuk lukis kotak <b>${kDraw === "kda" ? "KDA" : "BANNER"}</b>.` : `<b>BANNER</b> = tempat tulisan DOUBLE KILL / SAVAGE keluar. <b>KDA</b> = nombor K/D/A anda (contoh 3/1/4) di skrin game.`;
+      $("ap-khint").innerHTML = kDraw ? `Seret di atas gambar untuk lukis kotak <b>${kDraw === "kda" ? "KDA" : "BANNER"}</b>.` : `<b>BANNER</b> = tempat banner kill keluar (tulisan DOUBLE KILL + nama pemain). <b>KDA</b> (pilihan) = nombor K/D/A anda, bantu tangkap kill yang terlepas.`;
     }));
     let kStart = null;
     const kPt = e => { const r = kshot.getBoundingClientRect(); return [Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), Math.max(0, Math.min(1, (e.clientY - r.top) / r.height))]; };
@@ -551,8 +551,8 @@ ${embedded ? "" : `<header class="app-top">
           : kCfg.team === "me" && ignN.length < 2 ? "Isi nama dalam game (IGN) anda dulu." : kCfg.team === "kda" && !(kCfg.kw > 0) ? "Lukis kotak KDA dulu (langkah 3)."
           : inf.length < 5 ? (j.err || "Menunggu…") : `Membaca ${inf[0]}×${inf[1]} dari ${HOW[inf[5]] || inf[5] || "?"}${+inf[4] > 4000 ? " · skrin GELAP" : ""}`;
         const mex = typeof j.mex === "number" ? j.mex : -1;
-        const meTxt = kCfg.team === "me" && ignN.length >= 2 && j.on ? `<span>Nama anda: ${mex < 0 ? "tak nampak" : mex < .5 ? `<b class="kok">kiri (${Math.round(mex * 100)}%) = anda bunuh</b>` : `kanan (${Math.round(mex * 100)}%) = bukan kill anda`}</span>` : "";
-        const kdaTxt = kCfg.team === "kda" && kCfg.kw > 0 && j.on ? `<span>KDA dibaca: <code>${esc(j.kda || "—")}</code> → kill anda = <b class="kok">${j.k >= 0 ? j.k : "?"}</b></span>` : "";
+        const meTxt = kCfg.team === "me" && ignN.length >= 2 && j.on ? `<span>Nama anda: ${mex < 0 ? "tak nampak" : `<b class="kok">nampak ✓</b>`} · Banner: ${j.ally ? `<b class="kok">biru (pasukan kita)</b>` : "bukan biru"}</span>` : "";
+        const kdaTxt = (kCfg.team === "kda" || kCfg.team === "me") && kCfg.kw > 0 && j.on ? `<span>KDA dibaca: <code>${esc(j.kda || "—")}</code> → kill anda = <b class="kok">${j.k >= 0 ? j.k : "?"}</b></span>` : "";
         const html = `<b>Status</b><span>${esc(st)}</span>${kdaTxt}${meTxt}${j.hit ? `<span class="khit">Terakhir: <b>${esc(KNAME[j.hit] || j.hit)}</b>${ago != null ? ` · ${ago}s lepas` : ""}</span>` : ""}${j.text ? `<span>Banner dibaca:</span><code>${esc(j.text)}</code>` : ""}${j.err && j.ocr ? `<span class="warn">${esc(j.err)}</span>` : ""}`;
         if (box._h !== html) { box.innerHTML = html; box._h = html; }
         $("ap-kst").textContent = j.on && need ? "● aktif" : "";
