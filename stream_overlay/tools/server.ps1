@@ -258,6 +258,10 @@ while ($true) {
         $type = 'application/json'
         if (-not $okPin) { $status = '401 Unauthorized'; $body = ToBytes '[]' }
         else { $body = ToBytes ('[' + ($cmds -join ',') + ']'); $cmds.Clear() }
+      } elseif ($path -eq 'api/versi') {
+        # versi yang dipasang oleh KEMASKINI.bat (App bandingkan dengan GitHub)
+        $vf = Join-Path $dataDir 'versi.txt'; $v = ''; if (Test-Path -LiteralPath $vf) { $v = ([System.IO.File]::ReadAllText($vf)).Trim() }
+        $body = ToBytes $v
       } elseif ($path -eq 'api/nowplaying') {
         $type = 'application/json'
         if (((Get-Date) - $npAt).TotalSeconds -ge 2.5) { $npText = Get-NowPlaying; $npAt = Get-Date }

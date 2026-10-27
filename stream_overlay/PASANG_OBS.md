@@ -13,6 +13,8 @@ Perlu: **Windows 10/11** dan **OBS Studio** (versi 30 ke atas). Tak perlu instal
 
 Kalau ada versi lama, salin folder `data\` dari folder lama ke folder baru supaya baki VIP dan PIN kekal.
 
+**Kemas kini lepas ni (tak perlu muat turun ZIP lagi):** tutup tetingkap hitam overlay › klik dua kali **`KEMASKINI.bat`** › tunggu SIAP › buka semula `START_OVERLAY.bat` › OBS: Refresh cache. Folder `data\` (baki, PIN, link) dan `seed_doc.js` kekal. App tunjuk chip **VERSI BARU** bila ada kemas kini.
+
 ## 2. Hidupkan (setiap kali nak live)
 
 1. Klik dua kali **`START_OVERLAY.bat`**. Amaran biru Windows: **More info › Run anyway**.

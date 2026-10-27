@@ -24,6 +24,10 @@ Ikut urutan. Langkah penuh setiap satu ada dalam [PASANG_OBS.md](PASANG_OBS.md).
 5. Tak muncul bila dipanggil: **Tak muncul** pada nama tu.
 6. MVP: App › Senarai MVP › **+**.
 
-## C. Kalau ada masalah
+## C. Kemas kini (bila saya beritahu ada versi baru, atau App tunjuk VERSI BARU)
+
+Tutup tetingkap hitam › klik **`KEMASKINI.bat`** › buka semula `START_OVERLAY.bat` › OBS: Refresh cache. Tak perlu muat turun ZIP lagi.
+
+## D. Kalau ada masalah
 
 Lihat jadual "Masalah biasa" di hujung PASANG_OBS.md. Untuk Sociabuzz, ikut "Test langkah demi langkah" (bahagian 8).

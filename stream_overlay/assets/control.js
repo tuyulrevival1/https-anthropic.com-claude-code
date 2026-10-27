@@ -19,7 +19,7 @@
     root.innerHTML = `
 ${embedded ? "" : `<header class="app-top">
   <div class="brand"><b>SYNO</b> CONTROL</div>
-  <div class="chips"><span class="chip" id="ap-conn">MENYAMBUNG…</span><span class="chip" id="ap-auth" hidden></span>
+  <div class="chips"><span class="chip" id="ap-conn">MENYAMBUNG…</span><span class="chip" id="ap-auth" hidden></span><span class="chip warn" id="ap-upd" hidden title="Tutup overlay, klik KEMASKINI.bat dalam folder stream_overlay">VERSI BARU · KLIK KEMASKINI.BAT</span>
   <button class="btn small ghost" type="button" id="ap-lay">⠿ Susun layout</button><button class="btn small ghost" type="button" id="ap-layreset" hidden>Reset</button></div>
   <nav class="app-tabs" id="ap-tabs" role="tablist" aria-label="Bahagian"></nav>
 </header>
@@ -521,9 +521,19 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
       Store.canWrite = !!a.ok;
       pinbar.hidden = !!a.ok;
       lastAuth = a;
-      renderLinks(a); hookTick();
+      renderLinks(a); hookTick(); checkUpdate();
       return a;
     }).catch(() => null);
+
+    /* ---------- new version on GitHub? (PC only; KEMASKINI.bat installs it) ---------- */
+    let updChecked = 0;
+    function checkUpdate() {
+      if (!lastAuth || !lastAuth.local || Date.now() - updChecked < 30 * 60000) return; updChecked = Date.now();
+      fetch("api/versi", { cache: "no-store" }).then(r => r.ok ? r.text() : "").then(v => fetch("https://api.github.com/repos/tuyulrevival1/https-anthropic.com-claude-code/commits/claude/streaming-layout-chou-kof-vie6x8")
+        .then(r => r.ok ? r.json() : null).then(c => { if (c && c.sha && c.sha !== String(v || "").trim()) $("ap-upd").hidden = false; }))
+        .catch(() => {});
+    }
+    setInterval(checkUpdate, 31 * 60000);
 
     /* ---------- webhook test & status ---------- */
     let lastAuth = null;
