@@ -334,3 +334,18 @@
 .app .killfx .ktest { gap: 6px; }
 .app .killfx .kme { align-items: flex-end; } .app .killfx .kign { flex: 1; min-width: 180px; } .app .killfx .kme[hidden] { display: none; }
 .app .kdbg .kok { color: var(--c-win); }
+.app .kstep { display: block; margin: 14px 0 6px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--c-gold); }
+.app .kseg { display: flex; gap: 0; margin-bottom: 8px; } .app .kseg button { flex: 1; padding: 10px 8px; font: inherit; font-weight: 700; color: #c9a9b0; background: #160709; border: 1px solid #4a1a24; cursor: pointer; }
+.app .kseg button[aria-pressed="true"] { background: var(--c-red); border-color: var(--c-red); color: #fff; }
+.app .ksrc[hidden], .app .killfx [hidden] { display: none !important; }
+.app .killfx .kobsrow .kport { width: 110px; flex: none; } .app .killfx .kobsrow .kpass { flex: 1; min-width: 160px; }
+.app .kshot { position: relative; width: 100%; min-height: 80px; aspect-ratio: 16 / 9; background: #050203 repeating-linear-gradient(45deg, #0d0507 0 10px, #080304 10px 20px); border: 1px solid #4a1a24; overflow: hidden; user-select: none; -webkit-user-select: none; }
+.app .kshot.on { aspect-ratio: auto; } .app .kshot img { display: block; width: 100%; height: auto; pointer-events: none; }
+.app .kshot:not(.on) img { display: none; }
+.app .kshot.drawing { touch-action: none; cursor: crosshair; outline: 2px solid var(--c-gold); }
+.app .kshot .kmsg { position: absolute; inset: 0; display: grid; place-items: center; padding: 10px; text-align: center; color: #c9a9b0; font-size: 13px; }
+.app .kbox { position: absolute; border: 2px solid #ffcf4a; background: rgba(255,207,74,.12); box-shadow: 0 0 0 1px #000; pointer-events: none; }
+.app .kbox.kda { border-color: #4fe38a; background: rgba(79,227,138,.14); }
+.app .kbox em { position: absolute; left: -2px; top: -18px; padding: 1px 5px; font: 700 10px/14px var(--f-ui, sans-serif); font-style: normal; letter-spacing: .08em; color: #000; background: #ffcf4a; }
+.app .kbox.kda em { background: #4fe38a; }
+.app .killfx .kdraw { gap: 6px; margin-top: 6px; } .app .killfx .kdraw [aria-pressed="true"] { background: var(--c-gold); color: #000; }

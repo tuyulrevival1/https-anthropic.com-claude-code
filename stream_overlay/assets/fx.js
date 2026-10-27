@@ -185,13 +185,16 @@ ${mile ? `<div class="fx-mile">🎁 CUKUP ${n} MVP · CLAIM SKIN!</div>` : info.
     wiped:       { t: "WIPED OUT",     sub: "ACE",     a: "#ff2346", b: "#14000a", lvl: 4, intro: "shatter", bg: ["dark", "glass", "bolts"],  icon: "skull",  parts: "shards",  dur: 3600 }
   };
 
-  // ---------- sounds (synth, no files) ----------
+  // ---------- sounds (synth, no files) + announcer voice ----------
   function kAudio() { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); return actx; }
   function noiseBuf(sec, shape) {
     const A = kAudio(), n = A.createBuffer(1, Math.max(1, A.sampleRate * sec | 0), A.sampleRate), d = n.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (shape ? shape(i / d.length) : 1);
     return n;
   }
+  const curves = {};
+  function driveCurve(k) { if (curves[k]) return curves[k]; const n = 2048, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = i / n * 2 - 1; c[i] = (1 + k) * x / (1 + k * Math.abs(x)); } return (curves[k] = c); }
+  function env(g, t, a, peak, dur) { g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(.0001, t + dur); }
   const S = {
     noise(out, t, sec, type, f0, f1, vol, q, shape, pan) {
       const A = kAudio(), src = A.createBufferSource(), f = A.createBiquadFilter(), v = A.createGain();
@@ -204,47 +207,135 @@ ${mile ? `<div class="fx-mile">🎁 CUKUP ${n} MVP · CLAIM SKIN!</div>` : info.
     tone(out, t, type, f0, f1, sec, vol, att) {
       const A = kAudio(), o = A.createOscillator(), v = A.createGain(); o.type = type;
       o.frequency.setValueAtTime(f0, t); if (f1 && f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + sec);
-      v.gain.setValueAtTime(.0001, t); v.gain.linearRampToValueAtTime(vol, t + (att || .01)); v.gain.exponentialRampToValueAtTime(.0001, t + sec);
-      o.connect(v).connect(out); o.start(t); o.stop(t + sec + .05);
+      env(v, t, att || .01, vol, sec); o.connect(v).connect(out); o.start(t); o.stop(t + sec + .05);
     },
     swish(out, t, hi, lo, sec, vol, pan) { S.noise(out, t, sec || .3, "bandpass", hi || 5000, lo || 600, vol || .8, 2, null, pan); },
-    hit(out, t, f, vol, sec) { S.tone(out, t, "sine", f || 130, 38, sec || .6, vol || .9); S.noise(out, t, .08, "lowpass", 2400, 300, (vol || .9) * .6, 1, x => 1 - x); },
-    ring(out, t, fs, sec, vol, type) { fs.forEach((fq, i) => S.tone(out, t, type || "triangle", fq, fq, (sec || 1) + i * .15, vol || .1, .005)); },
-    roar(out, t, sec, vol) { S.noise(out, t, sec, "lowpass", 300, 160, vol, 1, x => Math.min(1, x * 6) * Math.pow(1 - x, 1.2)); S.noise(out, t + .1, sec * .7, "bandpass", 900, 250, vol * .5, 1.5); },
+    boom(out, t, vol, len) { S.tone(out, t, "sine", 70, 24, len || 1.4, vol || 1); S.noise(out, t, (len || 1.4) * .8, "lowpass", 2600, 50, (vol || 1) * .9, 1, x => Math.pow(1 - x, 2.2)); },
+    // metallic bell (FM)
+    bell(out, t, f, dur, vol, ratio) {
+      const A = kAudio(), c = A.createOscillator(), m = A.createOscillator(), mg = A.createGain(), v = A.createGain();
+      c.frequency.value = f; m.frequency.value = f * (ratio || 3.5); mg.gain.setValueAtTime(f * 2.5, t); mg.gain.exponentialRampToValueAtTime(f * .05, t + dur);
+      m.connect(mg).connect(c.frequency); env(v, t, .004, vol, dur); c.connect(v).connect(out); c.start(t); m.start(t); c.stop(t + dur + .05); m.stop(t + dur + .05);
+    },
+    pluck(out, t, f, dur, vol) {
+      const A = kAudio(), o = A.createOscillator(), lp = A.createBiquadFilter(), v = A.createGain(); o.type = "sawtooth"; o.frequency.value = f;
+      lp.type = "lowpass"; lp.Q.value = 6; lp.frequency.setValueAtTime(f * 8, t); lp.frequency.exponentialRampToValueAtTime(f * 1.2, t + dur);
+      env(v, t, .005, vol, dur); o.connect(lp).connect(v).connect(out); o.start(t); o.stop(t + dur + .05);
+    },
+    brass(out, t, f, dur, vol) {
+      const A = kAudio(), lp = A.createBiquadFilter(), v = A.createGain(); lp.type = "lowpass"; lp.Q.value = 2;
+      lp.frequency.setValueAtTime(f * 1.5, t); lp.frequency.linearRampToValueAtTime(f * 7, t + .08); lp.frequency.exponentialRampToValueAtTime(f * 3, t + dur);
+      [1, 1.007, .993].forEach(d => { const o = A.createOscillator(); o.type = "sawtooth"; o.frequency.value = f * d; o.connect(lp); o.start(t); o.stop(t + dur + .05); });
+      v.gain.setValueAtTime(.0001, t); v.gain.linearRampToValueAtTime(vol, t + .05); v.gain.setValueAtTime(vol, t + dur * .7); v.gain.exponentialRampToValueAtTime(.0001, t + dur);
+      lp.connect(v).connect(out);
+    },
+    drum(out, t, f, vol) { S.tone(out, t, "sine", f, f * .45, .35, vol); S.noise(out, t, .07, "lowpass", 1800, 400, vol * .5, 1, x => 1 - x); },
+    snare(out, t, vol) { S.noise(out, t, .22, "highpass", 1800, 1500, vol, 1, x => Math.pow(1 - x, 2)); S.tone(out, t, "triangle", 220, 160, .12, vol * .5); },
+    // "aah" choir: sawtooth through vowel formants, with vibrato
+    choir(out, t, f, dur, vol) {
+      const A = kAudio(), o = A.createOscillator(), lfo = A.createOscillator(), lg = A.createGain(), v = A.createGain(); o.type = "sawtooth"; o.frequency.value = f;
+      lfo.frequency.value = 5.2; lg.gain.value = f * .012; lfo.connect(lg).connect(o.frequency);
+      [[800, 1], [1150, .6], [2900, .25]].forEach(([fq, g]) => { const b = A.createBiquadFilter(), bg = A.createGain(); b.type = "bandpass"; b.frequency.value = fq; b.Q.value = 8; bg.gain.value = g; o.connect(b).connect(bg).connect(v); });
+      v.gain.setValueAtTime(.0001, t); v.gain.linearRampToValueAtTime(vol, t + .4); v.gain.setValueAtTime(vol, t + dur * .7); v.gain.exponentialRampToValueAtTime(.0001, t + dur);
+      v.connect(out); o.start(t); lfo.start(t); o.stop(t + dur + .05); lfo.stop(t + dur + .05);
+    },
+    // distorted low growl / roar
+    growl(out, t, f0, f1, dur, vol, trem) {
+      const A = kAudio(), o = A.createOscillator(), ws = A.createWaveShaper(), lp = A.createBiquadFilter(), v = A.createGain(), am = A.createGain();
+      o.type = "sawtooth"; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur); ws.curve = driveCurve(30); lp.type = "lowpass"; lp.frequency.value = 900;
+      if (trem) { const l = A.createOscillator(), lg = A.createGain(); l.frequency.value = trem; lg.gain.value = .5; am.gain.value = .5; l.connect(lg).connect(am.gain); l.start(t); l.stop(t + dur + .05); }
+      env(v, t, .08, vol, dur); o.connect(ws).connect(lp).connect(am).connect(v).connect(out); o.start(t); o.stop(t + dur + .05);
+      S.noise(out, t, dur, "bandpass", 500, 200, vol * .6, 1.2, x => Math.min(1, x * 8) * (1 - x));
+    },
+    zap(out, t, vol) { S.tone(out, t, "square", rnd(1600, 2600), rnd(60, 120), .14, vol); },
     crackle(out, t, sec, vol) {
       const A = kAudio(), src = A.createBufferSource(), f = A.createBiquadFilter(), v = A.createGain();
-      src.buffer = noiseBuf(sec, x => (Math.random() < .06 ? 1 : .05) * (1 - x)); f.type = "highpass"; f.frequency.value = 1800; v.gain.value = vol;
+      src.buffer = noiseBuf(sec, x => (Math.random() < .06 ? 1 : .04) * (1 - x)); f.type = "highpass"; f.frequency.value = 1800; v.gain.value = vol;
       src.connect(f).connect(v).connect(out); src.start(t);
     },
-    chord(out, t, fs, sec, vol, type, att) { fs.forEach(fq => { S.tone(out, t, type || "sawtooth", fq, fq, sec, vol, att || .3); S.tone(out, t, type || "sawtooth", fq * 1.006, fq * 1.006, sec, vol * .7, att || .3); }); },
-    glass(out, t, vol) { for (let i = 0; i < 14; i++) S.tone(out, t + Math.random() * .25, "sine", rnd(2500, 6500), 0, rnd(.15, .5), (vol || .08) * rnd(.4, 1), .002); S.noise(out, t, .25, "highpass", 4000, 3000, vol * 4 || .3, 1, x => 1 - x); }
+    glass(out, t, vol) { for (let i = 0; i < 16; i++) S.bell(out, t + Math.random() * .3, rnd(2800, 6500), rnd(.2, .6), vol * rnd(.3, 1), 1.41); S.noise(out, t, .3, "highpass", 5000, 3000, vol * 3, 1, x => 1 - x); },
+    gong(out, t, vol) { [98, 147, 209, 286, 391, 523].forEach((fq, i) => S.tone(out, t, "sine", fq * 1.02, fq, 3.2 - i * .35, vol * (1 - i * .13), .006)); S.noise(out, t, .4, "bandpass", 600, 300, vol * .4, 2, x => 1 - x); }
   };
-  // a filtered bus so chords don't get harsh
-  function bus(vol, lp) { const A = kAudio(), g = A.createGain(), f = A.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = lp || 9000; g.gain.value = vol; g.connect(f).connect(A.destination); return g; }
+  // master bus: compressor so stacked layers stay loud but clean
+  function bus(vol) {
+    const A = kAudio(), g = A.createGain(), c = A.createDynamicsCompressor(); g.gain.value = vol;
+    c.threshold.value = -16; c.knee.value = 8; c.ratio.value = 5; c.attack.value = .003; c.release.value = .2;
+    g.connect(c).connect(A.destination); return g;
+  }
+  // each kill has its own sound identity
   const SND = {
-    solo(o, t) { S.swish(o, t, 9000, 2500, .16, .9, .8); S.ring(o, t + .05, [2637, 3951, 5274], 1.6, .07, "sine"); S.hit(o, t + .06, 160, .45, .35); },
-    first(o, t) { S.hit(o, t, 70, .9, .25); S.hit(o, t + .24, 62, .8, .3); S.swish(o, t + .45, 6000, 700, .25, .8); S.hit(o, t + .55, 140, .9, .6); S.noise(o, t + .58, .35, "lowpass", 900, 200, .7, 3, x => 1 - x); },
-    double(o, t) { [0, .16].forEach((d, i) => { S.swish(o, t + d, 6000, 900, .2, .8, i ? -.7 : .7); S.hit(o, t + d + .08, 150 + i * 30, .7, .4); }); S.ring(o, t + .3, [1046, 1568], 1, .09); },
-    triple(o, t) { [0, .12, .24].forEach((d, i) => { S.swish(o, t + d, 7000, 1200, .16, .7); S.hit(o, t + d + .06, 140 + i * 40, .6, .35); }); S.ring(o, t + .35, [1174, 1760, 2349], 1.1, .08); },
-    maniac(o, t) { S.crackle(o, t, 1.2, 1.4); S.tone(o, t + .05, "sawtooth", 1400, 120, .5, .18); S.tone(o, t + .3, "square", 90, 60, .6, .12); S.hit(o, t + .1, 120, .9, .7); S.ring(o, t + .1, [880, 1245], 1, .06, "square"); },
-    savage(o, t) { S.hit(o, t + .05, 90, 1, 1.1); S.roar(o, t + .05, 1.6, .9); S.crackle(o, t + .3, 1.4, .8); S.ring(o, t + .1, [622, 932], 1.4, .08, "sawtooth"); S.noise(o, t, .5, "lowpass", 4000, 80, .9, 1, x => 1 - x); },
-    shutdown(o, t) { S.tone(o, t, "sawtooth", 900, 40, .9, .22); S.glass(o, t + .25, .1); S.hit(o, t + .25, 120, .7, .5); S.tone(o, t + .3, "sine", 1975, 1975, 1.2, .06, .005); },
-    spree(o, t) { S.noise(o, t, .5, "bandpass", 300, 4500, .9, 3, x => x * x); S.hit(o, t + .48, 150, .8, .5); S.ring(o, t + .5, [1318, 1975], .9, .08); },
-    monster(o, t) {
-      const A = kAudio(), g = A.createOscillator(), lfo = A.createOscillator(), lg = A.createGain(), v = A.createGain(), f = A.createBiquadFilter();
-      g.type = "sawtooth"; g.frequency.setValueAtTime(70, t); g.frequency.linearRampToValueAtTime(48, t + 1.1); lfo.frequency.value = 18; lg.gain.value = .25; f.type = "lowpass"; f.frequency.value = 500;
-      v.gain.setValueAtTime(.0001, t); v.gain.linearRampToValueAtTime(.5, t + .2); v.gain.exponentialRampToValueAtTime(.0001, t + 1.2);
-      lfo.connect(lg).connect(v.gain); g.connect(f).connect(v).connect(o); g.start(t); lfo.start(t); g.stop(t + 1.3); lfo.stop(t + 1.3);
-      S.hit(o, t + .38, 48, 1, 1); S.noise(o, t + .38, .6, "lowpass", 600, 60, .8, 1, x => 1 - x);
+    solo(o, t) { S.swish(o, t, 10000, 3000, .14, .9, .9); S.bell(o, t + .04, 2637, 1.8, .22, 2.76); S.bell(o, t + .05, 3951, 1.4, .12, 2.76); S.tone(o, t + .04, "sine", 5274, 5274, 1.2, .05, .002); },
+    first(o, t) { S.drum(o, t, 70, .9); S.drum(o, t + .26, 62, .8); S.noise(o, t + .5, .4, "lowpass", 1200, 150, .9, 4, x => Math.pow(1 - x, 1.5)); [220, 233, 311].forEach(f => S.pluck(o, t + .55, f, 1.6, .16)); S.swish(o, t + .48, 6000, 700, .2, .6); },
+    double(o, t) { S.swish(o, t, 7000, 1200, .15, .7, .8); S.bell(o, t + .05, 1319, .9, .3, 2); S.swish(o, t + .2, 7000, 1200, .15, .7, -.8); S.bell(o, t + .25, 1976, 1.3, .32, 2); S.drum(o, t + .25, 130, .6); },
+    triple(o, t) { [523, 659, 784].forEach((f, i) => { S.swish(o, t + i * .13, 8000, 1500, .12, .6); S.pluck(o, t + i * .13 + .03, f, .5, .3); }); S.bell(o, t + .42, 2093, 1.4, .25, 2); S.snare(o, t + .42, .6); },
+    maniac(o, t) { for (let i = 0; i < 7; i++) S.zap(o, t + i * .09 + rnd(0, .03), .14); S.crackle(o, t, 1.3, 1.4); S.growl(o, t + .1, 140, 70, 1, .25, 9); S.drum(o, t + .05, 110, .7); },
+    savage(o, t) { S.boom(o, t, 1, 1.6); S.growl(o, t + .08, 95, 38, 1.7, .55); S.crackle(o, t + .2, 1.6, 1); S.brass(o, t + .1, 98, 1.3, .12); },
+    shutdown(o, t) { S.tone(o, t, "sawtooth", 1300, 28, 1.1, .2); S.tone(o, t, "sine", 650, 20, 1.1, .3); S.noise(o, t + 1.05, .05, "highpass", 3000, 3000, .8, 1, x => 1 - x); S.glass(o, t + .2, .12); },
+    spree(o, t) { S.noise(o, t, .55, "bandpass", 250, 6000, 1, 4, x => x * x); S.tone(o, t, "sawtooth", 200, 1200, .55, .08); S.snare(o, t + .55, .9); [523, 659, 784, 1047].forEach(f => S.pluck(o, t + .56, f, .8, .12)); },
+    monster(o, t) { S.growl(o, t, 60, 42, 1.4, .6, 16); S.boom(o, t + .3, .9, .8); S.boom(o, t + .75, .8, .9); },
+    mega(o, t) { S.boom(o, t, 1.2, 2.2); S.noise(o, t, 2, "lowpass", 5000, 40, .8, 1, x => Math.pow(1 - x, 1.4)); S.crackle(o, t + .15, 1.2, .9); S.tone(o, t, "sine", 40, 30, 2.2, .7, .02); },
+    unstoppable(o, t) {
+      const A = kAudio(), e = A.createOscillator(), l = A.createOscillator(), lg = A.createGain(), am = A.createGain(), lp = A.createBiquadFilter(), v = A.createGain(), p = A.createStereoPanner ? A.createStereoPanner() : A.createGain();
+      e.type = "sawtooth"; e.frequency.setValueAtTime(55, t); e.frequency.exponentialRampToValueAtTime(190, t + .7); l.frequency.setValueAtTime(25, t); l.frequency.linearRampToValueAtTime(60, t + .7); lg.gain.value = .5; am.gain.value = .5;
+      lp.type = "lowpass"; lp.frequency.value = 1400; env(v, t, .1, .5, 1); if (p.pan) { p.pan.setValueAtTime(.9, t); p.pan.linearRampToValueAtTime(-.9, t + .9); }
+      l.connect(lg).connect(am.gain); e.connect(lp).connect(am).connect(v).connect(p).connect(o); e.start(t); l.start(t); e.stop(t + 1.05); l.stop(t + 1.05);
+      S.swish(o, t + .6, 3000, 300, .45, 1, .9); S.boom(o, t + .65, .8, .9);
     },
-    mega(o, t) { S.noise(o, t, 1.6, "lowpass", 3000, 60, 1.1, 1, x => Math.pow(1 - x, 2)); S.hit(o, t, 55, 1, 1.4); S.hit(o, t + .18, 45, .7, 1); S.crackle(o, t + .2, .8, .5); },
-    unstoppable(o, t) { S.noise(o, t, .7, "lowpass", 150, 1400, .9, 1, x => x); S.swish(o, t + .55, 3000, 400, .4, 1, .9); S.hit(o, t + .62, 120, .9, .6); S.tone(o, t + .62, "sawtooth", 220, 110, .8, .1); },
-    godlike(o, t) { S.chord(o, t + .05, [220, 277.2, 329.6, 440], 2.6, .05, "sawtooth", .5); S.chord(o, t + .05, [880, 1108.7], 2.4, .03, "sine", .6); S.ring(o, t + .9, [1760, 2217, 2637], 1.6, .05, "sine"); S.noise(o, t, 2, "bandpass", 2000, 6000, .15, 4, x => Math.sin(Math.PI * x)); },
-    legendary(o, t) { S.hit(o, t, 80, 1, 1); S.chord(o, t + .02, [261.6, 329.6, 392], .55, .07, "sawtooth", .03); S.chord(o, t + .55, [349.2, 440, 523.3, 698.5], 1.8, .07, "sawtooth", .03); S.hit(o, t + .55, 70, 1, 1.2); S.ring(o, t + .6, [2093, 2637, 3136], 1.5, .05, "sine"); },
-    rampage(o, t) { [0, .2, .38, .54, .68, .8, .9, 1].forEach((d, i) => S.hit(o, t + d, 70 + (i % 2) * 20, .85, .3)); S.roar(o, t + 1, 1.2, .9); S.hit(o, t + 1, 55, 1, 1); },
-    wiped(o, t) { S.tone(o, t, "sine", 85, 28, 2, .9); [110, 163, 231, 317, 452].forEach((fq, i) => S.tone(o, t + .02, "sine", fq, fq * .995, 3 - i * .3, .14 - i * .02, .005)); S.glass(o, t + .1, .12); S.noise(o, t, 1.2, "lowpass", 2000, 60, .9, 1, x => Math.pow(1 - x, 2)); }
+    godlike(o, t) { [220, 277.2, 329.6, 440].forEach(f => S.choir(o, t + .05, f, 2.8, .1)); S.choir(o, t + .3, 659.3, 2.4, .05); [1760, 2217, 2637, 3520].forEach((f, i) => S.bell(o, t + .7 + i * .12, f, 1.6, .07, 3)); S.noise(o, t, 2.4, "bandpass", 3000, 8000, .12, 6); },
+    legendary(o, t) { const n = [[392, 0, .16], [523.3, .17, .16], [659.3, .34, .16], [784, .51, 1.3]]; n.forEach(([f, d, l]) => { S.brass(o, t + d, f, l, .13); S.brass(o, t + d, f / 2, l, .09); });
+      [0, .51].forEach(d => S.drum(o, t + d, 90, 1)); S.noise(o, t + .51, 2, "highpass", 6000, 4000, .35, 1, x => Math.pow(1 - x, 1.5)); S.bell(o, t + .55, 3136, 1.6, .06); },
+    rampage(o, t) { [0, .24, .44, .6, .73, .84, .93, 1, 1.06].forEach((d, i) => S.drum(o, t + d, i % 2 ? 95 : 70, .9)); S.growl(o, t + 1.08, 110, 45, 1.3, .55, 0); S.noise(o, t + 1.08, .5, "bandpass", 900, 600, .8, 3, x => Math.min(1, x * 10) * (1 - x)); S.boom(o, t + 1.08, 1, 1.2); },
+    wiped(o, t) { S.gong(o, t, .5); S.glass(o, t + .08, .14); S.tone(o, t, "sine", 90, 26, 2.4, .8); S.tone(o, t + 1.2, "sine", 1000, 1000, 1.6, .06, .01); }
   };
-  function killSound(type, k) { try { const A = kAudio(); if (A.state === "suspended") A.resume(); const o = bus(.42 + k.lvl * .05, 9000); (SND[type] || SND.double)(o, A.currentTime + .02); } catch (e) {} }
+  // announcer voice: data\voice\<kill>.wav made by the PC server (Windows voice), made deep and heavy here.
+  // Without the server (preview) the browser's own voice is used.
+  const VOICE = {}; let impulse = null;
+  function loadVoice(type) {
+    if (!VOICE[type]) VOICE[type] = fetch("voice/" + type + ".wav").then(r => r.ok && /audio|wav|octet/.test(r.headers.get("content-type") || "") ? r.arrayBuffer() : null)
+      .then(b => b ? new Promise(res => kAudio().decodeAudioData(b, res, () => res(null))) : null).catch(() => null);
+    return VOICE[type];
+  }
+  function reverbIR(sec) { const A = kAudio(), n = A.sampleRate * sec | 0, b = A.createBuffer(2, n, A.sampleRate); for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3); } return b; }
+  const VTXT = { solo: "Solo kill!", first: "First blood!", double: "Double kill!", triple: "Triple kill!", maniac: "Maniac!", savage: "Savage!", shutdown: "Shut down!", spree: "Killing spree!", monster: "Monster kill!", mega: "Mega kill!", unstoppable: "Unstoppable!", godlike: "God like!", legendary: "Legendary!", rampage: "Rampage!", wiped: "Wiped out!" };
+  function browserVoice(type) {
+    try {
+      const sy = window.speechSynthesis; if (!sy) return;
+      const u = new SpeechSynthesisUtterance(VTXT[type] || type), vs = sy.getVoices().filter(v => /^en/i.test(v.lang));
+      u.voice = vs.find(v => /male|david|guy|daniel|george|mark/i.test(v.name) && !/female/i.test(v.name)) || vs[0] || null; u.pitch = .2; u.rate = .9; u.volume = 1;
+      sy.cancel(); sy.speak(u);
+    } catch (e) {}
+  }
+  function speak(type, delay) {
+    loadVoice(type).then(buf => {
+      if (!buf) return browserVoice(type);
+      const A = kAudio(), t = A.currentTime + (delay || 0);
+      const out = A.createGain(), comp = A.createDynamicsCompressor(); out.gain.value = 1.15; comp.threshold.value = -20; comp.ratio.value = 8; comp.attack.value = .002; comp.release.value = .15;
+      const low = A.createBiquadFilter(); low.type = "lowshelf"; low.frequency.value = 160; low.gain.value = 10;
+      const bite = A.createBiquadFilter(); bite.type = "peaking"; bite.frequency.value = 2400; bite.Q.value = 1; bite.gain.value = 6;
+      const ws = A.createWaveShaper(); ws.curve = driveCurve(6); ws.oversample = "4x";
+      const mix = A.createGain(); mix.gain.value = 1.3;
+      // two slightly detuned copies = thick, powerful voice; slower + deeper than the original
+      [[.8, 0, -.35], [.79, .018, .35]].forEach(([rate, dl, pan]) => {
+        const src = A.createBufferSource(); src.buffer = buf; src.playbackRate.value = rate;
+        let n = src; if (A.createStereoPanner) { const p = A.createStereoPanner(); p.pan.value = pan; n = src.connect(p); }
+        n.connect(mix); src.start(t + dl);
+      });
+      mix.connect(ws).connect(low).connect(bite).connect(comp).connect(out).connect(A.destination);
+      // big arena reverb + slap echo
+      impulse = impulse || reverbIR(2.6);
+      const conv = A.createConvolver(), wet = A.createGain(); conv.buffer = impulse; wet.gain.value = .45; comp.connect(conv).connect(wet).connect(A.destination);
+      const d = A.createDelay(1), fb = A.createGain(), dw = A.createGain(); d.delayTime.value = .14; fb.gain.value = .3; dw.gain.value = .32; comp.connect(d); d.connect(fb).connect(d); d.connect(dw).connect(A.destination);
+    });
+  }
+  function killSound(type, k, voice) {
+    try {
+      const A = kAudio(); if (A.state === "suspended") A.resume();
+      const o = bus(voice ? .5 + k.lvl * .04 : .6 + k.lvl * .05); (SND[type] || SND.double)(o, A.currentTime + .02);
+      if (voice) speak(type, .12);
+    } catch (e) {}
+  }
+  // load all voices once so a kill speaks instantly
+  if (/^https?:$/.test(location.protocol)) setTimeout(() => { if (window.ChouOverlay || document.querySelector(".ov-stage")) Object.keys(VTXT).forEach(loadVoice); }, 2500);
 
   // ---------- icons (120x120) ----------
   function kIcon(k) {
@@ -388,7 +479,7 @@ ${mile ? `<div class="fx-mile">🎁 CUKUP ${n} MVP · CLAIM SKIN!</div>` : info.
     const shake = k.shake === 0 ? "" : k.shake === "r" ? "fx-shake-r" : k.lvl >= 3 ? "fx-shake" : "fx-shake-s";
     if (shake) setTimeout(() => { stage.classList.remove("fx-shake", "fx-shake-s", "fx-shake-r"); void stage.offsetWidth; stage.classList.add(shake);
       setTimeout(() => stage.classList.remove(shake), shake === "fx-shake-r" ? 1800 : 800); }, k.shakeAt || 60);
-    if (s.fxSound !== false) killSound(type, k);
+    if (s.fxSound !== false) killSound(type, k, s.fxVoice !== false);
     setTimeout(() => layer.remove(), dur);
   }
 

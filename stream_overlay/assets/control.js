@@ -87,20 +87,36 @@ ${embedded ? "" : `<header class="app-top">
 
   <section class="card killfx">
     <h3>Auto efek kill <span id="ap-kst"></span></h3>
-    <p class="muted">Server di PC baca skrin game. Bila banner kill MLBB keluar dengan <b>nama anda di sebelah kiri</b> (anda yang bunuh), efek penuh skrin keluar sendiri. Kill orang lain dan bila anda yang mati: tiada efek. MLBB mesti bahasa <b>English</b>.</p>
+    <p class="muted">Server di PC baca skrin game. Bila <b>anda</b> dapat kill, efek penuh skrin + suara keluar terus (FIRST BLOOD → DOUBLE KILL terus bertukar). Kill orang lain: tiada efek. MLBB mesti bahasa <b>English</b>.</p>
     <div class="row toggles"><label class="tog"><input id="ap-kon" type="checkbox"><span>Auto detect kill</span></label>
-      <label class="fld kteam">Kill siapa<select id="ap-kteam"><option value="me">Kill saya sahaja (ikut nama)</option><option value="ally">Pasukan kita (biru)</option><option value="all">Semua kill</option></select></label></div>
-    <div class="row kme"><label class="fld kign">Nama dalam game (IGN) anda<input id="ap-kign" type="text" maxlength="24" placeholder="contoh: SYNO.Aqil" autocomplete="off"></label>
-      <label class="tog"><input id="ap-ksolo" type="checkbox"><span>Kill biasa saya = SOLO KILL</span></label></div>
-    <label class="fld">Tetingkap game di PC (mirror tablet / OBS Windowed Projector)<div class="row kwin"><select id="ap-kwin"><option value="">— pilih tetingkap —</option></select><button class="btn small ghost" type="button" id="ap-kwinr">↻ Muat semula</button></div></label>
-    <label class="fld">Bahagian skrin dibaca<select id="ap-kreg">
+      <label class="tog"><input id="ap-kvoice" type="checkbox"><span>Suara announcer</span></label></div>
+    <b class="kstep">1 · Ambil skrin game dari</b>
+    <div class="kseg" id="ap-ksrc"><button type="button" data-v="obs">OBS (paling stabil)</button><button type="button" data-v="win">Tetingkap di PC</button></div>
+    <div class="ksrc" data-src="obs">
+      <label class="fld">Source game dalam OBS<div class="row kwin"><select id="ap-kobs"><option value="">— pilih source —</option></select><button class="btn small ghost" type="button" id="ap-kobsr">↻ Sambung OBS</button></div></label>
+      <div class="row kobsrow"><label class="fld kport">Port<input id="ap-kport" type="number" min="1" max="65535" inputmode="numeric"></label>
+        <label class="fld kpass">Password WebSocket<input id="ap-kpass" type="password" autocomplete="off" placeholder="taip untuk tukar"></label></div>
+      <p class="muted">OBS › <b>Tools › WebSocket Server Settings</b> › tanda <b>Enable WebSocket server</b>. Password: tekan <b>Show Connect Info</b>.</p>
+    </div>
+    <div class="ksrc" data-src="win">
+      <label class="fld">Tetingkap game di PC (mirror / OBS Windowed Projector)<div class="row kwin"><select id="ap-kwin"><option value="">— pilih tetingkap —</option></select><button class="btn small ghost" type="button" id="ap-kwinr">↻ Muat semula</button></div></label>
+      <p class="muted">Jangan minimize tetingkap tu.</p>
+    </div>
+    <b class="kstep">2 · Kill siapa</b>
+    <div class="row toggles"><label class="fld kteam"><select id="ap-kteam"><option value="kda">Kill saya: ikut KDA (paling tepat)</option><option value="me">Kill saya: ikut nama di banner</option><option value="ally">Pasukan kita (biru)</option><option value="all">Semua kill</option></select></label>
+      <label class="tog ksolo"><input id="ap-ksolo" type="checkbox"><span>Kill biasa = SOLO KILL</span></label></div>
+    <div class="row kme"><label class="fld kign">Nama dalam game (IGN) anda<input id="ap-kign" type="text" maxlength="24" placeholder="contoh: SYNO.Aqil" autocomplete="off"></label></div>
+    <b class="kstep">3 · Kotak bacaan</b>
+    <div class="kshot" id="ap-kshot"><img id="ap-kimg" alt=""><i class="kbox ban" id="ap-kbban"><em>BANNER</em></i><i class="kbox kda" id="ap-kbkda"><em>KDA</em></i><span class="kmsg" id="ap-kmsg">Tekan “Tunjuk skrin”.</span></div>
+    <div class="row kdraw"><button class="btn small" type="button" id="ap-kprev">👁 Tunjuk skrin</button><button class="btn small ghost" type="button" data-draw="ban">✎ Lukis kotak BANNER</button><button class="btn small ghost" type="button" data-draw="kda">✎ Lukis kotak KDA</button></div>
+    <p class="muted" id="ap-khint"><b>BANNER</b> = tempat tulisan DOUBLE KILL / SAVAGE keluar. <b>KDA</b> = nombor K/D/A anda (contoh 3/1/4) di skrin game.</p>
+    <label class="fld">Kotak banner (pilihan cepat)<select id="ap-kreg">
       <option value="0.2,0.08,0.6,0.32">Atas tengah (banner kill MLBB, asal)</option>
       <option value="0.15,0.15,0.7,0.45">Atas tengah lebih besar</option>
       <option value="0.1,0.25,0.8,0.5">Tengah</option>
-      <option value="0,0,1,1">Seluruh tetingkap</option></select></label>
+      <option value="0,0,1,1">Seluruh skrin</option></select></label>
     <div class="kdbg" id="ap-kdbg"><b>Status</b><span>—</span></div>
     <div class="row ktest">${["solo:SOLO KILL", "first:FIRST BLOOD", "double:DOUBLE", "triple:TRIPLE", "maniac:MANIAC", "savage:SAVAGE", "shutdown:SHUT DOWN", "spree:SPREE", "monster:MONSTER", "mega:MEGA", "unstoppable:UNSTOPPABLE", "godlike:GODLIKE", "legendary:LEGENDARY", "rampage:RAMPAGE", "wiped:WIPED OUT"].map(x => `<button class="btn small" type="button" data-a="ktest" data-k="${x.split(":")[0]}">${x.split(":")[1]}</button>`).join("")}</div>
-    <p class="muted">Tip: kalau game cuma ada dalam OBS, klik kanan source game › <b>Windowed Projector (Source)</b>, kemudian pilih tetingkap projector tu di atas. Jangan minimize tetingkap tu.</p>
   </section>
 
   <section class="card queue">
@@ -422,24 +438,42 @@ ${embedded ? "" : `<header class="app-top">
     twoStep($("ap-clearq"), () => { Q.clear(); toast("Queue dikosongkan"); });
     $("ap-showq").addEventListener("change", e => Q.patch({ showQueue: e.target.checked }));
     $("ap-fx").addEventListener("change", e => Q.patch({ fx: e.target.checked }));
-    /* ---------- auto kill effects (PC server reads the game window with Windows OCR) ---------- */
+    /* ---------- auto kill effects (PC server reads the game screen with Windows OCR) ---------- */
     const kHdr = () => ({ "X-Pin": lsGet(PIN_KEY, "") });
     const KNAME = { solo: "SOLO KILL", first: "FIRST BLOOD", double: "DOUBLE KILL", triple: "TRIPLE KILL", maniac: "MANIAC", savage: "SAVAGE", shutdown: "SHUT DOWN", spree: "KILLING SPREE", monster: "MONSTER KILL", mega: "MEGA KILL", unstoppable: "UNSTOPPABLE", godlike: "GODLIKE", legendary: "LEGENDARY", rampage: "RAMPAGE", wiped: "WIPED OUT" };
-    let kCfg = null;
+    const kCard = root.querySelector(".card.killfx");
+    let kCfg = null, kPrev = false, kDraw = null, kImgUrl = "";
     const kSave = patch => {
       const body = Object.entries(patch).map(([k2, v]) => k2 + "=" + encodeURIComponent(v)).join("&");
       return fetch("api/killcfg", { method: "POST", headers: kHdr(), body }).then(r => r.ok ? r.json() : null).then(j => { if (j) { kCfg = j; kShow(); } else toast("Perlu START_OVERLAY.bat versi baru / PIN"); }).catch(() => toast("Server tak dapat dihubungi"));
     };
+    const pct = v => (Math.max(0, Math.min(1, +v || 0)) * 100).toFixed(2) + "%";
+    function kBoxes() {
+      if (!kCfg) return;
+      const put = (el, x, y, w, h) => { el.hidden = !(w > 0 && h > 0); Object.assign(el.style, { left: pct(x), top: pct(y), width: pct(w), height: pct(h) }); };
+      put($("ap-kbban"), kCfg.x, kCfg.y, kCfg.w, kCfg.h);
+      put($("ap-kbkda"), kCfg.kx, kCfg.ky, kCfg.kw, kCfg.kh);
+      if (kCfg.team !== "kda") $("ap-kbkda").hidden = true;
+    }
     function kShow() {
       if (!kCfg) return;
-      $("ap-kon").checked = !!kCfg.on; $("ap-kteam").value = kCfg.team || "me"; $("ap-ksolo").checked = kCfg.solo !== false;
+      const src = kCfg.src || "win";
+      $("ap-kon").checked = !!kCfg.on; $("ap-kteam").value = kCfg.team || "kda"; $("ap-ksolo").checked = kCfg.solo !== false;
+      kCard.querySelectorAll("#ap-ksrc button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === src)));
+      kCard.querySelectorAll(".ksrc").forEach(d => { d.hidden = d.dataset.src !== src; });
       if (root.activeElement !== $("ap-kign")) $("ap-kign").value = kCfg.ign || "";
-      root.querySelector(".killfx .kme").hidden = (kCfg.team || "me") !== "me";
-      const reg = [kCfg.x, kCfg.y, kCfg.w, kCfg.h].join(","), sel = $("ap-kreg");
-      if (![...sel.options].some(o => o.value === reg)) sel.insertAdjacentHTML("beforeend", `<option value="${esc(reg)}">Custom (${esc(reg)})</option>`);
+      if (root.activeElement !== $("ap-kport")) $("ap-kport").value = kCfg.obsPort || 4455;
+      $("ap-kpass").placeholder = kCfg.obsPassSet ? "•••••• (tersimpan) taip untuk tukar" : "tiada (taip kalau OBS ada password)";
+      kCard.querySelector(".kme").hidden = kCfg.team !== "me";
+      kCard.querySelector(".ksolo").hidden = !(kCfg.team === "kda" || kCfg.team === "me");
+      kCard.querySelector('[data-draw="kda"]').hidden = kCfg.team !== "kda";
+      const reg = [kCfg.x, kCfg.y, kCfg.w, kCfg.h].map(v => +(+v).toFixed(3)).join(","), sel = $("ap-kreg");
+      [...sel.options].forEach(o => { if (o.dataset.custom) o.remove(); });
+      if (![...sel.options].some(o => o.value === reg)) sel.insertAdjacentHTML("beforeend", `<option data-custom="1" value="${esc(reg)}">Kotak sendiri (dilukis)</option>`);
       sel.value = reg;
-      const ws = $("ap-kwin"); if (kCfg.win && ![...ws.options].some(o => o.value === kCfg.win)) ws.insertAdjacentHTML("beforeend", `<option value="${esc(kCfg.win)}">${esc(kCfg.win)}</option>`);
-      ws.value = kCfg.win || "";
+      const fill = (id, val, none) => { const el = $(id); if (val && ![...el.options].some(o => o.value === val)) el.insertAdjacentHTML("beforeend", `<option value="${esc(val)}">${esc(val)}</option>`); el.value = val || ""; };
+      fill("ap-kwin", kCfg.win); fill("ap-kobs", kCfg.obsSrc);
+      kBoxes();
     }
     function kWins() {
       fetch("api/windows", { headers: kHdr(), cache: "no-store" }).then(r => r.ok ? r.json() : []).then(list => {
@@ -449,27 +483,79 @@ ${embedded ? "" : `<header class="app-top">
         ws.value = cur || "";
       }).catch(() => {});
     }
-    fetch("api/killcfg", { headers: kHdr(), cache: "no-store" }).then(r => r.ok ? r.json() : null).then(j => { if (j) { kCfg = j; kShow(); kWins(); } else $("ap-kst").textContent = "perlu server baru"; }).catch(() => {});
+    function kObs() {
+      const btn = $("ap-kobsr"); btn.disabled = true; btn.textContent = "Menyambung…";
+      fetch("api/obssources", { headers: kHdr(), cache: "no-store" }).then(r => r.ok ? r.json() : { ok: false, err: "Perlu START_OVERLAY.bat versi baru" }).then(j => {
+        if (!j.ok) { toast(j.err || "OBS tak dapat dihubungi", 4000); return; }
+        const el = $("ap-kobs"), cur = (kCfg && kCfg.obsSrc) || el.value;
+        el.innerHTML = `<option value="">— pilih source —</option>` + j.list.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
+        if (cur && !j.list.includes(cur)) el.insertAdjacentHTML("beforeend", `<option value="${esc(cur)}">${esc(cur)} (tiada)</option>`);
+        el.value = cur || ""; toast("OBS bersambung ✓ " + j.list.length + " source");
+      }).catch(() => toast("Server tak dapat dihubungi")).finally(() => { btn.disabled = false; btn.textContent = "↻ Sambung OBS"; });
+    }
+    fetch("api/killcfg", { headers: kHdr(), cache: "no-store" }).then(r => r.ok ? r.json() : null).then(j => { if (j) { kCfg = j; kShow(); kWins(); if (j.src === "obs") kObs(); } else $("ap-kst").textContent = "perlu server baru"; }).catch(() => {});
     $("ap-kon").addEventListener("change", e => kSave({ on: e.target.checked ? 1 : 0 }));
+    $("ap-kvoice").addEventListener("change", e => Q.patch({ fxVoice: e.target.checked }));
     $("ap-kteam").addEventListener("change", e => kSave({ team: e.target.value }));
     $("ap-ksolo").addEventListener("change", e => kSave({ solo: e.target.checked ? 1 : 0 }));
     $("ap-kign").addEventListener("change", e => kSave({ ign: e.target.value.trim() }));
     $("ap-kwin").addEventListener("change", e => kSave({ win: e.target.value }));
+    $("ap-kobs").addEventListener("change", e => kSave({ obsSrc: e.target.value }));
+    $("ap-kport").addEventListener("change", e => kSave({ obsPort: e.target.value }));
+    $("ap-kpass").addEventListener("change", e => { kSave({ obsPass: e.target.value }).then(() => { e.target.value = ""; kObs(); }); });
     $("ap-kwinr").addEventListener("click", kWins);
+    $("ap-kobsr").addEventListener("click", kObs);
+    $("ap-ksrc").addEventListener("click", e => { const b = e.target.closest("button[data-v]"); if (b) kSave({ src: b.dataset.v }).then(() => { if (b.dataset.v === "obs") kObs(); else kWins(); }); });
     $("ap-kreg").addEventListener("change", e => { const [x, y, w, h] = e.target.value.split(","); kSave({ x, y, w, h }); });
+    // screen preview + draw the read boxes with a finger / mouse
+    const kshot = $("ap-kshot");
+    function kPull() {
+      if (!kPrev || kCard.offsetParent === null) return;
+      fetch("api/killshot", { headers: kHdr(), cache: "no-store" }).then(r => r.ok ? r.blob() : null).then(b => {
+        if (!b) { $("ap-kmsg").textContent = "Belum ada gambar: pilih tetingkap / source OBS dulu."; $("ap-kmsg").hidden = false; return; }
+        const u = URL.createObjectURL(b), img = $("ap-kimg"); img.onload = () => { if (kImgUrl) URL.revokeObjectURL(kImgUrl); kImgUrl = u; }; img.src = u;
+        $("ap-kmsg").hidden = true; kshot.classList.add("on");
+      }).catch(() => {});
+    }
+    setInterval(kPull, 1200);
+    $("ap-kprev").addEventListener("click", () => { kPrev = !kPrev; $("ap-kprev").textContent = kPrev ? "⏸ Berhenti tunjuk" : "👁 Tunjuk skrin"; $("ap-kmsg").textContent = kPrev ? "Memuat…" : "Tekan “Tunjuk skrin”."; if (kPrev) kPull(); });
+    kCard.querySelectorAll("[data-draw]").forEach(b => b.addEventListener("click", () => {
+      if (!kPrev) $("ap-kprev").click();
+      kDraw = kDraw === b.dataset.draw ? null : b.dataset.draw;
+      kCard.querySelectorAll("[data-draw]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.draw === kDraw)));
+      kshot.classList.toggle("drawing", !!kDraw);
+      $("ap-khint").innerHTML = kDraw ? `Seret di atas gambar untuk lukis kotak <b>${kDraw === "kda" ? "KDA" : "BANNER"}</b>.` : `<b>BANNER</b> = tempat tulisan DOUBLE KILL / SAVAGE keluar. <b>KDA</b> = nombor K/D/A anda (contoh 3/1/4) di skrin game.`;
+    }));
+    let kStart = null;
+    const kPt = e => { const r = kshot.getBoundingClientRect(); return [Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), Math.max(0, Math.min(1, (e.clientY - r.top) / r.height))]; };
+    kshot.addEventListener("pointerdown", e => { if (!kDraw) return; e.preventDefault(); kshot.setPointerCapture(e.pointerId); kStart = kPt(e); });
+    kshot.addEventListener("pointermove", e => {
+      if (!kDraw || !kStart) return; const [x, y] = kPt(e), el = $(kDraw === "kda" ? "ap-kbkda" : "ap-kbban");
+      el.hidden = false; Object.assign(el.style, { left: pct(Math.min(x, kStart[0])), top: pct(Math.min(y, kStart[1])), width: pct(Math.abs(x - kStart[0])), height: pct(Math.abs(y - kStart[1])) });
+    });
+    kshot.addEventListener("pointerup", e => {
+      if (!kDraw || !kStart) return; const [x, y] = kPt(e), r = [Math.min(x, kStart[0]), Math.min(y, kStart[1]), Math.abs(x - kStart[0]), Math.abs(y - kStart[1])].map(v => v.toFixed(4)); kStart = null;
+      if (+r[2] < .01 || +r[3] < .008) { kBoxes(); return; }
+      const which = kDraw; kCard.querySelector(`[data-draw="${which}"]`).click();
+      kSave(which === "kda" ? { kx: r[0], ky: r[1], kw: r[2], kh: r[3] } : { x: r[0], y: r[1], w: r[2], h: r[3] }).then(() => toast("Kotak " + (which === "kda" ? "KDA" : "BANNER") + " disimpan"));
+    });
     setInterval(() => {
-      const card = root.querySelector(".card.killfx"); if (!card || card.offsetParent === null || !kCfg) return;
+      if (kCard.offsetParent === null || !kCfg) return;
       fetch("api/killlog", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(j => {
         if (!j) return;
         const box = $("ap-kdbg"), inf = String(j.info || "").split(",");
-        const ago = j.hitAt ? Math.round((Date.now() - j.hitAt) / 1000) : null;
+        const ago = j.hitAt ? Math.round((Date.now() - j.hitAt) / 1000) : null, src = kCfg.src || "win", need = src === "obs" ? kCfg.obsSrc : kCfg.win;
         const ignN = String(kCfg.ign || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-        const st = !kCfg.cap ? "Tangkap skrin tak dapat dimuat di PC ni." : j.err && !j.ocr ? j.err : !j.on ? "Dimatikan." : !kCfg.win ? "Pilih tetingkap game dulu." : kCfg.team === "me" && ignN.length < 2 ? "Isi nama dalam game (IGN) anda dulu. Nama mesti ada huruf A–Z / nombor." : inf.length < 5 ? (j.info || "Menunggu…") : `Membaca ${inf[0]}×${inf[1]} · biru ${inf[2]} · merah ${inf[3]}${+inf[4] > 4000 ? " · skrin GELAP (tetingkap tak dapat ditangkap?)" : ""}`;
+        const HOW = { obs: "OBS", pw: "tetingkap", skrin: "salinan skrin" };
+        const st = !kCfg.cap ? "Tangkap skrin tak dapat dimuat di PC ni." : j.err && !j.ocr ? j.err : !j.on && !j.preview ? "Dimatikan." : !need ? (src === "obs" ? "Pilih source game dalam OBS dulu." : "Pilih tetingkap game dulu.")
+          : kCfg.team === "me" && ignN.length < 2 ? "Isi nama dalam game (IGN) anda dulu." : kCfg.team === "kda" && !(kCfg.kw > 0) ? "Lukis kotak KDA dulu (langkah 3)."
+          : inf.length < 5 ? (j.err || "Menunggu…") : `Membaca ${inf[0]}×${inf[1]} dari ${HOW[inf[5]] || inf[5] || "?"}${+inf[4] > 4000 ? " · skrin GELAP" : ""}`;
         const mex = typeof j.mex === "number" ? j.mex : -1;
-        const meTxt = kCfg.team === "me" && ignN.length >= 2 && j.ocr && j.on ? `<span>Nama anda: ${mex < 0 ? "tak nampak" : mex < .5 ? `<b class="kok">kiri (${Math.round(mex * 100)}%) = anda bunuh</b>` : `kanan (${Math.round(mex * 100)}%) = anda mati / bukan kill anda`}</span>` : "";
-        const html = `<b>Status</b><span>${esc(st)}</span>${meTxt}${j.hit ? `<span class="khit">Terakhir: <b>${esc(KNAME[j.hit] || j.hit)}</b>${ago != null ? ` · ${ago}s lepas` : ""}</span>` : ""}${j.text ? `<code>${esc(j.text)}</code>` : ""}${j.err && j.ocr ? `<span class="warn">${esc(j.err)}</span>` : ""}`;
+        const meTxt = kCfg.team === "me" && ignN.length >= 2 && j.on ? `<span>Nama anda: ${mex < 0 ? "tak nampak" : mex < .5 ? `<b class="kok">kiri (${Math.round(mex * 100)}%) = anda bunuh</b>` : `kanan (${Math.round(mex * 100)}%) = bukan kill anda`}</span>` : "";
+        const kdaTxt = kCfg.team === "kda" && kCfg.kw > 0 && j.on ? `<span>KDA dibaca: <code>${esc(j.kda || "—")}</code> → kill anda = <b class="kok">${j.k >= 0 ? j.k : "?"}</b></span>` : "";
+        const html = `<b>Status</b><span>${esc(st)}</span>${kdaTxt}${meTxt}${j.hit ? `<span class="khit">Terakhir: <b>${esc(KNAME[j.hit] || j.hit)}</b>${ago != null ? ` · ${ago}s lepas` : ""}</span>` : ""}${j.text ? `<span>Banner dibaca:</span><code>${esc(j.text)}</code>` : ""}${j.err && j.ocr ? `<span class="warn">${esc(j.err)}</span>` : ""}`;
         if (box._h !== html) { box.innerHTML = html; box._h = html; }
-        $("ap-kst").textContent = j.on && kCfg.win ? "● aktif" : "";
+        $("ap-kst").textContent = j.on && need ? "● aktif" : "";
       }).catch(() => {});
     }, 1000);
     $("ap-fxs").addEventListener("change", e => Q.patch({ fxSound: e.target.checked }));
@@ -626,7 +712,7 @@ ${embedded ? "" : `<header class="app-top">
       // where the cameras sit in the landscape column right now (they move up when one is off)
       const lk = O.layoutOf && O.layoutOf("kiri"), sk = lk && O.stackLayout(lk, (s.hide || {}).l || {}, s.showBanner);
       if (sk && $("ap-ovpobs")) { const f = (n, r) => r ? `${n} ${r.x}, ${r.y} · ${r.w}×${r.h}` : ""; $("ap-ovpobs").textContent = ["OBS landscape: Game 384, 0 · 1536×1024", f("Facecam", sk.slots.face), f("Handcam", sk.slots.hand)].filter(Boolean).join(" · "); }
-      $("ap-showq").checked = !!s.showQueue; $("ap-fx").checked = s.fx !== false; $("ap-fxs").checked = s.fxSound !== false; $("ap-open").setAttribute("aria-pressed", String(!s.mabarClosed)); $("ap-close").setAttribute("aria-pressed", String(!!s.mabarClosed)); $("ap-showb").checked = !!s.showBanner; $("ap-shows").checked = !s.song || s.song.on !== false;
+      $("ap-showq").checked = !!s.showQueue; $("ap-fx").checked = s.fx !== false; $("ap-fxs").checked = s.fxSound !== false; $("ap-kvoice").checked = s.fxVoice !== false; $("ap-open").setAttribute("aria-pressed", String(!s.mabarClosed)); $("ap-close").setAttribute("aria-pressed", String(!!s.mabarClosed)); $("ap-showb").checked = !!s.showBanner; $("ap-shows").checked = !s.song || s.song.on !== false;
       if (document.activeElement !== $("ap-song")) $("ap-song").value = (s.song && s.song.manual) || "";
       $("ap-pc").textContent = `${s.playing.length}/${max}`; $("ap-qc").textContent = s.queue.length;
       if (qDrag) { pending.queue = true; } else {

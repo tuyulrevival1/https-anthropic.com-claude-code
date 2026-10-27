@@ -289,9 +289,9 @@ Server di PC dengar bunyi app **IndoFinity** dan baca teks dalam tetingkapnya (t
 
 Tajuk / nama tak keluar? App › Lagu › buka **Teks dibaca dari IndoFinity** dan hantar screenshot.
 
-## 13. Efek kill automatik (kill anda sahaja)
+## 13. Efek kill automatik (kill anda sahaja) + suara announcer
 
-Server di PC baca skrin game guna pengecaman teks Windows (OCR). Bila banner kill MLBB keluar dengan **nama anda di sebelah kiri** (anda yang bunuh), overlay tunjuk efek penuh skrin dengan bunyi. Kill orang lain, dan bila anda yang mati (nama di kanan): tiada efek.
+Server di PC baca skrin game guna pengecaman teks Windows (OCR). Bila **anda** dapat kill, overlay terus tunjuk efek penuh skrin dengan bunyi dan **suara announcer garang** ("SAVAGE!"). Kill bertukar serta-merta: FIRST BLOOD, 1 saat kemudian DOUBLE KILL, efek terus bertukar ke DOUBLE KILL. Kill orang lain: tiada efek.
 
 Setiap kill ada efek sendiri:
 
@@ -313,27 +313,37 @@ Setiap kill ada efek sendiri:
 | **RAMPAGE** | skrin merah berdegup, tulisan menggeletar, gendang perang |
 | **WIPED OUT** | skrin gelap, kaca pecah, huruf runtuh, gong |
 
-1. Jalankan **KEMASKINI.bat**, tutup dan buka semula **START_OVERLAY.bat**.
-2. Game mesti ada dalam satu tetingkap di PC:
-   - mirror tablet / phone (contoh scrcpy), **atau**
-   - dalam OBS: klik kanan source game › **Windowed Projector (Source)**. Tetingkap tu boleh di belakang, tapi **jangan minimize**.
-3. MLBB guna bahasa **English** (Settings › Language).
-4. App › tab **Live** › **Auto efek kill**:
-   - **Kill siapa**: *Kill saya sahaja (ikut nama)*,
-   - **Nama dalam game (IGN)**: taip nama MLBB anda (huruf / nombor sahaja dibaca; simbol khas diabaikan),
-   - **Kill biasa saya = SOLO KILL**: hidup = setiap kill anda tanpa banner streak tunjuk SOLO KILL,
-   - pilih **Tetingkap game** (tekan ↻ kalau tak nampak), **Bahagian skrin dibaca**: *Atas tengah*,
-   - tanda **Auto detect kill**.
-5. Kotak **Status** tunjuk teks yang dibaca dan **Nama anda: kiri = anda bunuh / kanan = anda mati**. Masa game, baris **Terakhir:** berubah bila efek keluar.
+**Cara App tahu kill tu anda punya:** nombor **K** dalam KDA anda (contoh 3/1/4) di skrin game naik. Jenis kill diambil dari banner yang keluar serentak (DOUBLE KILL, SAVAGE…). Tiada banner = **SOLO KILL**. FIRST BLOOD hanya sekali setiap game.
+
+1. Jalankan **KEMASKINI.bat**, tutup dan buka semula **START_OVERLAY.bat**. Kali ini sahaja, **tutup dan buka semula OBS** (atau Properties › **Refresh** setiap Browser source). Lepas ni overlay muat semula sendiri bila ada versi baru.
+2. MLBB guna bahasa **English** (Settings › Language).
+3. App › tab **Live** › **Auto efek kill**:
+   - **1 · Ambil skrin game dari**: pilih **OBS (paling stabil)**.
+     - OBS › **Tools › WebSocket Server Settings** › tanda **Enable WebSocket server** › tekan **Show Connect Info** › salin **Password**.
+     - Dalam App: taip password tu, tekan **↻ Sambung OBS**, pilih **source game** (contoh source capture tablet / phone).
+     - Atau pilih **Tetingkap di PC** dan pilih tetingkap mirror / OBS Windowed Projector (jangan minimize).
+   - **2 · Kill siapa**: **Kill saya: ikut KDA**. Suis **Kill biasa = SOLO KILL** hidup.
+   - **3 · Kotak bacaan**: tekan **👁 Tunjuk skrin** (gambar game keluar):
+     - tekan **✎ Lukis kotak KDA** › seret jari di atas nombor K/D/A anda (kotak hijau),
+     - tekan **✎ Lukis kotak BANNER** › seret di tempat tulisan DOUBLE KILL / SAVAGE keluar (kotak kuning).
+   - tanda **Auto detect kill** dan **Suara announcer**.
+4. Kotak **Status** tunjuk:
+   - **KDA dibaca: 3/1/4 → kill anda = 3** (nombor mesti betul dan naik bila anda kill),
+   - **Banner dibaca:** teks dari kotak banner,
+   - **Terakhir:** efek terakhir yang keluar.
+
+Suara announcer dibuat sekali guna suara Windows (disimpan dalam `data\voice`), kemudian dibesarkan jadi dalam, garang dengan gema arena. Bunyi keluar melalui browser source overlay (tanda **Control audio via OBS** kalau nak kawal volume).
 
 Butang dalam kad tu = uji setiap efek. Stream Deck: fail `deck\SOLO_KILL.bat`, atau `http://localhost:8787/api/do/kill-solo` (ganti `solo` dengan `first`, `double`, `triple`, `maniac`, `savage`, `shutdown`, `spree`, `monster`, `mega`, `unstoppable`, `godlike`, `legendary`, `rampage`, `wiped`).
 
 | Status | Maksud |
 |---|---|
-| Skrin **GELAP** | Tetingkap tak dapat ditangkap: jangan minimize; untuk OBS guna *Windowed Projector*. |
+| OBS minta password / putuskan sambungan | Password WebSocket salah: salin semula dari **Show Connect Info**. |
+| OBS tak dapat dihubungi | WebSocket belum di-Enable dalam OBS, atau port bukan 4455. |
+| Skrin **GELAP** | Tetingkap tak dapat ditangkap: guna sumber **OBS**. |
 | Tiada bahasa OCR | Windows Settings › Time & Language › Language › tambah **English (United States)**. |
-| Nama anda: **tak nampak** semasa banner keluar | Semak ejaan IGN. Nama dengan huruf khas / bukan Latin susah dibaca: hantar screenshot kotak Status. |
-| Teks dibaca tapi efek tak keluar | Hantar screenshot kotak Status. |
+| KDA dibaca salah / "?" | Lukis kotak KDA lebih ketat (nombor sahaja, tanpa ikon lain). |
+| Efek tak keluar | Hantar screenshot kad **Auto efek kill** (dengan **Tunjuk skrin** hidup) masa anda dapat kill. |
 
 ## Masalah biasa
 

@@ -92,13 +92,16 @@
         // change check every 0.4 s: fetch the full state / Stream Deck commands only when something changed.
         // (the PC server is single-threaded PowerShell, so every page keeps its requests light)
         // Older server without /api/rev: plain polling every 700 ms.
-        let lastRev = null, revBusy = false, legacy = false, lastFull = 0, revTick = 0;
+        let lastRev = null, revBusy = false, legacy = false, lastFull = 0, revTick = 0, verSeen = null, reloading = false;
+        // new files from KEMASKINI.bat: reload (OBS browser sources otherwise keep running the old code)
+        const reloadNow = () => { const a = document.activeElement; if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && !window.obsstudio) { setTimeout(reloadNow, 4000); return; } location.reload(); };
         setInterval(() => {
           if (legacy || revBusy) return;
           if (document.hidden && !window.obsstudio && ++revTick % 5) return;   // background tab: every 2 s
           revBusy = true;
           fetch("api/rev", { cache: "no-store" }).then(r => { if (r.status === 404) { legacy = true; return null; } return r.ok ? r.json() : null; }).then(j => {
             if (!j) return;
+            if (j.v) { if (verSeen == null) verSeen = j.v; else if (j.v !== verSeen && !reloading) { reloading = true; setTimeout(reloadNow, 3000); } }
             if (j.s !== lastRev || Date.now() - lastFull > 5000) { lastRev = j.s; lastFull = Date.now(); this.pull(); }
             if (j.c > 0) pullCmds();
           }).catch(() => {}).finally(() => { revBusy = false; });
@@ -1215,7 +1218,7 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
         if (t && (!pt || t.at !== pt.at) && Date.now() - t.at < 8000) {
           if (t.k === "kill") SynoFX.kill && SynoFX.kill(stage, L, s, t.type);
           else if (t.k === "mvp") SynoFX.mvp && SynoFX.mvp(stage, L, s, { name: t.name || "AQIL.MY", cur: t.cur || 5, role: "MID" });
-          else SynoFX[t.k === "lose" ? "lose" : "win"](stage, L, s);
+          else if (t.k === "win" || t.k === "lose") SynoFX[t.k](stage, L, s);
         }
         // no counter effects in the first seconds (page load / OBS refresh catching up with saved state)
         else if (Date.now() - FX_BOOT < 4000) {}
