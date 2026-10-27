@@ -290,18 +290,19 @@ ${mile ? `<div class="fx-mile">🎁 CUKUP ${n} MVP · CLAIM SKIN!</div>` : info.
   // announcer voice: data\voice\<kill>.wav made by the PC server (Windows voice), made deep and heavy here.
   // Without the server (preview) the browser's own voice is used.
   const VOICE = {}; let impulse = null;
-  // deeper, more masculine voice without slowing it down (WSOLA): resample lower, then put the time back with
-  // grains lined up by correlation so they don't cancel each other
-  function pitchDown(buf, f) {
+  // WSOLA: change pitch (f < 1 = deeper) and speed (stretch > 1 = slower) separately, without the "chipmunk" link.
+  // Resample, then lay grains back in time lined up by correlation so they don't cancel each other.
+  function wsola(buf, f, stretch) {
     try {
-      const A = kAudio(), L = buf.length, N = 1024, Hs = N / 2, M = N / 2, tol = 300, out = A.createBuffer(buf.numberOfChannels, L, buf.sampleRate), win = new Float32Array(N);
+      const A = kAudio(), L = buf.length, Lout = Math.floor(L * stretch), N = 1024, Hs = N / 2, M = N / 2, tol = 300, win = new Float32Array(N);
+      const out = A.createBuffer(buf.numberOfChannels, Lout, buf.sampleRate);
       for (let i = 0; i < N; i++) win[i] = .5 - .5 * Math.cos(2 * Math.PI * i / N);
-      const x0 = buf.getChannelData(0), Lr = Math.floor((L - 1) / f), rs = ch => { const x = buf.getChannelData(ch), r = new Float32Array(Lr); for (let i = 0; i < Lr; i++) { const p = i * f, i0 = p | 0, fr = p - i0; r[i] = x[i0] * (1 - fr) + x[Math.min(i0 + 1, L - 1)] * fr; } return r; };
-      const R = []; for (let c = 0; c < buf.numberOfChannels; c++) R.push(rs(c));
-      const r0 = R[0], Y = R.map((_, c) => out.getChannelData(c)), nrm = new Float32Array(L + N);
+      const Lr = Math.floor((L - 1) / f), R = [];
+      for (let c = 0; c < buf.numberOfChannels; c++) { const x = buf.getChannelData(c), r = new Float32Array(Lr); for (let i = 0; i < Lr; i++) { const p = i * f, i0 = p | 0, fr = p - i0; r[i] = x[i0] * (1 - fr) + x[Math.min(i0 + 1, L - 1)] * fr; } R.push(r); }
+      const r0 = R[0], Y = R.map((_, c) => out.getChannelData(c)), nrm = new Float32Array(Lout + N);
       let prev = 0;
-      for (let k = 0; k * Hs < L; k++) {
-        const nom = Math.floor(k * Hs / f); let pos = nom;
+      for (let k = 0; k * Hs < Lout; k++) {
+        const nom = Math.floor(k * Hs / (f * stretch)); let pos = nom;
         if (k > 0) {
           const tgt = prev + Hs;
           if (tgt + M <= Lr) {
@@ -314,16 +315,21 @@ ${mile ? `<div class="fx-mile">🎁 CUKUP ${n} MVP · CLAIM SKIN!</div>` : info.
           }
         }
         const o = k * Hs;
-        for (let n = 0; n < N && o + n < L; n++) { const w = win[n], src = pos + n; nrm[o + n] += w; if (src < Lr) for (let c = 0; c < Y.length; c++) Y[c][o + n] += R[c][src] * w; }
+        for (let n = 0; n < N && o + n < Lout; n++) { const w = win[n], src = pos + n; nrm[o + n] += w; if (src < Lr) for (let c = 0; c < Y.length; c++) Y[c][o + n] += R[c][src] * w; }
         prev = pos;
       }
-      for (let c = 0; c < Y.length; c++) { const y = Y[c]; for (let i = 0; i < L; i++) if (nrm[i] > .1) y[i] /= nrm[i]; }
-      void x0; return out;
+      for (let c = 0; c < Y.length; c++) { const y = Y[c]; for (let i = 0; i < Lout; i++) if (nrm[i] > .1) y[i] /= nrm[i]; }
+      return out;
     } catch (e) { return buf; }
   }
+  // heavy work one voice at a time so the page never freezes
+  let procQ = Promise.resolve();
+  const later = fn => (procQ = procQ.then(() => new Promise(res => setTimeout(() => res(fn()), 0))));
+  // announcer voice = main (deeper, ~12% slower) + beast layer one octave down (same timing)
+  const V_PITCH = .84, V_SLOW = 1.12;
   function loadVoice(type) {
     if (!VOICE[type]) VOICE[type] = fetch("voice/" + type + ".wav").then(r => r.ok && /audio|wav|octet/.test(r.headers.get("content-type") || "") ? r.arrayBuffer() : null)
-      .then(b => b ? new Promise(res => kAudio().decodeAudioData(b, res, () => res(null))) : null).then(b => b ? pitchDown(b, .86) : null).catch(() => null)
+      .then(b => b ? new Promise(res => kAudio().decodeAudioData(b, res, () => res(null))) : null).then(b => b ? later(() => ({ main: wsola(b, V_PITCH, V_SLOW), sub: wsola(b, .5, V_SLOW) })) : null).catch(() => null)
       .then(buf => { if (!buf) setTimeout(() => { delete VOICE[type]; }, 4000); return buf; });   // not made yet on the PC: try again later
     return VOICE[type];
   }
@@ -333,7 +339,7 @@ ${mile ? `<div class="fx-mile">🎁 CUKUP ${n} MVP · CLAIM SKIN!</div>` : info.
     try {
       const sy = window.speechSynthesis; if (!sy) return;
       const u = new SpeechSynthesisUtterance(VTXT[type] || type), vs = sy.getVoices().filter(v => /^en/i.test(v.lang));
-      u.voice = vs.find(v => /male|david|guy|daniel|george|mark/i.test(v.name) && !/female/i.test(v.name)) || vs[0] || null; u.pitch = 1.15; u.rate = 1.15; u.volume = 1;
+      u.voice = vs.find(v => /male|david|guy|daniel|george|mark/i.test(v.name) && !/female/i.test(v.name)) || vs[0] || null; u.pitch = .5; u.rate = .9; u.volume = 1;
       sy.cancel(); sy.speak(u);
     } catch (e) {}
   }
@@ -357,17 +363,18 @@ ${mile ? `<div class="fx-mile">🎁 CUKUP ${n} MVP · CLAIM SKIN!</div>` : info.
   }
   function speak(type, delay, dest) {
     const asked = kAudio().currentTime;
-    loadVoice(type).then(buf => {
-      if (!buf) return browserVoice(type);
+    loadVoice(type).then(v => {
+      if (!v) return browserVoice(type);
+      const buf = v.main;
       const A = kAudio(), t = Math.max(A.currentTime, asked + (delay || 0)), D = dest || A.destination;
       if (dest && dest._cut) return;   // a newer kill already took over
-      // bright, hyped arena announcer: normal speed (no slow-down), body + presence + air, hard compression
+      // big, aggressive arena announcer: deep and a little slower, chest + bite, hard compression
       const mix = A.createGain(); mix.gain.value = 1.1;
       const hp = A.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 85;
       const body = A.createBiquadFilter(); body.type = "peaking"; body.frequency.value = 160; body.Q.value = .8; body.gain.value = 6;
       const pres = A.createBiquadFilter(); pres.type = "peaking"; pres.frequency.value = 2600; pres.Q.value = .9; pres.gain.value = 5;
       const air = A.createBiquadFilter(); air.type = "highshelf"; air.frequency.value = 8500; air.gain.value = 4;
-      const ws = A.createWaveShaper(); ws.curve = driveCurve(9); ws.oversample = "4x";
+      const ws = A.createWaveShaper(); ws.curve = driveCurve(12); ws.oversample = "4x";
       const comp = A.createDynamicsCompressor(); comp.threshold.value = -28; comp.knee.value = 3; comp.ratio.value = 14; comp.attack.value = .001; comp.release.value = .1;
       const out = A.createGain(); out.gain.value = 1.6;
       // two copies a hair apart = wide, thick "stadium PA" voice
@@ -382,6 +389,10 @@ ${mile ? `<div class="fx-mile">🎁 CUKUP ${n} MVP · CLAIM SKIN!</div>` : info.
       gsrc.buffer = buf; gsrc.playbackRate.value = 1; rm.gain.value = 0; ro.frequency.value = 38; ro.connect(rm.gain);
       glp.type = "lowpass"; glp.frequency.value = 2600; gws.curve = driveCurve(14); gv.gain.value = .5;
       gsrc.connect(rm).connect(gws).connect(glp).connect(gv).connect(comp); gsrc.start(t); ro.start(t); ro.stop(t + buf.duration + .3);
+      // beast layer: the voice one octave down, distorted and dark, under the main voice
+      const bsrc = A.createBufferSource(), bws = A.createWaveShaper(), blp = A.createBiquadFilter(), bv = A.createGain();
+      bsrc.buffer = v.sub; bws.curve = driveCurve(22); bws.oversample = "4x"; blp.type = "lowpass"; blp.frequency.value = 1300; bv.gain.value = .62;
+      bsrc.connect(bws).connect(blp).connect(bv).connect(comp); bsrc.start(t);
       // sub hit under the first word
       S.tone(D, t, "sine", 75, 32, .55, .9); S.noise(D, t, .12, "highpass", 2500, 1800, .5, 1, x => Math.pow(1 - x, 3));
       // stadium echo ("KILL... kill... kill") + arena reverb

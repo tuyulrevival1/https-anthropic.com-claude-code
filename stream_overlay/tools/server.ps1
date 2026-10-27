@@ -922,14 +922,14 @@ function SiteVer {
 }
 # suara announcer: teks setiap kill
 $voiceText = @{ solo = 'Solo kill!'; first = 'First blood!'; double = 'Double kill!'; triple = 'Triple kill!'; maniac = 'Maniac!'; savage = 'Savage!'; shutdown = 'Shut down!'; spree = 'Killing spree!'; monster = 'Monster kill!'; mega = 'Mega kill!'; unstoppable = 'Unstoppable!'; godlike = 'Godlike!'; legendary = 'Legendary!'; rampage = 'Rampage!'; wiped = 'Wiped out!' }
-$voiceVer = 'v4'   # tukar bila gaya suara berubah (fail lama dijana semula)
+$voiceVer = 'v5'   # tukar bila gaya suara berubah (fail lama dijana semula)
 $voiceDefs = @'
 # SSML gaya announcer bersemangat: perkataan awal laju, perkataan akhir dihentak tinggi dan kuat
 function Voice-Ssml([string]$text, [string]$lang) {
   $wds = @($text.Split(' ') | Where-Object { $_ })
   $last = [System.Security.SecurityElement]::Escape($wds[$wds.Count - 1])
-  $lead = ''; if ($wds.Count -gt 1) { $lead = '<prosody rate="fast" pitch="-4%" volume="x-loud">' + [System.Security.SecurityElement]::Escape(($wds[0..($wds.Count - 2)] -join ' ')) + '</prosody> ' }
-  return '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="' + $lang + '">' + $lead + '<prosody rate="medium" pitch="+4%" volume="x-loud"><emphasis level="strong">' + $last + '</emphasis></prosody></speak>'
+  $lead = ''; if ($wds.Count -gt 1) { $lead = '<prosody rate="medium" pitch="-4%" volume="x-loud">' + [System.Security.SecurityElement]::Escape(($wds[0..($wds.Count - 2)] -join ' ')) + '</prosody> ' }
+  return '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="' + $lang + '">' + $lead + '<prosody rate="-8%" pitch="+2%" volume="x-loud"><emphasis level="strong">' + $last + '</emphasis></prosody></speak>'
 }
 function Make-Voice([string]$text, [string]$file) {
   # 1) suara Windows moden (OneCore: Guy / Davis / Mark ...), 2) suara lama System.Speech (David)

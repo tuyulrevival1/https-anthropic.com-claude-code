@@ -338,7 +338,7 @@ Setiap kill ada efek sendiri:
    - **Banner dibaca:** teks dari kotak banner,
    - **Terakhir:** efek terakhir yang keluar.
 
-Suara announcer dibuat sekali guna suara lelaki Windows (Guy / Mark / David, mana yang ada; disimpan dalam `data\voice`): laju, nada naik, perkataan akhir dihentak ("Double… KILL!"), dengan gema stadium dan sorakan penonton. Nak suara lebih baik: Windows Settings › Time & Language › **Speech** › **Add voices** › English (United States), kemudian padam folder `data\voice` dan buka semula START_OVERLAY.bat. Bunyi keluar melalui browser source overlay (tanda **Control audio via OBS** kalau nak kawal volume).
+Suara announcer dibuat sekali guna suara lelaki Windows (Guy / Mark / David, mana yang ada; disimpan dalam `data\voice`), kemudian overlay jadikan ia garang: nada lebih dalam, 12% lebih perlahan, lapisan suara satu oktaf lebih rendah yang kasar di bawahnya, perkataan akhir dihentak ("Double… KILL!"), gema stadium dan sorakan penonton. Nak suara lebih baik: Windows Settings › Time & Language › **Speech** › **Add voices** › English (United States), kemudian padam folder `data\voice` dan buka semula START_OVERLAY.bat. Bunyi keluar melalui browser source overlay (tanda **Control audio via OBS** kalau nak kawal volume).
 
 Butang dalam kad tu = uji setiap efek. Stream Deck: fail `deck\SOLO_KILL.bat`, atau `http://localhost:8787/api/do/kill-solo` (ganti `solo` dengan `first`, `double`, `triple`, `maniac`, `savage`, `shutdown`, `spree`, `monster`, `mega`, `unstoppable`, `godlike`, `legendary`, `rampage`, `wiped`).
 
