@@ -89,17 +89,20 @@
       fetch("api/state", { cache: "no-store" }).then(r => r.ok ? r.text() : Promise.reject(r.status)).then(txt => {
         this.remote = true;
         if (txt && txt.trim()) this.onRemote(txt, true); else this.push(this.state);
-        // fast change check (~7x a second): fetch the full state / Stream Deck commands only when something changed.
+        // change check every 0.4 s: fetch the full state / Stream Deck commands only when something changed.
+        // (the PC server is single-threaded PowerShell, so every page keeps its requests light)
         // Older server without /api/rev: plain polling every 700 ms.
-        let lastRev = null, revBusy = false, legacy = false, lastFull = 0;
+        let lastRev = null, revBusy = false, legacy = false, lastFull = 0, revTick = 0;
         setInterval(() => {
-          if (legacy || revBusy) return; revBusy = true;
+          if (legacy || revBusy) return;
+          if (document.hidden && !window.obsstudio && ++revTick % 5) return;   // background tab: every 2 s
+          revBusy = true;
           fetch("api/rev", { cache: "no-store" }).then(r => { if (r.status === 404) { legacy = true; return null; } return r.ok ? r.json() : null; }).then(j => {
             if (!j) return;
             if (j.s !== lastRev || Date.now() - lastFull > 5000) { lastRev = j.s; lastFull = Date.now(); this.pull(); }
             if (j.c > 0) pullCmds();
           }).catch(() => {}).finally(() => { revBusy = false; });
-        }, 150);
+        }, 400);
         setInterval(() => { if (legacy) { this.pull(); pullCmds(); } }, 700);
         setInterval(pullOrders, 3000); setTimeout(pullOrders, 800);
         window.dispatchEvent(new CustomEvent("ov-remote", { detail: true }));
@@ -574,7 +577,7 @@
      While the player app plays a song: Spotify paused, title on the overlay; when it stops: Spotify back. */
   const MEDIA = { last: null, at: 0, loudAt: 0, loudSince: 0, busy: false };
   function mediaTick() {
-    const st = Store.state; if (!st || !Store.remote || MEDIA.busy || document.hidden && !window.obsstudio) return;
+    const st = Store.state; if (!st || !Store.remote || MEDIA.busy || MEDIA.off || document.hidden && !window.obsstudio) return;
     MEDIA.busy = true; const pin = Store.pin();
     fetch("api/media", { cache: "no-store", headers: pin ? { "X-Pin": pin } : {} }).then(r => r.ok ? r.json() : null).then(j => {
       MEDIA.last = j; MEDIA.at = Date.now();
@@ -1051,6 +1054,7 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
     Store.init();
     const L = resolveLayout(opts.layout, opts);
     const land = (L.w || W) > (L.h || H);
+    if (L.noSong && !document.getElementById("app")) MEDIA.off = true;   // landscape (YouTube) overlay: no song / Spotify checks
     const stage = el("div", `ov-stage ov-l1 theme-${CFG.theme || "violet"}${land ? " land" : ""}`);
     if (L.w) { stage.style.width = L.w + "px"; stage.style.height = L.h + "px"; }
 

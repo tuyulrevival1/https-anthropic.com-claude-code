@@ -497,7 +497,7 @@ while ($true) {
         $k = ([string]$k).Trim().TrimEnd('/').Trim()
         $via = 'Wi-Fi / Tailscale'; if ($hdr.ContainsKey('tailscale-funnel-request') -or $hdr.ContainsKey('x-forwarded-for')) { $via = 'internet' } elseif ($isLocal) { $via = 'PC ini' }
         $res = 'song'; if ($k -ne $hookKey) { $res = 'key' }
-        [void]$hookHits.Insert(0, ('{"t":' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() + ',"r":' + (JsonStr $res) + ',"via":' + (JsonStr ($via + ' · lagu')) + ',"n":' + $bodyBytes.Length + ',"ua":' + (JsonStr '') + '}'))
+        [void]$hookHits.Insert(0, ('{"t":' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() + ',"r":' + (JsonStr $res) + ',"via":' + (JsonStr ($via + ' - lagu')) + ',"n":' + $bodyBytes.Length + ',"ua":' + (JsonStr '') + '}'))
         while ($hookHits.Count -gt 15) { $hookHits.RemoveAt(15) }
         if ($k -ne $hookKey) { $status = '403 Forbidden'; $body = ToBytes 'Kunci salah' }
         else {
