@@ -133,7 +133,14 @@ ${embedded ? "" : `<header class="app-top">
     <div class="row"><button class="btn" type="button" id="ap-sppause">❚❚ Jeda Spotify</button><button class="btn gold" type="button" id="ap-spplay">▶ Sambung Spotify</button><span class="muted" id="ap-spst"></span></div>
     <ol class="list sglist" id="ap-songs"></ol>
     <div class="row"><button class="btn ghost" type="button" id="ap-sgclear" data-confirm="Tekan lagi: buang yang dah main">Buang yang dah main</button></div>
-    <details class="quick"><summary>Sambung IndoFinity (webhook)</summary>
+    <div class="sgdet">
+      <b class="ctest-h">Kesan lagu dari app IndoFinity (tanpa webhook)</b>
+      <div class="row"><label class="tog"><input id="ap-sgdetect" type="checkbox"><span>Jeda Spotify bila app ni main lagu</span></label>
+      <label class="fld sgapp">Nama app<input id="ap-sgplayer" maxlength="40" placeholder="indofinity" autocomplete="off"></label></div>
+      <p class="muted">Spotify dijeda bila app tu berbunyi 6 saat tanpa henti (alert / TTS pendek tak dikira), dan main semula bila senyap. Tajuk lagu keluar kalau app tu beritahu Windows.</p>
+      <div id="ap-sgmedia" class="sgmedia"><p class="muted">Buka App ni di PC (START_OVERLAY.bat versi baru) untuk lihat app yang dikesan.</p></div>
+    </div>
+    <details class="quick"><summary>Sambung IndoFinity (webhook, pilihan)</summary>
       <ol class="muted steps">
         <li>IndoFinity › <b>Pusat Interaksi</b> › <b>Interaksi</b> › buat baru › aksi <b>Trigger Webhook</b> › tampal link di bawah. Hidupkan suis Webhook.</li>
         <li><b>Aktivitas</b> › buat baru › pemicu <b>Komentar</b> / perintah <b>!play</b> (buat juga untuk !req, !skip, !revoke kalau mahu) › pilih interaksi tadi.</li>
@@ -478,6 +485,7 @@ ${embedded ? "" : `<header class="app-top">
       else if (a === "sgdone") Q.songDone(id);
       else if (a === "sgdel") Q.songDel(id);
       else if (a === "role") Q.setRole(k, b.dataset.r);
+      else if (a === "sgplayer") { Q.songCfg({ player: b.dataset.v, detect: true }); toast(`App lagu: ${b.dataset.v}`); }
       else if (a === "ordmv") {
         const rx = +b.dataset.rx, inp = root.querySelector(`.og[data-rx="${b.dataset.rx}"]`);
         const n = inp ? inp.value : 1;
@@ -604,9 +612,10 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
       tabc("lagu", sgWait || "");
       $("ap-sgc").textContent = sg.length ? `${sgWait} menunggu` : "";
       const cfg = s.songCfg || {};
-      $("ap-sgpause").checked = cfg.autopause !== false; $("ap-sgshow").checked = cfg.show !== false;
+      $("ap-sgpause").checked = cfg.autopause !== false; $("ap-sgshow").checked = cfg.show !== false; $("ap-sgdetect").checked = cfg.detect !== false;
+      if (document.activeElement !== $("ap-sgplayer")) $("ap-sgplayer").value = cfg.player != null ? cfg.player : "indofinity";
       if (document.activeElement !== $("ap-sgmin")) $("ap-sgmin").value = cfg.resumeMin != null ? cfg.resumeMin : 4;
-      $("ap-songs").innerHTML = sg.length ? sg.map(x => `<li class="sgrow${x.done ? " done" : ""}"><span class="who"><span class="nm">♪ ${esc(x.title)}</span><span class="sub">@${esc(x.user)} · ${fmtDate(x.at)}</span></span>
+      $("ap-songs").innerHTML = sg.length ? sg.map(x => `<li class="sgrow${x.done ? " done" : ""}"><span class="who"><span class="nm">♪ ${esc(x.title)}</span><span class="sub">${x.user ? `@${esc(x.user)} · ` : x.src === "app" ? "dari app · " : ""}${fmtDate(x.at)}</span></span>
 <button class="btn small ${x.done ? "ghost" : "gold"}" type="button" data-a="sgdone" data-id="${x.id}">${x.done ? "✓ Dah main" : "Tanda dah main"}</button><button class="btn sq ghost" type="button" data-a="sgdel" data-id="${x.id}" aria-label="Buang ${esc(x.title)}">✕</button></li>`).join("")
         : `<li class="empty">Belum ada song request. Sambung IndoFinity di bawah.</li>`;
       const sl = s.songLast, slBox = $("ap-sglast");
@@ -683,6 +692,22 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
     $("ap-akadd").addEventListener("click", () => Q.akaunAdd());
     $("ap-sgpause").addEventListener("change", e => Q.songCfg({ autopause: e.target.checked }));
     $("ap-sgshow").addEventListener("change", e => Q.songCfg({ show: e.target.checked }));
+    $("ap-sgdetect").addEventListener("change", e => Q.songCfg({ detect: e.target.checked }));
+    $("ap-sgplayer").addEventListener("change", e => Q.songCfg({ player: e.target.value.trim().slice(0, 40) }));
+    // apps Windows sees playing / making sound right now (refreshed by the overlay engine every 1.5 s)
+    const appNm = a => String(a || "").split(/[\\/!]/).filter(Boolean).pop().replace(/\.exe$/i, "") || a;
+    setInterval(() => {
+      const box = $("ap-sgmedia"), j = O.MEDIA && O.MEDIA.last; if (!box || !j || Date.now() - O.MEDIA.at > 8000) return;
+      const st = Store.state || {}, cfg = st.songCfg || {}, want = String(cfg.player || "").toLowerCase();
+      const hit = x => want && String(x || "").toLowerCase().includes(want);
+      const rows = [];
+      (j.smtc || []).forEach(x => rows.push(`<li class="${hit(x.app) ? "me" : ""}"><span class="who"><span class="nm">🎵 ${esc(appNm(x.app))} · ${x.playing ? "sedang main" : "berhenti"}</span><span class="sub">${esc([x.artist, x.title].filter(Boolean).join(" - ") || "tiada tajuk")}</span></span>${/spotify/i.test(x.app) ? "" : `<button class="btn small ghost" type="button" data-a="sgplayer" data-v="${esc(appNm(x.app).toLowerCase())}">Guna ni</button>`}</li>`));
+      (j.audio || []).filter(x => !/^(audiodg|system|idle)$/i.test(x.name)).sort((a, b) => b.peak - a.peak).forEach(x => rows.push(`<li class="${hit(x.name) ? "me" : ""}"><span class="who"><span class="nm">🔊 ${esc(x.name)}</span><span class="sub"><i class="vu"><i style="width:${Math.min(100, Math.round(x.peak * 160))}%"></i></i>${x.peak > 0.015 ? "berbunyi" : "senyap"}</span></span>${/spotify/i.test(x.name) ? "" : `<button class="btn small ghost" type="button" data-a="sgplayer" data-v="${esc(x.name.toLowerCase())}">Guna ni</button>`}</li>`));
+      const now = st.songNow;
+      const head = cfg.detect === false ? "Kesan app dimatikan." : !want ? "Isi nama app dulu." : now ? `<b class="on">▶ ${esc(cfg.player)} sedang main${now.title ? `: ${esc(now.title)}` : ""}</b>${st.spotAuto ? " · Spotify dijeda auto" : ""}` : (j.audio || []).concat(j.smtc || []).some(x => hit(x.name || x.app)) ? `${esc(cfg.player)} dikesan, senyap sekarang.` : `<b class="warn">${esc(cfg.player)} tak dikesan.</b> Buka app tu dan main satu lagu, kemudian tekan <b>Guna ni</b> pada app yang betul di bawah.`;
+      const html = `<p class="sgst">${head}</p>${!j.audioOk && !j.winrt ? `<p class="muted">Windows tak benarkan server baca bunyi app. Buka semula START_OVERLAY.bat.</p>` : ""}<ol class="list">${rows.join("") || `<li class="empty">Tiada app berbunyi sekarang.</li>`}</ol>`;
+      if (box._h !== html) { box.innerHTML = html; box._h = html; }
+    }, 1500);
     $("ap-sgmin").addEventListener("change", e => Q.songCfg({ resumeMin: Math.max(0, Math.min(30, parseInt(e.target.value, 10) || 0)) }));
     const spMsg = r => r === "ok" ? "" : r === "tiada-spotify" ? " (Spotify tak dibuka?)" : r ? ` (${r})` : " (perlu START_OVERLAY.bat)";
     $("ap-sppause").addEventListener("click", () => Q.spotify("pause").then(r => toast("Spotify dijeda" + spMsg(r))));

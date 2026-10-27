@@ -157,6 +157,108 @@ function Get-NowPlaying {
   }
   return $t
 }
+# --- media dari app lain (IndoFinity / YouTube Music): tajuk lagu (Windows media) + bunyi setiap app (volume mixer) ---
+$audioCs = @"
+using System;
+using System.Text;
+using System.Globalization;
+using System.Runtime.InteropServices;
+namespace SynoAudio {
+  [ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")] class MMDeviceEnumeratorCo { }
+  [ComImport, Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+  interface IMMDeviceEnumerator { [PreserveSig] int EnumAudioEndpoints(int dataFlow, int stateMask, out IMMDeviceCollection devices); }
+  [ComImport, Guid("0BD7A1BE-7A1A-44DB-8397-CC5392387B5E"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+  interface IMMDeviceCollection { [PreserveSig] int GetCount(out uint n); [PreserveSig] int Item(uint i, out IMMDevice dev); }
+  [ComImport, Guid("D666063F-1587-4E43-81F1-B948E807363F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+  interface IMMDevice { [PreserveSig] int Activate(ref Guid iid, int clsCtx, IntPtr prm, [MarshalAs(UnmanagedType.IUnknown)] out object iface); }
+  [ComImport, Guid("77AA99A0-1BD6-484F-8BC7-2C654C9A9B6F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+  interface IAudioSessionManager2 {
+    [PreserveSig] int GetAudioSessionControl(IntPtr g, int f, out IntPtr c);
+    [PreserveSig] int GetSimpleAudioVolume(IntPtr g, int f, out IntPtr v);
+    [PreserveSig] int GetSessionEnumerator(out IAudioSessionEnumerator e);
+  }
+  [ComImport, Guid("E2F5BB11-0570-40CA-ACDD-3AA01277DEE8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+  interface IAudioSessionEnumerator { [PreserveSig] int GetCount(out int n); [PreserveSig] int GetSession(int i, out IAudioSessionControl2 s); }
+  [ComImport, Guid("BFB7FF88-7239-4FC9-8FA2-07C950BE9C6D"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+  interface IAudioSessionControl2 {
+    [PreserveSig] int GetState(out int st);
+    [PreserveSig] int GetDisplayName(out IntPtr name);
+    [PreserveSig] int SetDisplayName(IntPtr v, IntPtr ctx);
+    [PreserveSig] int GetIconPath(out IntPtr p);
+    [PreserveSig] int SetIconPath(IntPtr v, IntPtr ctx);
+    [PreserveSig] int GetGroupingParam(out Guid g);
+    [PreserveSig] int SetGroupingParam(ref Guid g, IntPtr ctx);
+    [PreserveSig] int RegisterAudioSessionNotification(IntPtr n);
+    [PreserveSig] int UnregisterAudioSessionNotification(IntPtr n);
+    [PreserveSig] int GetSessionIdentifier(out IntPtr s);
+    [PreserveSig] int GetSessionInstanceIdentifier(out IntPtr s);
+    [PreserveSig] int GetProcessId(out uint pid);
+  }
+  [ComImport, Guid("C02216F6-8C67-4B5B-9D00-D008E73E0064"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+  interface IAudioMeterInformation { [PreserveSig] int GetPeakValue(out float peak); }
+  public static class Meter {
+    // "pid:peak;pid:peak" for every audio session on every active output device
+    public static string Scan() {
+      var sb = new StringBuilder();
+      var en = (IMMDeviceEnumerator)new MMDeviceEnumeratorCo();
+      IMMDeviceCollection col; if (en.EnumAudioEndpoints(0, 1, out col) != 0 || col == null) return "";
+      uint nd; col.GetCount(out nd);
+      Guid iid = typeof(IAudioSessionManager2).GUID;
+      for (uint d = 0; d < nd; d++) {
+        IMMDevice dev; if (col.Item(d, out dev) != 0 || dev == null) continue;
+        object o; if (dev.Activate(ref iid, 23, IntPtr.Zero, out o) != 0 || o == null) continue;
+        IAudioSessionEnumerator se; if (((IAudioSessionManager2)o).GetSessionEnumerator(out se) != 0 || se == null) continue;
+        int n; se.GetCount(out n);
+        for (int i = 0; i < n; i++) {
+          IAudioSessionControl2 c; if (se.GetSession(i, out c) != 0 || c == null) continue;
+          try {
+            uint pid; c.GetProcessId(out pid); float pk = 0;
+            var m = c as IAudioMeterInformation; if (m != null) m.GetPeakValue(out pk);
+            sb.Append(pid).Append(':').Append(pk.ToString("0.####", CultureInfo.InvariantCulture)).Append(';');
+          } catch { }
+          Marshal.ReleaseComObject(c);
+        }
+        Marshal.ReleaseComObject(se); Marshal.ReleaseComObject(o); Marshal.ReleaseComObject(dev);
+      }
+      Marshal.ReleaseComObject(col); Marshal.ReleaseComObject(en);
+      return sb.ToString();
+    }
+  }
+}
+"@
+$audioOk = $false
+try { Add-Type -TypeDefinition $audioCs -Language CSharp -ErrorAction Stop; $audioOk = $true } catch { Write-Host 'Pengesan bunyi app tak dapat dimuat (lagu IndoFinity cuma dikesan ikut tajuk).' -ForegroundColor DarkYellow }
+function CleanTxt([string]$s) { return ($s -replace '[\x00-\x1f]', ' ').Trim() }
+function Get-MediaJson {
+  $sm = @()
+  if ($npWinRT) {
+    try {
+      if (-not $script:npMgr) { $script:npMgr = NpAwait ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]) }
+      foreach ($ses in @($script:npMgr.GetSessions())) {
+        $ti = ''; $ar = ''
+        try { $pr = NpAwait ($ses.TryGetMediaPropertiesAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties]); if ($pr) { $ti = [string]$pr.Title; $ar = [string]$pr.Artist } } catch { }
+        $pl = ([string]$ses.GetPlaybackInfo().PlaybackStatus -eq 'Playing')
+        $sm += '{"app":' + (JsonStr (CleanTxt ([string]$ses.SourceAppUserModelId))) + ',"playing":' + ([string]$pl).ToLower() + ',"title":' + (JsonStr (CleanTxt $ti)) + ',"artist":' + (JsonStr (CleanTxt $ar)) + '}'
+      }
+    } catch { }
+  }
+  $au = @()
+  if ($audioOk) {
+    try {
+      $by = @{}
+      foreach ($p in ([SynoAudio.Meter]::Scan()).Split(';')) {
+        if (-not $p) { continue }
+        $a = $p.Split(':'); $id = [int]$a[0]; $pk = [double]::Parse($a[1], [Globalization.CultureInfo]::InvariantCulture)
+        if ($id -eq 0) { continue }
+        $nm = ''; try { $nm = (Get-Process -Id $id -ErrorAction Stop).ProcessName } catch { $nm = 'pid' + $id }
+        if (-not $by.ContainsKey($nm) -or $by[$nm] -lt $pk) { $by[$nm] = $pk }
+      }
+      foreach ($k in $by.Keys) { $au += '{"name":' + (JsonStr (CleanTxt $k)) + ',"peak":' + $by[$k].ToString('0.####', [Globalization.CultureInfo]::InvariantCulture) + '}' }
+    } catch { }
+  }
+  return '{"winrt":' + ([string][bool]$npWinRT).ToLower() + ',"audioOk":' + ([string]$audioOk).ToLower() + ',"smtc":[' + ($sm -join ',') + '],"audio":[' + ($au -join ',') + ']}'
+}
+$mediaJson = ''; $mediaAt = [DateTime]::MinValue
 $hookHits = New-Object System.Collections.ArrayList   # 15 cubaan webhook terakhir (untuk App > Status webhook)
 $cmds = New-Object System.Collections.ArrayList       # arahan Stream Deck menunggu overlay / App ambil
 $deckActs = @('win', 'lose', 'win-1', 'lose-1', 'end-win', 'end-lose', 'end', 'timer-start', 'timer-pause', 'timer-reset', 'queue-on', 'queue-off', 'banner-on', 'banner-off', 'wl-reset', 'win-reset', 'lose-reset')
@@ -299,6 +401,14 @@ while ($true) {
         $type = 'application/json'
         if (((Get-Date) - $npAt).TotalSeconds -ge 2.5) { $npText = Get-NowPlaying; $npAt = Get-Date }
         $body = ToBytes ('{"t":' + (JsonStr $npText) + '}')
+      } elseif ($path -eq 'api/media') {
+        # app lain yang sedang main lagu (untuk jeda Spotify bila IndoFinity main lagu request)
+        $type = 'application/json'
+        if (-not $okPin) { $status = '401 Unauthorized'; $body = ToBytes '{}' }
+        else {
+          if (((Get-Date) - $mediaAt).TotalSeconds -ge 1) { $mediaJson = Get-MediaJson; $mediaAt = Get-Date }
+          $body = ToBytes $mediaJson
+        }
       } elseif ($path -eq 'api/hooklog') {
         $type = 'application/json'
         if (-not $okPin) { $status = '401 Unauthorized'; $body = ToBytes '[]' }

@@ -52,7 +52,7 @@
     s.mvp = Array.isArray(s.mvp) ? s.mvp : [];
     s.album = Array.isArray(s.album) ? s.album : [];
     s.songs = Array.isArray(s.songs) ? s.songs : [];
-    s.songCfg = Object.assign({ autopause: CFG.songs ? CFG.songs.autoPauseSpotify !== false : true, resumeMin: CFG.songs && CFG.songs.resumeAfterMin != null ? CFG.songs.resumeAfterMin : 4, show: true }, s.songCfg || {});
+    s.songCfg = Object.assign({ autopause: CFG.songs ? CFG.songs.autoPauseSpotify !== false : true, resumeMin: CFG.songs && CFG.songs.resumeAfterMin != null ? CFG.songs.resumeAfterMin : 4, show: true, detect: true, player: (CFG.songs && CFG.songs.player) || "indofinity" }, s.songCfg || {});
     if (!Array.isArray(s.akaun)) s.akaun = defaultAkaun();
     s.akaun.forEach(r => { const m = String(r.date || "").match(/^(\d{1,2})\/(\d{1,2})$/); if (m) r.date = `${new Date().getFullYear()}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`; });
     if (typeof s.rules !== "string") s.rules = CFG.rules || "";
@@ -156,7 +156,7 @@
       return e;
     }
   };
-  const HIST_SKIP = new Set(["rev", "updated", "seenOrders", "orderSeq", "yt", "docImported", "songResumeAt", "songLast"]); // album / akaun changes stay undoable
+  const HIST_SKIP = new Set(["rev", "updated", "seenOrders", "orderSeq", "yt", "docImported", "songResumeAt", "songLast", "songNow", "spotAuto"]); // album / akaun changes stay undoable
 
   /* ---------- queue, VIP balance, W/L, timer ---------- */
   const inLine = (s, k) => s.playing.some(p => p.key === k) || s.queue.some(p => p.key === k);
@@ -553,12 +553,49 @@
   // pause / play Spotify through the PC server (Windows media controls)
   const spotify = act => { const pin = Store.pin(); return fetch("api/spotify/" + act, { cache: "no-store", headers: pin ? { "X-Pin": pin } : {} }).then(r => r.ok ? r.text() : "").catch(() => ""); };
 
+  /* ---------- lagu dari app lain (IndoFinity / YouTube Music) ----------
+     The PC server reports Windows media sessions (app + title) and how loud each app is.
+     While the player app plays a song: Spotify paused, title on the overlay; when it stops: Spotify back. */
+  const MEDIA = { last: null, at: 0, loudAt: 0, loudSince: 0, busy: false };
+  function mediaTick() {
+    const st = Store.state; if (!st || !Store.remote || MEDIA.busy || document.hidden && !window.obsstudio) return;
+    MEDIA.busy = true; const pin = Store.pin();
+    fetch("api/media", { cache: "no-store", headers: pin ? { "X-Pin": pin } : {} }).then(r => r.ok ? r.json() : null).then(j => {
+      MEDIA.last = j; MEDIA.at = Date.now();
+      const cfg = st.songCfg || {}, now = Date.now();
+      if (!j || !Store.canWrite || cfg.detect === false) return;
+      const want = String(cfg.player || "").trim().toLowerCase(); if (!want) return;
+      const hit = x => String(x || "").toLowerCase().includes(want);
+      const sm = (j.smtc || []).find(x => hit(x.app) && x.playing);
+      const loud = (j.audio || []).some(x => hit(x.name) && x.peak > 0.015);
+      if (loud) { if (now - MEDIA.loudAt > 3000) MEDIA.loudSince = now; MEDIA.loudAt = now; }
+      // a song = title reported by Windows, or sound for 6 s non-stop (short alerts / TTS don't count)
+      const active = !!sm || (MEDIA.loudAt > 0 && now - MEDIA.loudAt < 4000 && now - MEDIA.loudSince >= 6000);
+      const title = sm ? String(sm.artist && sm.title && !sm.title.includes(sm.artist) ? `${sm.artist} - ${sm.title}` : sm.title || "").trim().slice(0, 90) : "";
+      const s0 = Store.state, curT = s0.songNow ? s0.songNow.title || "" : "";
+      if (active && (!s0.songNow || (title && title !== curT))) {
+        Store.set(s => {
+          s.songNow = { title, at: now };
+          (s.songs || []).forEach(x => { if (x.src === "app" && !x.done) { x.done = true; x.doneAt = now; } });
+          if (title) { s.songs = s.songs || []; s.songs.unshift({ id: uid("s"), user: "", title, at: now, done: false, src: "app" }); s.songs = s.songs.slice(0, 60); }
+        }, { noHist: true });
+      } else if (!active && s0.songNow) {
+        Store.set(s => { s.songNow = null; (s.songs || []).forEach(x => { if (x.src === "app" && !x.done) { x.done = true; x.doneAt = now; } }); Q._songIdle(s); }, { noHist: true });
+      }
+      if (cfg.autopause === false) return;
+      const spot = (j.smtc || []).find(x => /spotify/i.test(x.app));
+      if (active && !Store.state.spotAuto && (!spot || spot.playing)) { Store.set(s => { s.spotAuto = true; }, { noHist: true }); spotify("pause"); }
+      else if (!active && Store.state.spotAuto) { Store.set(s => { s.spotAuto = false; }, { noHist: true }); spotify("play"); }
+    }).catch(() => {}).finally(() => { MEDIA.busy = false; });
+  }
+  setInterval(mediaTick, 1500);
+
   let ordersBusy = false, songPause = false;
   // Orders stay in the server journal with a number; the shared state remembers the last number
   // handled (orderSeq), so a page that fails or a lost write never drops an order.
   setInterval(() => {
     const st = Store.state; if (!st || !Store.remote || !Store.canWrite) return;
-    if (st.songResumeAt && Date.now() > st.songResumeAt) { Store.set(s => { s.songResumeAt = 0; }, { noHist: true }); spotify("play"); }
+    if (st.songResumeAt && Date.now() > st.songResumeAt && !st.spotAuto) { Store.set(s => { s.songResumeAt = 0; }, { noHist: true }); spotify("play"); }
   }, 5000);
   function pullOrders() {
     if (ordersBusy || !Store.remote || !Store.canWrite) return; ordersBusy = true;
@@ -609,7 +646,7 @@
     const tick = () => { if (!Store.remote) return; fetch("api/nowplaying", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(j => { if (j && typeof j.t === "string") NP.text = j.t.trim().slice(0, 120); }).catch(() => {}); };
     setInterval(tick, 3000); setTimeout(tick, 900);
   } };
-  const songText = st => !st.song || st.song.on === false ? "" : String(st.song.manual || NP.text || "").trim();
+  const songText = st => !st.song || st.song.on === false ? "" : String(st.song.manual || (st.songNow && st.songNow.title) || NP.text || "").trim();
 
   const fmtTime = ms => { const x = Math.floor(ms / 1000), h = Math.floor(x / 3600), m = Math.floor(x / 60) % 60, sec = x % 60; return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`; };
 
@@ -942,9 +979,11 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
           // song requests (IndoFinity): newest few still waiting; hidden when there are none
           const n = CFG.songs && CFG.songs.showOnOverlay != null ? CFG.songs.showOnOverlay : 3;
           const list = (s.songs || []).filter(x => !x.done).slice(0, n).reverse();
+          // the song the player app is playing right now goes first
+          const ni = list.findIndex(x => x.src === "app"); if (ni > 0) list.unshift(list.splice(ni, 1)[0]);
           const show = n > 0 && list.length && !(s.songCfg && s.songCfg.show === false);
           e.className = "ov-songs"; e.style.display = show ? "" : "none";
-          const html = show ? `<div class="sr-h"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="17" cy="16" r="3" fill="currentColor"/></svg>SONG REQUEST<i>${(s.songs || []).filter(x => !x.done).length}</i></div><ol>${list.map((x, i) => `<li${i === 0 ? ' class="now"' : ""}><span class="t">${esc(x.title)}</span><span class="u">@${esc(x.user)}</span></li>`).join("")}</ol>` : "";
+          const html = show ? `<div class="sr-h"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="17" cy="16" r="3" fill="currentColor"/></svg>SONG REQUEST<i>${(s.songs || []).filter(x => !x.done).length}</i></div><ol>${list.map((x, i) => `<li${i === 0 ? ' class="now"' : ""}><span class="t">${esc(x.title)}</span>${x.user ? `<span class="u">@${esc(x.user)}</span>` : x.src === "app" ? `<span class="u">▶ SEDANG MAIN</span>` : ""}</li>`).join("")}</ol>` : "";
           if (e._h !== html) { e.innerHTML = html; e._h = html; }
         } else if (def.type === "music") {
           if (!e.firstChild) { e.className = "ov-music"; e.innerHTML = `<div class="mu-tab"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="17" cy="16" r="3" fill="currentColor"/></svg>NOW PLAYING</div>${opts.demo ? `<div class="mu-demo">widget lagu · ${def.w}×${def.h}</div>` : ""}`; }
@@ -1038,5 +1077,5 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
 
   requestAnimationFrame(loop);
   const util = { el, esc, clamp, seg, eOut, eBack, frac, rnd, TAU, fill, priceHL, uid, tickers, now };
-  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util, keyOf, liveElapsed, fmtTime, parseOrder, NP, songText, ACTIONS, ROLES: ["EXP", "JUNGLE", "MID", "GOLD", "ROAM"], roleTag };
+  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util, keyOf, liveElapsed, fmtTime, parseOrder, NP, MEDIA, songText, ACTIONS, ROLES: ["EXP", "JUNGLE", "MID", "GOLD", "ROAM"], roleTag };
 })();

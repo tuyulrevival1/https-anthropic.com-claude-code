@@ -302,3 +302,9 @@
 .app .sglast > b { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--c-gold); }
 .app .sglast code { font: 12px/1.4 ui-monospace, Consolas, monospace; color: #ffb3bf; overflow-wrap: anywhere; white-space: pre-wrap; }
 .app ol.steps { margin: 4px 0 8px; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+
+.app .sgdet { margin-top: 10px; padding: 10px; border: 1px dashed rgba(255,207,74,.45); display: flex; flex-direction: column; gap: 6px; }
+.app .sgdet .sgapp { width: 170px; }
+.app .sgmedia .sgst { margin: 0; font-size: 13px; } .app .sgmedia .sgst .on { color: var(--c-win); } .app .sgmedia .sgst .warn { color: var(--c-gold); }
+.app .sgmedia .list li.me { outline: 1px solid var(--c-win); }
+.app .sgmedia .vu { display: inline-block; width: 70px; height: 6px; background: #2a1418; margin-right: 6px; vertical-align: 1px; } .app .sgmedia .vu i { display: block; height: 100%; background: var(--c-win); }

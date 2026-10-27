@@ -250,7 +250,19 @@ Setiap tekan keluar dalam tetingkap hitam ("Stream Deck: end-win") dan App tunju
 
 ## 12. Song request IndoFinity (TikTok) ke App & overlay
 
-Penonton taip `!play tajuk lagu` (atau `!req`) di TikTok › IndoFinity hantar webhook › lagu masuk **App › Lagu** dan panel **SONG REQUEST** di overlay (bawah kiri). Spotify dijeda sendiri supaya tak bertindih dengan YouTube Music IndoFinity.
+### Cara utama: kesan app IndoFinity (tak perlu webhook / API)
+
+Server di PC dengar app yang sedang berbunyi di Windows. Bila app **IndoFinity** main lagu request: Spotify dijeda, tajuk lagu keluar di overlay (panel SONG REQUEST + bar LIVE) dan dalam App › Lagu. Bila lagu habis: Spotify main semula.
+
+1. Jalankan **KEMASKINI.bat**, tutup dan buka semula **START_OVERLAY.bat**.
+2. Buka IndoFinity dan main satu lagu request (atau uji `!play` di Simulator).
+3. App › tab **Lagu** › **Kesan lagu dari app IndoFinity**: senarai app yang berbunyi keluar. Tekan **Guna ni** pada IndoFinity (nama asal: `indofinity`).
+4. Status hijau **▶ indofinity sedang main** = jadi. Spotify dijeda sendiri.
+
+- Spotify cuma dijeda bila app tu berbunyi **6 saat tanpa henti**. Alert / TTS pendek tak kacau Spotify.
+- Tajuk lagu keluar kalau IndoFinity beritahu Windows (macam tajuk yang keluar bila tekan butang volume). Kalau tak, Spotify tetap dijeda tapi tajuk tak keluar.
+
+### Cara tambahan: webhook IndoFinity (nama peminta)
 
 1. App › tab **Lagu** › buka **Sambung IndoFinity (webhook)** › salin **Link kekal** (`https://synostore.xxxx.ts.net/api/song-hook/KUNCI`). Link `http://127.0.0.1:8787/...` cuma untuk cuba kalau link kekal tak jalan.
 2. IndoFinity › **Pusat Interaksi** › **Interaksi** › buat baru › aksi **Trigger Webhook** › tampal link tadi. Hidupkan suis **Webhook**. IndoFinity hantar data cara POST (FormData), App terima terus.
