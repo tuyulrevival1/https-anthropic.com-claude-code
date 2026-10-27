@@ -49,6 +49,10 @@ ${embedded ? "" : `<header class="app-top">
       <label class="tog"><input id="ap-showb" type="checkbox"><span>Banner</span></label>
       <label class="tog"><input id="ap-shows" type="checkbox"><span>Lagu</span></label>
     </div>
+    <div class="ovparts">
+      <b class="ctest-h">Tunjuk di overlay</b>
+      ${[["p", "Portrait"], ["l", "Landscape"]].map(([o, t]) => `<div class="ovp-col"><span class="ovp-t">${t}</span>${[["cam", "Kamera"], ["score", "WIN / LOSE"], ["mabar", "Mabar VIP"], ["banner", "Banner"], ["band", "Bar LIVE"]].map(([k, n]) => `<label class="tog"><input type="checkbox" class="ovp" data-o="${o}" data-k="${k}" checked><span>${n}</span></label>`).join("")}</div>`).join("")}
+    </div>
     <div class="songbox">
       <div class="np-now"><span>♪ Sedang main</span><b id="ap-npauto">—</b></div>
       <input id="ap-song" placeholder="Taip tajuk lagu sendiri (pilihan)" aria-label="Tajuk lagu manual">
@@ -224,7 +228,7 @@ ${embedded ? "" : `<header class="app-top">
     }
     /* ---------- undo / redo per card ---------- */
     const HIST_FIELDS = {
-      live: ["live", "song", "showQueue", "showBanner", "mabarClosed"], wl: ["wins", "losses", "streak"],
+      live: ["live", "song", "showQueue", "showBanner", "mabarClosed", "hide"], wl: ["wins", "losses", "streak"],
       end: ["wins", "losses", "streak", "playing", "queue", "members"], queue: ["playing", "queue", "members"],
       vip: ["members", "playing", "queue"], mvp: ["mvp", "mvpRules"], akaun: ["akaun"], album: ["album"], songs: ["songs", "songCfg"], rules: ["rules"], orders: ["orders"]
     };
@@ -392,6 +396,7 @@ ${embedded ? "" : `<header class="app-top">
     }));
     twoStep($("ap-clearq"), () => { Q.clear(); toast("Queue dikosongkan"); });
     $("ap-showq").addEventListener("change", e => Q.patch({ showQueue: e.target.checked }));
+    root.querySelectorAll(".ovp").forEach(i => i.addEventListener("change", () => Q.hideSet(i.dataset.o, i.dataset.k, !i.checked)));
     $("ap-open").addEventListener("click", () => { Q.patch({ mabarClosed: false }); toast("Mabar VIP OPEN"); });
     $("ap-close").addEventListener("click", () => { Q.patch({ mabarClosed: true }); toast("Mabar VIP CLOSED"); });
     $("ap-showb").addEventListener("change", e => Q.patch({ showBanner: e.target.checked }));
@@ -535,6 +540,7 @@ ${embedded ? "" : `<header class="app-top">
       const newOrd = (s.orders || []).filter(o => o.rx > appOpen && o.src !== "manual").length;
       tabc("order", newOrd ? `${newOrd} baru` : "");
       $("ap-streak").textContent = s.streak >= 2 ? `Win streak ${s.streak}` : s.streak <= -2 ? `Lose streak ${-s.streak}` : "";
+      root.querySelectorAll(".ovp").forEach(i => { i.checked = !(((s.hide || {})[i.dataset.o] || {})[i.dataset.k]); });
       $("ap-showq").checked = !!s.showQueue; $("ap-open").setAttribute("aria-pressed", String(!s.mabarClosed)); $("ap-close").setAttribute("aria-pressed", String(!!s.mabarClosed)); $("ap-showb").checked = !!s.showBanner; $("ap-shows").checked = !s.song || s.song.on !== false;
       if (document.activeElement !== $("ap-song")) $("ap-song").value = (s.song && s.song.manual) || "";
       $("ap-pc").textContent = `${s.playing.length}/${max}`; $("ap-qc").textContent = s.queue.length;

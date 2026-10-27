@@ -38,7 +38,7 @@
   const keyOf = n => String(n || "").trim().toLowerCase();
   const defaults = () => ({
     wins: CFG.defaults.wins, losses: CFG.defaults.losses, streak: 0,
-    showQueue: true, showBanner: true, mabarClosed: false, playing: [], queue: [], members: {},
+    showQueue: true, showBanner: true, mabarClosed: false, hide: { p: {}, l: {} }, playing: [], queue: [], members: {},
     live: { running: false, start: 0, acc: 0 }, yt: { viewers: null, at: 0 }, song: { on: true, manual: "" }, mvp: [], rev: 0, updated: 0
   });
   // upgrade older saves (queue entries with name/games) to members + balance
@@ -235,6 +235,8 @@
       });
       return res;
     },
+    // show / hide a part of the overlay, separately for portrait (p) and landscape (l)
+    hideSet(o, k, v) { Store.set(s => { s.hide = s.hide || {}; s.hide[o] = Object.assign({}, s.hide[o] || {}, { [k]: !!v }); }); },
     setMl(k, v) { Store.set(s => { const m = s.members[k]; if (m) m.mlid = String(v || "").trim().slice(0, 32); }); },
     // role in the party: EXP / JUNGLE / MID / GOLD / ROAM (tap again to clear)
     setRole(k, r) { Store.set(s => { const m = s.members[k]; if (m) m.role = m.role === r ? "" : r; }); },
@@ -811,7 +813,7 @@
     c.style.webkitMaskSize = c.style.maskSize = "100% 100%";
     const ctx = c.getContext("2d"); let last = -1;
     const LOOP = 24;
-    tickers.push(t => {
+    c._tick = t => {
       if (manualT == null && t - last < 1 / 30) return; last = t;
       ctx.clearRect(0, 0, CW, CH);
       ctx.globalCompositeOperation = "lighter";
@@ -839,7 +841,8 @@
       g.addColorStop(0, "rgba(185,138,255,0)"); g.addColorStop(.5, "rgba(185,138,255,.05)"); g.addColorStop(1, "rgba(185,138,255,0)");
       ctx.fillStyle = g; ctx.fillRect(0, 0, CW, CH);
       ctx.globalCompositeOperation = "source-over";
-    });
+    };
+    tickers.push(c._tick);
     return c;
   }
 
@@ -989,11 +992,24 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
       const img = new Image(); img.alt = "";
       img.onerror = () => { img.remove(); d.classList.add("is-empty"); d.innerHTML = `<span>${SLOT_NAMES[s.id]}</span>`; };
       img.src = (opts.demoBase || "assets/demo/") + s.id + ".jpg";
-      d.appendChild(img); stage.appendChild(d);
+      d.dataset.slot = s.id; d.appendChild(img); stage.appendChild(d);
     }
-    stage.insertAdjacentHTML("beforeend", bgSVG(L));
-    if (opts.bgfx !== false) stage.appendChild(bgFx(L));
-    stage.insertAdjacentHTML("beforeend", frameSVG(L));
+    // background + camera frames; rebuilt when the camera is switched off / on in the App
+    const layerMark = document.createComment("layers"); stage.appendChild(layerMark);
+    let layerEls = [], camOff = null;
+    function buildLayers(off) {
+      if (camOff === off) return; camOff = off;
+      layerEls.forEach(x => { if (x._tick) { const i = tickers.indexOf(x._tick); if (i >= 0) tickers.splice(i, 1); } x.remove(); });
+      const Lc = off ? Object.assign({}, L, { slots: L.slots.filter(sl => !sl.optional) }) : L;
+      const tmp = document.createElement("div");
+      tmp.innerHTML = bgSVG(Lc); const bg = tmp.firstElementChild;
+      tmp.innerHTML = frameSVG(Lc); const fr = tmp.firstElementChild;
+      layerEls = [bg, opts.bgfx !== false ? bgFx(Lc) : null, fr].filter(Boolean);
+      layerEls.forEach(x => stage.insertBefore(x, layerMark));
+      stage.querySelectorAll(".ov-demo").forEach(d => { const sl = L.slots.find(x => x.id === d.dataset.slot); d.style.display = off && sl && sl.optional ? "none" : ""; });
+    }
+    const orient = land ? "l" : "p", hideOf = st => ((st.hide || {})[orient]) || {};
+    buildLayers(!!hideOf(Store.state).cam);
 
     // band between facecam and gameplay
     // band under the facecam: LIVE · stream timer · clock · YouTube viewers
@@ -1024,7 +1040,7 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
       const s = L.slots.find(x => x.id === t.slot);
       const cap = el("div", "ov-caption", `<i></i><span>DEVICE: <b>${esc(CFG.device)}</b></span><i></i>`);
       Object.assign(cap.style, { left: s.x + "px", top: (s.y + s.h + 6) + "px", width: s.w + "px" });
-      stage.appendChild(cap);
+      cap.dataset.opt = s.optional ? "1" : ""; stage.appendChild(cap);
     }
 
     const panels = L.panels.map(p => {
@@ -1037,15 +1053,22 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
       if (api.banner) api.banner.destroy();
       api.banner = st === "none" ? null : mountBanner(stage, { style: st, accent: acc || opts.accent, y: L.bannerY, inStage: true });
       if (api.banner && L.bannerScale) Object.assign(api.banner.el.style, { left: (L.bannerX || 0) + "px", transformOrigin: "0 0", transform: `scale(${L.bannerScale})` });
-      if (api.banner) api.banner.el.style.display = Store.state.showBanner ? "" : "none";
+      if (api.banner) api.banner.el.style.display = Store.state.showBanner && !hideOf(Store.state).banner ? "" : "none";
     };
     api.setBanner(opts.banner || "pro");
     if (L.energy) { const en = energyLayer(L); en.style.zIndex = 4; stage.appendChild(en); }
 
     function render(s, prev) {
       const prevIds = prev ? new Set(prev.playing.concat(prev.queue).map(p => p.id)) : null;
+      const hid = hideOf(s);
+      buildLayers(!!hid.cam);
+      stage.querySelectorAll(".ov-caption").forEach(c => { c.style.display = hid.cam && c.dataset.opt ? "none" : ""; });
+      if (L.band != null) band.style.display = hid.band ? "none" : "";
       for (const { def, e } of panels) {
         const v = def.variant ? " " + def.variant : "";
+        const off = def.type === "score" ? hid.score : (def.type === "queue" || def.type === "prices") ? hid.mabar : false;
+        if (off) { e.style.display = "none"; continue; }
+        if (def.type !== "prices") e.style.display = "";
         if (def.type === "queue") {
           e.className = "ov-card " + (s.showQueue ? "ov-queue" : "ov-prices") + v + (s.mabarClosed ? " is-closed" : "");
           e.innerHTML = s.showQueue ? queueHTML(s, def.variant, prevIds, def) : pricesHTML(def.variant, s);
@@ -1070,13 +1093,13 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
           if (!e.firstChild) { e.className = "ov-music"; e.innerHTML = `<div class="mu-tab"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="17" cy="16" r="3" fill="currentColor"/></svg>NOW PLAYING</div>${opts.demo ? `<div class="mu-demo">widget lagu · ${def.w}×${def.h}</div>` : ""}`; }
         }
       }
-      if (api.banner) api.banner.el.style.display = s.showBanner ? "" : "none";
+      if (api.banner) api.banner.el.style.display = s.showBanner && !hid.banner ? "" : "none";
       // thank-you pop when a Sociabuzz order lands
       const o = (s.orders || [])[0], po = prev && (prev.orders || [])[0];
       const pop = o && (o.src === "sociabuzz" || o.src === "sim" || o.src === "test");
       if (prev && pop && (!po || o.rx !== po.rx)) {
         const qc = panels.find(p => p.def.type === "queue");
-        if (qc) {
+        if (qc && !hid.mabar) {
           const al = el("div", "q-alert", `<b>TERIMA KASIH</b><span>${esc(o.name)}</span><i>${o.src === "test" ? "TEST ✓" : o.svc === "album" ? "KOMEN ALBUM" : o.svc === "akaun" ? "MAIN AKAUN" : o.svc === "joki" ? "JOKI" : o.games > 0 ? `+${o.games} GAME` : "SOCIABUZZ"}</i>`);
           qc.e.parentNode.appendChild(al);
           Object.assign(al.style, { left: qc.def.x + "px", top: Math.max(4, qc.def.y - 26) + "px", width: qc.def.w + "px" });

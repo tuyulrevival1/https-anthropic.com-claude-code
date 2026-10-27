@@ -96,6 +96,8 @@ Data sama dengan portrait (queue, W/L, timer, lagu, OPEN/CLOSED). **KEMASKINI.ba
 
 **Mabar VIP OPEN / CLOSED**: tab Live › butang **OPEN** atau **CLOSED**. Label kecil OPEN / CLOSED keluar di atas tajuk MABAR VIP (queue tetap keluar). **Senarai queue** tutup = kad harga, label di sebelah tajuk. Halaman penonton tunjuk "MABAR VIP CLOSED". Stream Deck: `deck\MABAR_OPEN.bat` / `deck\MABAR_CLOSED.bat`.
 
+**Tunjuk di overlay** (tab Live): on / off **Kamera**, **WIN / LOSE**, **Mabar VIP**, **Banner**, **Bar LIVE**, berasingan untuk **Portrait** dan **Landscape**. Kamera off = lubang kamera ditutup latar.
+
 **Tab** di atas App: Live · Hutang Mabar · MVP · Slot Akaun · Peraturan · Lagu · Order · Tetapan · Semua (link terus: `control.html#mvp`).
 **Susun layout**: tekan **⠿ Susun layout** › tarik **tab di atas** untuk tukar urutan tab, tarik **⠿ Tarik** untuk pindah kad, tarik bucu kanan bawah untuk ubah saiz, atau tekan 1 / 2 / 3 untuk lebar › **✓ Siap**. Disimpan dalam peranti tu (PC dan phone boleh lain). **Reset** = susunan asal.
 
