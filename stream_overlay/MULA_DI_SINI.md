@@ -13,7 +13,7 @@ Ikut urutan. Langkah penuh setiap satu ada dalam [PASANG_OBS.md](PASANG_OBS.md).
 7. **Admin**: hantar link `…/control.html` dan PIN (dalam tetingkap hitam / `data\admin_pin.txt`) kepada admin. Admin tekan Add to Home screen.
 8. **Sociabuzz**: App › Link › salin Sociabuzz Webhook URL › tampal di Sociabuzz › Save › Test Notification. Semak App › Order masuk › Status webhook.
 9. **YouTube viewers** (pilihan): App › YouTube › API key + link live.
-10. **Stream Deck** (pilihan): butang Website › `http://127.0.0.1:8787/api/do/end-win` (Menang) / `end-lose` (Kalah) › tanda GET request in background. Lihat PASANG_OBS.md bahagian 11.
+10. **Stream Deck** (pilihan): klik `PASANG_STREAMDECK.bat` › seret **Win** / **Lose** dari kategori SYNO Mabar. Tekan = +1, tahan = -1, tahan 2 saat = reset. Lihat PASANG_OBS.md bahagian 11.
 
 ## B. Setiap kali live
 

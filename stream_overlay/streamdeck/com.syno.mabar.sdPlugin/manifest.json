@@ -1,0 +1,57 @@
+{
+  "Name": "SYNO Mabar",
+  "Author": "SYNOSTORE",
+  "Version": "1.0.0",
+  "SDKVersion": 2,
+  "Description": "Win / Lose untuk overlay SYNO. Tekan = tambah, tahan = tolak 1, tahan lama = reset W/L.",
+  "Category": "SYNO Mabar",
+  "CategoryIcon": "img/cat",
+  "Icon": "img/plugin",
+  "CodePath": "plugin.html",
+  "PropertyInspectorPath": "pi.html",
+  "Software": {
+    "MinimumVersion": "5.0"
+  },
+  "OS": [
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    },
+    {
+      "Platform": "mac",
+      "MinimumVersion": "10.14"
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "com.syno.mabar.win",
+      "Name": "Win (tekan / tahan)",
+      "Icon": "img/win_list",
+      "Tooltip": "Tekan: Menang. Tahan 0.6 s: Win -1. Tahan 2 s: reset W/L.",
+      "States": [
+        {
+          "Image": "img/win_key",
+          "TitleAlignment": "middle",
+          "FontSize": "16",
+          "ShowTitle": true
+        }
+      ],
+      "SupportedInMultiActions": false
+    },
+    {
+      "UUID": "com.syno.mabar.lose",
+      "Name": "Lose (tekan / tahan)",
+      "Icon": "img/lose_list",
+      "Tooltip": "Tekan: Kalah. Tahan 0.6 s: Lose -1. Tahan 2 s: reset W/L.",
+      "States": [
+        {
+          "Image": "img/lose_key",
+          "TitleAlignment": "middle",
+          "FontSize": "16",
+          "ShowTitle": true
+        }
+      ],
+      "SupportedInMultiActions": false
+    }
+  ]
+}

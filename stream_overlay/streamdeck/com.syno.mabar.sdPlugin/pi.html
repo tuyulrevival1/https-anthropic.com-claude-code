@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ms"><head><meta charset="utf-8"><title>SYNO Mabar</title>
+<style>
+  body { margin: 0; padding: 10px 12px; background: #2d2d2d; color: #d8d8d8; font: 13px/1.4 "Segoe UI", system-ui, sans-serif; }
+  label { display: block; margin: 10px 0 4px; color: #9a9a9a; font-size: 12px; }
+  select, input { width: 100%; box-sizing: border-box; padding: 6px 8px; background: #3d3d3d; color: #eee; border: 1px solid #555; border-radius: 3px; font: inherit; }
+  p { margin: 12px 0 0; color: #9a9a9a; font-size: 12px; }
+  b { color: #eee; }
+</style></head>
+<body>
+  <label for="tap">Tekan sekejap</label>
+  <select id="tap"></select>
+  <label for="server">Alamat overlay</label>
+  <input id="server" placeholder="http://127.0.0.1:8787">
+  <p><b>Tahan 0.6 saat</b>: tolak 1.<br><b>Tahan 2 saat</b>: reset W/L (dua-dua 0).<br>Butang tunjuk bilangan sekarang.</p>
+<script>
+"use strict";
+let ws, uuid, settings = {}, isWin = true;
+const $ = id => document.getElementById(id);
+function fill() {
+  $("tap").innerHTML = isWin
+    ? '<option value="end-win">Menang: W +1 &amp; tolak baki</option><option value="win">W +1 sahaja</option>'
+    : '<option value="end-lose">Kalah: L +1 &amp; tolak baki</option><option value="lose">L +1 sahaja</option>';
+  $("tap").value = settings.tap || (isWin ? "end-win" : "end-lose");
+  $("server").value = settings.server || "";
+}
+function save() {
+  settings = { tap: $("tap").value, server: $("server").value.trim() };
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ event: "setSettings", context: uuid, payload: settings }));
+}
+function connectElgatoStreamDeckSocket(inPort, inUUID, inRegisterEvent, inInfo, inActionInfo) {
+  uuid = inUUID;
+  try { const a = JSON.parse(inActionInfo); settings = (a.payload && a.payload.settings) || {}; isWin = !/\.lose$/.test(a.action); } catch (e) {}
+  fill();
+  ws = new WebSocket("ws://127.0.0.1:" + inPort);
+  ws.onopen = () => ws.send(JSON.stringify({ event: inRegisterEvent, uuid: inUUID }));
+}
+$("tap").addEventListener("change", save);
+$("server").addEventListener("change", save);
+</script>
+</body></html>

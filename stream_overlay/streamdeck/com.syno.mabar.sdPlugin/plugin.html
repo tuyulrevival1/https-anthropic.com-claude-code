@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ms"><head><meta charset="utf-8"><title>SYNO Mabar</title></head>
+<body>
+<script>
+/* SYNO Mabar Stream Deck plugin.
+   Tekan sekejap  = Menang / Kalah (atau W/L +1 sahaja, ikut tetapan butang)
+   Tahan 0.6 saat = W / L tolak 1
+   Tahan 2 saat   = reset W/L (dua-dua jadi 0)
+   Butang tunjuk bilangan W / L sekarang. Perlu START_OVERLAY.bat jalan di PC ni. */
+"use strict";
+const BASE_DEF = "http://127.0.0.1:8787", HOLD_MS = 600, LONG_MS = 2000;
+let ws = null, last = { w: null, l: null };
+const keys = {}; // context -> { action, settings, down, stage, t1, t2 }
+const send = o => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
+const setTitle = (ctx, t) => send({ event: "setTitle", context: ctx, payload: { title: t, target: 0 } });
+const kind = a => /\.lose$/.test(a) ? "lose" : "win";
+const base = k => String((k && k.settings && k.settings.server) || BASE_DEF).trim().replace(/\/+$/, "");
+const label = k => kind(k.action) === "win" ? "WIN" : "LOSE";
+function paint() {
+  for (const [ctx, k] of Object.entries(keys)) {
+    if (k.down) continue;
+    const v = kind(k.action) === "win" ? last.w : last.l;
+    setTitle(ctx, label(k) + "\n" + (v == null ? "-" : v));
+  }
+}
+function refresh() {
+  const any = Object.values(keys)[0]; if (!any) return;
+  fetch(base(any) + "/api/wl", { cache: "no-store" }).then(r => r.json())
+    .then(d => { last = { w: d.w, l: d.l }; paint(); })
+    .catch(() => { last = { w: null, l: null }; paint(); });
+}
+function run(ctx, k, name) {
+  fetch(base(k) + "/api/do/" + name, { mode: "no-cors", cache: "no-store" })
+    .then(() => send({ event: "showOk", context: ctx }))
+    .catch(() => send({ event: "showAlert", context: ctx }))
+    .finally(() => setTimeout(refresh, 1200));
+}
+function keyDown(ctx, k) {
+  k.down = Date.now(); k.stage = 0;
+  setTitle(ctx, label(k) + "\n+1");
+  k.t1 = setTimeout(() => { k.stage = 1; setTitle(ctx, label(k) + "\n-1"); }, HOLD_MS);
+  k.t2 = setTimeout(() => { k.stage = 2; setTitle(ctx, "RESET\nW/L"); }, LONG_MS);
+}
+function keyUp(ctx, k) {
+  clearTimeout(k.t1); clearTimeout(k.t2);
+  const w = kind(k.action) === "win", st = k.stage; k.down = 0;
+  const tap = (k.settings && k.settings.tap) || (w ? "end-win" : "end-lose");
+  run(ctx, k, st === 2 ? "wl-reset" : st === 1 ? (w ? "win-1" : "lose-1") : tap);
+}
+function connectElgatoStreamDeckSocket(inPort, inUUID, inRegisterEvent) {
+  ws = new WebSocket("ws://127.0.0.1:" + inPort);
+  ws.onopen = () => send({ event: inRegisterEvent, uuid: inUUID });
+  ws.onmessage = ev => {
+    let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+    const ctx = m.context, p = m.payload || {};
+    if (m.event === "willAppear") { keys[ctx] = { action: m.action, settings: p.settings || {} }; refresh(); }
+    else if (m.event === "willDisappear") delete keys[ctx];
+    else if (m.event === "didReceiveSettings" && keys[ctx]) { keys[ctx].settings = p.settings || {}; refresh(); }
+    else if (m.event === "keyDown" && keys[ctx]) keyDown(ctx, keys[ctx]);
+    else if (m.event === "keyUp" && keys[ctx]) keyUp(ctx, keys[ctx]);
+  };
+}
+setInterval(refresh, 2000);
+</script>
+</body></html>

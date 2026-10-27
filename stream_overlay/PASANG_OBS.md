@@ -185,7 +185,18 @@ Boleh juga letak PNG sendiri: `epic.png`, `legend.png`, `mythic.png`, `honor.png
 
 Perlu: `START_OVERLAY.bat` jalan dan overlay (OBS) atau App terbuka.
 
-**Cara 1 (disyorkan): Website**
+**Plugin SYNO Mabar (disyorkan): tekan / tahan / tahan lama**
+1. Klik dua kali **`PASANG_STREAMDECK.bat`** (Stream Deck tutup sekejap dan buka semula).
+   (Atau klik dua kali `streamdeck\SYNO_Mabar.streamDeckPlugin`.)
+2. Dalam Stream Deck, kategori **SYNO Mabar** di sebelah kanan › seret **Win (tekan / tahan)** dan **Lose (tekan / tahan)** ke butang.
+3. Guna:
+   - **Tekan sekejap** = Menang / Kalah (W/L +1, tolak baki, rotation). Boleh tukar jadi "W +1 sahaja" dalam tetapan butang.
+   - **Tahan 0.6 saat** = W / L tolak 1 (butang tulis -1).
+   - **Tahan 2 saat** = reset W/L jadi 0 (butang tulis RESET).
+   - Butang tunjuk bilangan W / L sekarang.
+
+**Cara lain: Website (tekan sahaja)**
+
 1. Stream Deck app › seret **Website** (bahagian System) ke satu butang.
 2. URL: `http://127.0.0.1:8787/api/do/end-win`
 3. Tanda **GET request in background** (supaya browser tak terbuka).

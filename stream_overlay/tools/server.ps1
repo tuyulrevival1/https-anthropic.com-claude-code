@@ -137,9 +137,9 @@ function Get-NowPlaying {
   }
   return $t
 }
-$hookHits = New-Object System.Collections.ArrayList
+$hookHits = New-Object System.Collections.ArrayList   # 15 cubaan webhook terakhir (untuk App > Status webhook)
 $cmds = New-Object System.Collections.ArrayList       # arahan Stream Deck menunggu overlay / App ambil
-$deckActs = @('win', 'lose', 'win-1', 'lose-1', 'end-win', 'end-lose', 'end', 'timer-start', 'timer-pause', 'timer-reset', 'queue-on', 'queue-off', 'banner-on', 'banner-off')   # 15 cubaan webhook terakhir (untuk App > Status webhook)
+$deckActs = @('win', 'lose', 'win-1', 'lose-1', 'end-win', 'end-lose', 'end', 'timer-start', 'timer-pause', 'timer-reset', 'queue-on', 'queue-off', 'banner-on', 'banner-off', 'wl-reset')
 $fwdHeaders = @('x-forwarded-for', 'cf-connecting-ip', 'x-forwarded-host', 'forwarded', 'x-real-ip', 'tailscale-funnel-request')
 
 while ($true) {
@@ -197,7 +197,7 @@ while ($true) {
       $fails++; if ($fails -ge 10) { $lockUntil = (Get-Date).AddMinutes(10); $fails = 0; Write-Host "  PIN salah terlalu banyak kali. Akses admin luar dikunci 10 minit." -ForegroundColor Red }
     }
 
-    $status = '200 OK'; $type = 'text/plain; charset=utf-8'; $body = [byte[]]@(); $isHead = $false
+    $status = '200 OK'; $type = 'text/plain; charset=utf-8'; $body = [byte[]]@(); $isHead = $false; $cors = $false
     $m = [regex]::Match([string]$line, '^(GET|HEAD|POST|OPTIONS) (\S+)')
     if (-not $m.Success) {
       $status = '400 Bad Request'; $body = ToBytes 'Bad request'
@@ -259,6 +259,17 @@ while ($true) {
         $type = 'application/json'
         if (-not $okPin) { $status = '401 Unauthorized'; $body = ToBytes '[]' }
         else { $body = ToBytes ('[' + ($cmds -join ',') + ']'); $cmds.Clear() }
+      } elseif ($path -eq 'api/wl') {
+        # untuk plugin Stream Deck: bilangan W/L sekarang (dibaca dari state.txt)
+        $type = 'application/json'; $w = 0; $l = 0
+        if (Test-Path -LiteralPath $stateFile) {
+          try {
+            $txt = [Uri]::UnescapeDataString([System.IO.File]::ReadAllText($stateFile))
+            if ($txt -match '"wins":(\d+)') { $w = [int]$matches[1] }
+            if ($txt -match '"losses":(\d+)') { $l = [int]$matches[1] }
+          } catch { }
+        }
+        $body = ToBytes ('{"w":' + $w + ',"l":' + $l + '}'); $cors = $true
       } elseif ($path -eq 'api/versi') {
         # versi yang dipasang oleh KEMASKINI.bat (App bandingkan dengan GitHub)
         $vf = Join-Path $dataDir 'versi.txt'; $v = ''; if (Test-Path -LiteralPath $vf) { $v = ([System.IO.File]::ReadAllText($vf)).Trim() }
@@ -310,7 +321,8 @@ while ($true) {
         }
       }
     }
-    $head = "HTTP/1.1 $status`r`nContent-Type: $type`r`nContent-Length: $($body.Length)`r`nCache-Control: no-store`r`nX-Content-Type-Options: nosniff`r`nConnection: close`r`n`r`n"
+    $extra = ''; if ($cors) { $extra = "Access-Control-Allow-Origin: *`r`n" }
+    $head = "HTTP/1.1 $status`r`nContent-Type: $type`r`nContent-Length: $($body.Length)`r`nCache-Control: no-store`r`nX-Content-Type-Options: nosniff`r`n$($extra)Connection: close`r`n`r`n"
     $hb = [System.Text.Encoding]::ASCII.GetBytes($head)
     $stream.Write($hb, 0, $hb.Length)
     if (-not $isHead -and $body.Length -gt 0) { $stream.Write($body, 0, $body.Length) }

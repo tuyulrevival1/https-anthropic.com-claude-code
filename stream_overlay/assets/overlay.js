@@ -284,7 +284,8 @@
     "end-win": () => Q.endGame("W"), "end-lose": () => Q.endGame("L"), "end": () => Q.endGame("X"),
     "timer-start": () => Q.timer("start"), "timer-pause": () => Q.timer("pause"), "timer-reset": () => Q.timer("reset"),
     "queue-on": () => Q.patch({ showQueue: true }), "queue-off": () => Q.patch({ showQueue: false }),
-    "banner-on": () => Q.patch({ showBanner: true }), "banner-off": () => Q.patch({ showBanner: false })
+    "banner-on": () => Q.patch({ showBanner: true }), "banner-off": () => Q.patch({ showBanner: false }),
+    "wl-reset": () => Q.patch({ wins: 0, losses: 0, streak: 0 })
   };
   // Stream Deck presses wait on the PC server; whichever open overlay / app asks first runs them once
   let cmdBusy = false;

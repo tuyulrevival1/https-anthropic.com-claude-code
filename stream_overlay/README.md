@@ -12,6 +12,7 @@ Semua dalam HTML: tak perlu edit video, tak perlu install Python.
 | `START_OVERLAY.bat` | Hidupkan server kecil (PowerShell Windows) + buka App Kawalan. Biar terbuka masa live. |
 | `BUKA_APP.bat` | Buka semula tetingkap App Kawalan |
 | `KEMASKINI.bat` | Kemas kini ke versi terbaru dari GitHub (data\ dan seed_doc.js tak disentuh) |
+| `PASANG_STREAMDECK.bat` | Pasang plugin Stream Deck SYNO Mabar (tekan = +1, tahan = -1, tahan lama = reset) |
 | `deck/` | Fail .bat untuk butang Stream Deck (Menang, Kalah, …) |
 | `PASANG_LINK_KEKAL.bat` | Sekali sahaja: pasang Tailscale & hidupkan link kekal untuk admin / penonton di luar Wi-Fi |
 | `rank_tool.html` | Potong logo rank dari satu gambar (latar putih) dan simpan ke overlay |
