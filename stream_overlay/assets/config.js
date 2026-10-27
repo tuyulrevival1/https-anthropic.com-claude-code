@@ -6,14 +6,16 @@ window.OVERLAY_CONFIG = {
   storeName: "SYNOSTORE",
   status: "SOLO PUSH MMR",
   server: "SERVER INDO",
-  device: "REDMAGIC ASTRA",
+  device: "REDMAGIC ASTRA 2",
+  theme: "red",                 // red | violet
 
   // Harga Mabar VIP (keluar dalam kad queue & banner)
   mabar: {
     title: "MABAR VIP",
     prices: [
-      { qty: "1 GAME", price: "RM4" },
-      { qty: "3 GAME", price: "RM10" }
+      { qty: "1 GAME", price: "RM4", games: 1 },
+      { qty: "3 GAME", price: "RM10", games: 3 },
+      { qty: "IMMORTAL", price: "RM6", games: 1, note: "/ GAME" }
     ],
     joinHint: 'Komen "VIP" + ID untuk masuk queue',
     maxPlaying: 4 // berapa orang main sekali (max 4, sebab party 5)
@@ -32,11 +34,11 @@ window.OVERLAY_CONFIG = {
     // scale = besarkan, x/y = anjak (px). Kalau fail tiada, logo bulan sabit keluar.
     character: { src: "assets/chou.png", scale: 1.15, x: 0, y: 8 },
     messages: [
-      { kicker: "SERVIS TOPUP", main: "TOPUP DIAMOND MURAH", tags: ["LINK DI BIO"], art: "diamond" },
-      { kicker: "SERVIS JOKI", main: "JOKI RANK MURAH", tags: ["& TERPERCAYA"], art: "rank" },
-      { kicker: "MAIN DENGAN SAYA", main: "MABAR VIP", tags: ["RM4 / GAME", "3 GAME RM10"], art: "mabar" },
-      { kicker: "SERVIS LAIN", main: "KOMEN ALBUM RM5", tags: ["MAINKAN AKAUN RM40"], art: "album" },
-      { kicker: "SEMUA DI {store}", main: "TEKAN LINK DI BIO", tags: ["{store}"], art: "link" }
+      { kicker: "TOPUP MLBB", main: "TOPUP DIAMOND MURAH", tags: ["LINK DI BIO"], art: "diamond", hook: "MURAH!" },
+      { kicker: "SERVIS JOKI", main: "JOKI RANK MURAH", tags: ["& TERPERCAYA"], art: "rank", hook: "MURAH!" },
+      { kicker: "JOM MABAR", main: "MABAR VIP", tags: ["RM4 / GAME", "3 GAME RM10", "IMMORTAL RM6"], art: "mabar", hook: "RM4" },
+      { kicker: "SERVIS LAIN", main: "KOMEN ALBUM RM5", tags: ["MAINKAN AKAUN RM40"], art: "album", hook: "RM5" },
+      { kicker: "SEMUA DI {store}", main: "TEKAN LINK DI BIO", tags: ["{store}"], art: "link", hook: "TAP!" }
     ]
   },
 
@@ -56,7 +58,7 @@ window.OVERLAY_CONFIG = {
     items: [
       { bold: "TOPUP DIAMOND", light: "MURAH · LINK DI BIO", icon: "diamond" },
       { bold: "JOKI RANK", light: "MURAH & TERPERCAYA", icon: "rank" },
-      { bold: "MABAR VIP", light: "RM4 / GAME · 3 GAME RM10", icon: "mabar" },
+      { bold: "MABAR VIP", light: "RM4 / GAME · IMMORTAL RM6", icon: "mabar" },
       { bold: "KOMEN ALBUM", light: "RM5 · MAINKAN AKAUN RM40", icon: "album" },
       { bold: "synostore", light: "", pill: "Link in Bio", icon: "link" }
     ]
@@ -68,6 +70,7 @@ window.OVERLAY_CONFIG = {
       { name: "EPIC", img: "assets/ranks/epic.png", glow: "#45f0bf" },
       { name: "LEGEND", img: "assets/ranks/legend.png", glow: "#ffcf4a" },
       { name: "MYTHIC", img: "assets/ranks/mythic.png", glow: "#c995ff" },
+      { name: "HONOR", img: "assets/ranks/honor.png", glow: "#7fb2ff" },
       { name: "GLORY", img: "assets/ranks/glory.png", glow: "#ff96d4" },
       { name: "IMMORTAL", img: "assets/ranks/immortal.png", glow: "#ff5874" }
     ]

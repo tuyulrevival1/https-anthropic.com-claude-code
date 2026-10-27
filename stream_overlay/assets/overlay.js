@@ -30,57 +30,134 @@
   let uidN = 0; const uid = p => p + (++uidN) + Math.random().toString(36).slice(2, 5);
   const pos = (e, r) => Object.assign(e.style, { left: r.x + "px", top: r.y + "px", width: r.w + "px", height: r.h + "px" });
 
-  /* ---------- shared state ---------- */
+  /* ---------- shared state ----------
+     Served by START_OVERLAY.bat (http): state lives on the PC server (/api/state) so OBS,
+     the control app, admins on other devices and the viewer page all see the same data.
+     Opened as a plain file: falls back to localStorage in this browser only. */
   const KEY = window.OVERLAY_STORE_KEY || "chouOverlay.v1";
+  const PIN_KEY = "syno.adminPin";
+  const keyOf = n => String(n || "").trim().toLowerCase();
   const defaults = () => ({
-    wins: CFG.defaults.wins, losses: CFG.defaults.losses, mmr: CFG.defaults.mmr, globalRank: CFG.defaults.globalRank,
-    streak: 0, showQueue: true, showBanner: true, showWelcome: false, playing: [], queue: [], rev: 0
+    wins: CFG.defaults.wins, losses: CFG.defaults.losses, streak: 0,
+    showQueue: true, showBanner: true, playing: [], queue: [], members: {},
+    live: { running: false, start: 0, acc: 0 }, yt: { viewers: null, at: 0 }, rev: 0, updated: 0
   });
+  // upgrade older saves (queue entries with name/games) to members + balance
+  function normalize(s) {
+    s.members = s.members || {};
+    s.live = Object.assign({ running: false, start: 0, acc: 0 }, s.live || {});
+    s.yt = Object.assign({ viewers: null, at: 0 }, s.yt || {});
+    const fix = e => {
+      if (e.key) return e;
+      const k = keyOf(e.name); if (!k) return null;
+      if (!s.members[k]) s.members[k] = { name: e.name, bal: Math.max(1, e.left || e.games || 1) };
+      return { id: e.id || uid("p"), key: k };
+    };
+    s.playing = (s.playing || []).map(fix).filter(Boolean);
+    s.queue = (s.queue || []).map(fix).filter(Boolean);
+    return s;
+  }
+  const liveElapsed = (s, nowMs = Date.now()) => {
+    const L = s.live || {}; return Math.max(0, (L.acc || 0) + (L.running ? nowMs - (L.start || nowMs) : 0));
+  };
   const Store = {
-    state: null, subs: [], bc: null,
-    read() { try { const r = localStorage.getItem(KEY); if (r) return Object.assign(defaults(), JSON.parse(r)); } catch (e) {} return null; },
+    state: null, subs: [], bc: null, remote: false, pendingUntil: 0,
+    read() { try { const r = localStorage.getItem(KEY); if (r) return normalize(Object.assign(defaults(), JSON.parse(r))); } catch (e) {} return null; },
     init() {
       if (this.state) return;
-      this.state = this.read() || defaults();
-      try { this.bc = new BroadcastChannel(KEY); this.bc.onmessage = e => this.apply(e.data); } catch (e) {}
-      window.addEventListener("storage", e => { if (e.key === KEY) this.apply(this.read()); });
-      setInterval(() => this.apply(this.read()), 1500);
+      this.state = this.read() || normalize(defaults());
+      try { this.bc = new BroadcastChannel(KEY); this.bc.onmessage = e => { if (!this.remote) this.apply(e.data); }; } catch (e) {}
+      window.addEventListener("storage", e => { if (e.key === KEY && !this.remote) this.apply(this.read()); });
+      setInterval(() => { if (!this.remote) this.apply(this.read()); }, 1500);
+      if (/^https?:$/.test(location.protocol) && !window.OVERLAY_STORE_KEY) this.connect();
+    },
+    connect() {
+      fetch("api/state", { cache: "no-store" }).then(r => r.ok ? r.text() : Promise.reject(r.status)).then(txt => {
+        this.remote = true;
+        if (txt && txt.trim()) this.onRemote(txt, true); else this.push(this.state);
+        setInterval(() => this.pull(), 700);
+        window.dispatchEvent(new CustomEvent("ov-remote", { detail: true }));
+      }).catch(() => window.dispatchEvent(new CustomEvent("ov-remote", { detail: false })));
+    },
+    pull() { fetch("api/state", { cache: "no-store" }).then(r => r.ok ? r.text() : "").then(t => this.onRemote(t)).catch(() => {}); },
+    onRemote(txt, force) {
+      if (!txt || !txt.trim()) return;
+      let s; try { s = normalize(Object.assign(defaults(), JSON.parse(decodeURIComponent(txt)))); } catch (e) { return; }
+      if (!force && Date.now() < this.pendingUntil && (s.updated || 0) < (this.state.updated || 0)) return; // our write not landed yet
+      this.apply(s);
+      try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {}
+    },
+    pin() { try { return localStorage.getItem(PIN_KEY) || ""; } catch (e) { return ""; } },
+    push(s) {
+      const pin = this.pin();
+      fetch("api/state", { method: "POST", headers: pin ? { "X-Pin": pin } : {}, body: encodeURIComponent(JSON.stringify(s)) })
+        .then(r => window.dispatchEvent(new CustomEvent("ov-auth", { detail: r.status !== 401 })))
+        .catch(() => {});
     },
     apply(s) { if (!s || s.rev === this.state.rev) return; const prev = this.state; this.state = s; this.subs.forEach(f => f(s, prev)); },
     set(mut) {
       const s = JSON.parse(JSON.stringify(this.state)); mut(s);
-      s.rev = Date.now() + Math.random();
+      s.rev = Date.now() + Math.random(); s.updated = Date.now();
       const prev = this.state; this.state = s;
       try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {}
-      try { this.bc && this.bc.postMessage(s); } catch (e) {}
+      if (this.remote) { this.pendingUntil = Date.now() + 2500; this.push(s); }
+      else { try { this.bc && this.bc.postMessage(s); } catch (e) {} }
       this.subs.forEach(f => f(s, prev));
     },
     on(f) { this.subs.push(f); }
   };
 
-  /* ---------- queue actions ---------- */
+  /* ---------- queue, VIP balance, W/L, timer ---------- */
+  const inLine = (s, k) => s.playing.some(p => p.key === k) || s.queue.some(p => p.key === k);
   const Q = {
-    fillSlots(s) { const max = CFG.mabar.maxPlaying; while (s.playing.length < max && s.queue.length) s.playing.push(s.queue.shift()); },
-    add(name, games) {
-      name = String(name || "").trim().slice(0, 18); if (!name) return;
-      games = Math.max(1, Math.min(9, parseInt(games, 10) || 1));
-      Store.set(s => { s.queue.push({ id: uid("p"), name, games, left: games }); Q.fillSlots(s); });
+    fillSlots(s) {
+      const max = CFG.mabar.maxPlaying;
+      while (s.playing.length < max && s.queue.length) {
+        const e = s.queue.shift(), m = s.members[e.key];
+        if (m && m.bal > 0) s.playing.push(e);
+      }
     },
+    // top up a VIP (creates the member) and put them in the queue
+    add(name, games, join = true) {
+      name = String(name || "").trim().slice(0, 18); const k = keyOf(name); if (!k) return;
+      games = Math.max(0, Math.min(99, parseInt(games, 10) || 0));
+      Store.set(s => {
+        const m = s.members[k] || (s.members[k] = { name, bal: 0 });
+        m.name = name; m.bal += games;
+        if (join && m.bal > 0 && !inLine(s, k)) s.queue.push({ id: uid("p"), key: k });
+        Q.fillSlots(s);
+      });
+    },
+    join(k) { Store.set(s => { const m = s.members[k]; if (m && m.bal > 0 && !inLine(s, k)) s.queue.push({ id: uid("p"), key: k }); Q.fillSlots(s); }); },
+    addBal(k, d) { Store.set(s => { const m = s.members[k]; if (!m) return; m.bal = Math.max(0, m.bal + d); if (m.bal === 0) { s.playing = s.playing.filter(p => p.key !== k); s.queue = s.queue.filter(p => p.key !== k); } Q.fillSlots(s); }); },
+    setBal(k, v) { Store.set(s => { const m = s.members[k]; if (!m) return; m.bal = Math.max(0, parseInt(v, 10) || 0); if (m.bal === 0) { s.playing = s.playing.filter(p => p.key !== k); s.queue = s.queue.filter(p => p.key !== k); } Q.fillSlots(s); }); },
+    delMember(k) { Store.set(s => { delete s.members[k]; s.playing = s.playing.filter(p => p.key !== k); s.queue = s.queue.filter(p => p.key !== k); Q.fillSlots(s); }); },
     endGame(result) {
       Store.set(s => {
         if (result === "W") { s.wins++; s.streak = s.streak > 0 ? s.streak + 1 : 1; }
         if (result === "L") { s.losses++; s.streak = s.streak < 0 ? s.streak - 1 : -1; }
-        s.playing.forEach(p => p.left--);
-        s.playing = s.playing.filter(p => p.left > 0);
+        s.playing.forEach(p => { const m = s.members[p.key]; if (m) m.bal = Math.max(0, m.bal - 1); });
+        s.playing = s.playing.filter(p => (s.members[p.key] || {}).bal > 0);
         Q.fillSlots(s);
       });
     },
+    wl(k, d) { Store.set(s => { s[k] = Math.max(0, (s[k] || 0) + d); if (d > 0) s.streak = k === "wins" ? (s.streak > 0 ? s.streak + 1 : 1) : (s.streak < 0 ? s.streak - 1 : -1); }); },
     remove(id) { Store.set(s => { s.playing = s.playing.filter(p => p.id !== id); s.queue = s.queue.filter(p => p.id !== id); Q.fillSlots(s); }); },
     up(id) { Store.set(s => { const i = s.queue.findIndex(p => p.id === id); if (i > 0) { const [x] = s.queue.splice(i, 1); s.queue.splice(i - 1, 0, x); } }); },
-    addGame(id, d) { Store.set(s => { const p = s.playing.concat(s.queue).find(p => p.id === id); if (p) { p.left = Math.max(1, p.left + d); p.games = Math.max(p.games, p.left); } }); },
+    playNow(id) { Store.set(s => { const i = s.queue.findIndex(p => p.id === id); if (i >= 0 && s.playing.length < CFG.mabar.maxPlaying) s.playing.push(s.queue.splice(i, 1)[0]); }); },
     clear() { Store.set(s => { s.playing = []; s.queue = []; }); },
-    patch(obj) { Store.set(s => Object.assign(s, obj)); }
+    patch(obj) { Store.set(s => Object.assign(s, obj)); },
+    timer(act) {
+      Store.set(s => {
+        const L = s.live, t = Date.now();
+        if (act === "start" && !L.running) { L.running = true; L.start = t; }
+        else if (act === "pause" && L.running) { L.acc = (L.acc || 0) + t - L.start; L.running = false; }
+        else if (act === "reset") { L.running = false; L.acc = 0; L.start = 0; }
+        else if (act === "restart") { L.running = true; L.acc = 0; L.start = t; }
+      });
+    }
   };
+  const fmtTime = ms => { const x = Math.floor(ms / 1000), h = Math.floor(x / 3600), m = Math.floor(x / 60) % 60, sec = x % 60; return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`; };
 
   /* ---------- layouts (1080x1920) ----------
      slots = holes where OBS sources show through. Put your camera / game
@@ -96,7 +173,7 @@
       ],
       panels: [
         { type: "queue", x: 36, y: 1216, w: 484, h: 492 },
-        { type: "stats", x: 540, y: 1518, w: 504, h: 190 }
+        { type: "stats", x: 540, y: 1540, w: 504, h: 168 }
       ],
       tags: [{ slot: "hand", corner: "bl" }]
     },
@@ -109,7 +186,7 @@
         { id: "game", x: 0, y: 498, w: 1080, h: 608 }
       ],
       panels: [
-        { type: "stats", variant: "mini", x: 666, y: 254, w: 400, h: 202 },
+        { type: "stats", variant: "mini", x: 666, y: 272, w: 400, h: 184 },
         { type: "queue", variant: "wide", x: 36, y: 1124, w: 1008, h: 584 }
       ],
       tags: [{ slot: "hand", corner: "bl" }]
@@ -124,29 +201,33 @@
       ],
       panels: [
         { type: "stats", variant: "tall", x: 36, y: 1326, w: 484, h: 382 },
-        { type: "strip", x: 540, y: 1624, w: 504, h: 84 }
+        { type: "strip", x: 540, y: 1644, w: 504, h: 64 }
       ],
       tags: [{ slot: "hand", corner: "bl" }]
     }
   };
   LAYOUTS[4] = {
     name: "Arena",
-    band: null,
+    band: 584,
+    bannerY: 1220,                 // banner terus di bawah gameplay
     energy: [612, 1220],
-    chatSafe: { x: 0, y: 1220, w: 640, h: 508 },
     slots: [
-      { id: "face", x: 0, y: 0, w: 1080, h: 612, frame: false },
+      { id: "face", x: 0, y: 0, w: 1080, h: 584, frame: false },
       { id: "game", x: 0, y: 612, w: 1080, h: 608, frame: false },
-      { id: "hand", x: 716, y: 398, w: 340, h: 191, cut: 16, optional: true }
+      { id: "hand", x: 548, y: 1430, w: 508, h: 286, cut: 16, optional: true }
     ],
     panels: [
-      { type: "score", x: 536, y: 1238, w: 520, h: 322 },
-      { type: "strip", x: 548, y: 1584, w: 500, h: 84 },
-      { type: "welcome", x: 22, y: 1246, w: 500, h: 214 },
-      { type: "music", x: 36, y: 1598, w: 470, h: 110 }
+      { type: "queue", variant: "compact", x: 24, y: 1430, w: 500, h: 292 },
+      { type: "music", x: 24, y: 1742, w: 500, h: 116 },
+      { type: "score", x: 548, y: 1756, w: 508, h: 108 }
     ],
-    tags: [{ slot: "hand", corner: "bl" }]
+    tags: [{ slot: "hand" }]
   };
+  const THEMES = {
+    red: { a: "#ff2346", hi: "#ff7088", glow: "255,35,70", deep: "150,0,24", ember: "255,190,170", bg: ["#0d0507", "#1c070d", "#080305"] },
+    violet: { a: "#7b2cff", hi: "#b98aff", glow: "123,44,255", deep: "255,35,80", ember: "205,170,255", bg: ["#0d0716", "#140a25", "#09050f"] }
+  };
+  const TH = THEMES[CFG.theme] || THEMES.violet;
   const SLOT_NAMES = { face: "FACECAM", game: "GAMEPLAY", hand: "HANDCAM" };
   // copy a layout, dropping the optional handcam when ?hand=0
   function resolveLayout(n, opts) {
@@ -171,11 +252,11 @@
     const holes = L.slots.map(s => `<path d="${slotPath(s)}" fill="#000"/>`).join("");
     return `<svg class="ov-layer" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">
 <defs>
- <linearGradient id="${g}a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d0716"/><stop offset=".55" stop-color="#140a25"/><stop offset="1" stop-color="#09050f"/></linearGradient>
- <radialGradient id="${g}b" cx=".08" cy=".82" r=".55"><stop offset="0" stop-color="#7b2cff" stop-opacity=".38"/><stop offset="1" stop-color="#7b2cff" stop-opacity="0"/></radialGradient>
+ <linearGradient id="${g}a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${TH.bg[0]}"/><stop offset=".55" stop-color="${TH.bg[1]}"/><stop offset="1" stop-color="${TH.bg[2]}"/></linearGradient>
+ <radialGradient id="${g}b" cx=".08" cy=".82" r=".55"><stop offset="0" stop-color="${TH.a}" stop-opacity=".3"/><stop offset="1" stop-color="${TH.a}" stop-opacity="0"/></radialGradient>
  <radialGradient id="${g}c" cx=".98" cy=".7" r=".45"><stop offset="0" stop-color="#ff2350" stop-opacity=".2"/><stop offset="1" stop-color="#ff2350" stop-opacity="0"/></radialGradient>
  <linearGradient id="${g}d" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b98aff" stop-opacity=".16"/><stop offset="1" stop-color="#ff2350" stop-opacity=".05"/></linearGradient>
- <pattern id="${g}h" width="18" height="18" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><rect width="1.6" height="18" fill="#b98aff" fill-opacity=".07"/></pattern>
+ <pattern id="${g}h" width="18" height="18" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><rect width="1.6" height="18" fill="${TH.hi}" fill-opacity=".06"/></pattern>
  <filter id="${g}n" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .075 0"/></filter>
  <mask id="${m}"><rect width="${W}" height="${H}" fill="#fff"/>${holes}</mask>
 </defs>
@@ -184,7 +265,6 @@
  <rect width="${W}" height="${H}" fill="url(#${g}b)"/>
  <rect width="${W}" height="${H}" fill="url(#${g}c)"/>
  <rect width="${W}" height="${H}" fill="url(#${g}h)"/>
- ${crescent(c1, 120, 1600, 330, `url(#${g}d)`)}
  <rect width="${W}" height="${H}" filter="url(#${g}n)"/>
  ${L.chatSafe ? `<linearGradient id="${g}s" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#050309" stop-opacity=".78"/><stop offset=".75" stop-color="#050309" stop-opacity=".45"/><stop offset="1" stop-color="#050309" stop-opacity="0"/></linearGradient>
  <rect x="${L.chatSafe.x}" y="${L.chatSafe.y}" width="${L.chatSafe.w}" height="${L.chatSafe.h}" fill="url(#${g}s)"/>` : ""}
@@ -233,7 +313,7 @@
         const y = 300 + r2 * 180 + Math.sin(t / LOOP * TAU * (1 + (i % 3)) + i) * 26;
         const rad = 40 + r3 * 60, red = i % 3 === 0;
         const g = ctx.createRadialGradient(x, y, 0, x, y, rad);
-        g.addColorStop(0, red ? "rgba(255,35,80,.07)" : "rgba(123,44,255,.10)");
+        g.addColorStop(0, red ? `rgba(${TH.deep},.08)` : `rgba(${TH.glow},.10)`);
         g.addColorStop(1, "rgba(0,0,0,0)");
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, rad, 0, TAU); ctx.fill();
       }
@@ -243,7 +323,7 @@
         const y = 480 - ph * 300;
         if (L.chatSafe && x < (L.chatSafe.w / 4) && y > L.chatSafe.y / 4) continue;
         const a = Math.sin(ph * Math.PI) * .8;
-        ctx.fillStyle = i % 4 ? `rgba(205,170,255,${a})` : `rgba(255,110,140,${a})`;
+        ctx.fillStyle = i % 4 ? `rgba(${TH.ember},${a})` : `rgba(255,110,140,${a})`;
         ctx.fillRect(x, y, 1.2, 1.2);
       }
       const sw = frac(t / 8), sx = sw * 600 - 200;
@@ -256,51 +336,44 @@
   }
 
   /* ---------- panels ---------- */
-  const chipsHTML = () => CFG.mabar.prices.map(p => `<span class="ov-chip"><span><b>${esc(p.price)}</b> / ${esc(p.qty)}</span></span>`).join("");
+  const chipsHTML = () => CFG.mabar.prices.map(p => `<span class="ov-chip"><span>${p.note ? `${esc(p.qty)} <b>${esc(p.price)}</b>${esc(p.note)}` : `<b>${esc(p.price)}</b> / ${esc(p.qty)}`}</span></span>`).join("");
   const hintHTML = () => esc(CFG.mabar.joinHint).replace(/&quot;(.*?)&quot;/, "<b>&quot;$1&quot;</b>");
   const svcHTML = () => CFG.services.map(v => `<div><span>${esc(v.label)}</span><b>${esc(v.price)}</b></div>`).join("");
 
-  function queueHTML(s, wide, prevIds) {
+  const mem = (s, p) => s.members[p.key] || { name: p.key, bal: 0 };
+  function queueHTML(s, variant, prevIds) {
+    const wide = variant === "wide", compact = variant === "compact";
     const max = CFG.mabar.maxPlaying, full = s.playing.length >= max;
     const isNew = id => (prevIds && !prevIds.has(id) ? " is-new" : "");
     let slots = "";
     for (let i = 0; i < max; i++) {
       const p = s.playing[i];
-      if (p) {
-        let pips = ""; for (let k = 0; k < p.games; k++) pips += `<i class="${k < p.left ? "on" : ""}"></i>`;
-        slots += `<li class="slot${isNew(p.id)}"><span class="ix">${i + 1}</span><span class="nm">${esc(p.name)}</span><span class="pips">${pips}</span></li>`;
-      } else slots += `<li class="slot is-empty"><span class="ix">${i + 1}</span><span class="nm">SLOT KOSONG</span></li>`;
+      if (p) { const m = mem(s, p); slots += `<li class="slot${isNew(p.id)}"><span class="ix">${i + 1}</span><span class="nm">${esc(m.name)}</span><span class="bal">${m.bal}<small>G</small></span></li>`; }
+      else slots += `<li class="slot is-empty"><span class="ix">${i + 1}</span><span class="nm">SLOT KOSONG</span></li>`;
     }
-    const lim = wide ? 6 : 3;
+    const lim = wide ? 6 : compact ? 4 : 3;
     let next = s.queue.slice(0, lim).map((p, i) =>
-      `<li class="nx${isNew(p.id)}"><span class="no">${String(i + 1).padStart(2, "0")}</span><span class="nm">${esc(p.name)}</span><span class="g">${p.games}G</span></li>`).join("");
-    if (wide && s.queue.length > lim) next += `<li class="nx more">+${s.queue.length - lim} LAGI DALAM QUEUE</li>`;
-    const nextBlock = s.queue.length ? `<ol>${next}</ol>` : `<p class="q-empty">${full ? "Queue kosong. Jadi yang pertama!" : "Slot masih ada. Terus masuk main!"}</p>`;
-    return `<div class="ghost" style="right:-8px;top:${wide ? 30 : 70}px;font-size:${wide ? 170 : 150}px;writing-mode:vertical-rl">八稚女</div>
-<div class="q-head"><div><div class="q-open${full ? " full" : ""}">${full ? "PENUH · MASUK QUEUE" : "SLOT DIBUKA"}</div><h3 class="ov-h">${esc(CFG.mabar.title)}</h3></div><div class="q-prices">${chipsHTML()}</div></div>
-<div class="q-cols"><section><h4 class="ov-lbl">Sedang main <i>${s.playing.length}/${max}</i></h4><ol>${slots}</ol></section>
-<section><h4 class="ov-lbl">Queue <i>${s.queue.length}</i></h4>${nextBlock}</section></div>
-<div class="q-foot">${hintHTML()}</div>`;
+      `<li class="nx${isNew(p.id)}"><span class="no">${String(i + 1).padStart(2, "0")}</span><span class="nm">${esc(mem(s, p).name)}</span><span class="g">${mem(s, p).bal}G</span></li>`).join("");
+    if (s.queue.length > lim) next += `<li class="nx more">+${s.queue.length - lim} LAGI</li>`;
+    const nextBlock = s.queue.length ? `<ol>${next}</ol>` : `<p class="q-empty">${full ? "Queue kosong" : "Slot masih ada"}</p>`;
+    return `<div class="q-head"><div><div class="q-open${full ? " full" : ""}">${full ? "PENUH · MASUK QUEUE" : "SLOT DIBUKA"}</div><h3 class="ov-h">${esc(CFG.mabar.title)}</h3></div><div class="q-prices">${chipsHTML()}</div></div>
+<div class="q-cols"><section><h4 class="ov-lbl">Sedang main <i>${s.playing.length}/${max}</i></h4><ol class="slots">${slots}</ol></section>
+<section><h4 class="ov-lbl">Queue <i>${s.queue.length}</i></h4>${nextBlock}</section></div>`;
   }
 
   function pricesHTML() {
     const pr = CFG.mabar.prices.map(p => `<div class="pr"><span>${esc(p.qty)}</span><b>${esc(p.price)}</b></div>`).join("");
-    return `<div class="ghost" style="right:-8px;top:70px;font-size:150px;writing-mode:vertical-rl">八稚女</div>
-<div class="q-head"><div><div class="q-open">BUKA SEKARANG</div><h3 class="ov-h">${esc(CFG.mabar.title)}</h3></div></div>
+    return `<div class="q-head"><div><div class="q-open">BUKA SEKARANG</div><h3 class="ov-h">${esc(CFG.mabar.title)}</h3></div></div>
 <div class="pr-list">${pr}</div>
-<h4 class="ov-lbl">Servis lain</h4><div class="svc">${svcHTML()}</div>
-<div class="q-foot">TOPUP DIAMOND &amp; JOKI RANK · <b>LINK DI BIO</b></div>`;
+<h4 class="ov-lbl">Servis lain</h4><div class="svc">${svcHTML()}</div>`;
   }
 
   function statsHTML(s) {
     const tot = s.wins + s.losses, wr = tot ? Math.round(s.wins / tot * 100) : 0;
     const streak = s.streak >= 2 ? `<span class="streak on">WIN STREAK ${s.streak}</span>` : s.streak <= -2 ? `<span class="streak on lose">LOSE ${-s.streak} BERTURUT</span>` : "";
-    return `<div class="tagline"><span class="ov-lbl">${esc(CFG.server)}</span><h3 class="ov-h">${esc(CFG.status)}</h3></div>
-<div class="wl"><div class="w"><small>WIN</small><b data-k="wins">${s.wins}</b></div><span class="slash">/</span><div class="l"><small>LOSE</small><b data-k="losses">${s.losses}</b></div></div>
-<div class="side"><div class="kv"><small>MMR</small><b data-k="mmr">${s.mmr}</b></div><div class="kv"><small>GLOBAL</small><b data-k="globalRank">#${s.globalRank}</b></div></div>
+    return `<div class="wl"><div class="w"><small>WIN</small><b data-k="wins">${s.wins}</b></div><span class="slash">/</span><div class="l"><small>LOSE</small><b data-k="losses">${s.losses}</b></div></div>
 <div class="rate"><div class="bar"><i style="width:${wr}%"></i></div><span>WR ${wr}%</span>${streak}</div>
-<div class="svc">${svcHTML()}</div>
-<div class="dev">DEVICE · ${esc(CFG.device)}</div>`;
+<div class="svc">${svcHTML()}</div>`;
   }
 
   function stripHTML() {
@@ -311,42 +384,34 @@
   /* ---------- Arena: W/L scoreboard ---------- */
   function scoreSVG(s) {
     const u = uid("sb"), tot = s.wins + s.losses, wr = tot ? Math.round(s.wins / tot * 100) : 0;
-    const fs = v => { const n = String(v).length; return n >= 3 ? 112 : n === 2 ? 148 : 176; };
-    const num = (v, x, k, grad, dark) => `<g class="sb-n" data-k="${k}">
-<text x="${x + 8}" y="214" text-anchor="middle" style="font-family:var(--f-disp);font-size:${fs(v)}px" fill="#05030a" opacity=".85">${v}</text>
-<text x="${x + 4}" y="209" text-anchor="middle" style="font-family:var(--f-disp);font-size:${fs(v)}px" fill="${dark}">${v}</text>
-<text x="${x}" y="204" text-anchor="middle" style="font-family:var(--f-disp);font-size:${fs(v)}px;paint-order:stroke" stroke="#07050c" stroke-width="10" stroke-linejoin="round" fill="url(#${u}${grad})">${v}</text>
-<clipPath id="${u}c${k}"><text x="${x}" y="204" text-anchor="middle" style="font-family:var(--f-disp);font-size:${fs(v)}px">${v}</text></clipPath>
-<rect class="sb-sheen" x="-140" y="40" width="46" height="190" fill="#fff" opacity=".55" transform="skewX(-20)" clip-path="url(#${u}c${k})"/></g>`;
-    const streak = s.streak >= 2 ? `<g transform="translate(255 290)"><polygon points="-74,-14 78,-14 70,14 -82,14" fill="#ffcf4a"/><text x="-2" y="6" text-anchor="middle" style="font-family:var(--f-hud);font-weight:700;font-size:16px;letter-spacing:3px" fill="#07050c">WIN STREAK ${s.streak}</text></g>`
-      : s.streak <= -2 ? `<g transform="translate(255 290)"><text x="0" y="6" text-anchor="middle" style="font-family:var(--f-hud);font-weight:700;font-size:15px;letter-spacing:3px" fill="rgba(243,238,232,.55)">LOSE ${-s.streak} BERTURUT</text></g>` : "";
-    return `<svg viewBox="0 0 520 322" aria-hidden="true"><defs>
-<linearGradient id="${u}p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#26123f"/><stop offset=".6" stop-color="#120a20"/><stop offset="1" stop-color="#0a0612"/></linearGradient>
-<linearGradient id="${u}w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#c9ffe3"/><stop offset="1" stop-color="#33dd8b"/></linearGradient>
-<linearGradient id="${u}l" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#ffc4cf"/><stop offset="1" stop-color="#ff2350"/></linearGradient>
-<linearGradient id="${u}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#b98aff"/><stop offset="1" stop-color="#ff2350"/></linearGradient>
-<filter id="${u}g" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="4"/></filter></defs>
-<text x="260" y="16" text-anchor="middle" style="font-family:var(--f-hud);font-weight:700;font-size:15px;letter-spacing:5px" fill="#b98aff">${esc(CFG.status)} · ${esc(CFG.server)}</text>
-<polygon points="30,36 248,36 232,234 14,234" fill="url(#${u}p)"/>
-<polygon class="sb-edge" points="30,36 248,36 232,234 14,234" fill="none" stroke="#6dffb0" stroke-width="7" filter="url(#${u}g)"/>
-<polygon points="30,36 248,36 232,234 14,234" fill="none" stroke="#6dffb0" stroke-width="2.5"/>
-<polygon points="272,36 490,36 506,234 288,234" fill="url(#${u}p)"/>
-<polygon class="sb-edge" points="272,36 490,36 506,234 288,234" fill="none" stroke="#ff2350" stroke-width="7" filter="url(#${u}g)"/>
-<polygon points="272,36 490,36 506,234 288,234" fill="none" stroke="#ff2350" stroke-width="2.5"/>
-<polygon points="40,24 138,24 132,52 34,52" fill="#6dffb0"/><text x="86" y="45" text-anchor="middle" style="font-family:var(--f-shout);font-style:italic;font-weight:900;font-size:21px" fill="#07050c">WIN</text>
-<polygon points="382,24 480,24 486,52 388,52" fill="#ff2350"/><text x="434" y="45" text-anchor="middle" style="font-family:var(--f-shout);font-style:italic;font-weight:900;font-size:21px" fill="#fff">LOSE</text>
-${num(s.wins, 128, "wins", "w", "#0b6b44")}
-${num(s.losses, 392, "losses", "l", "#7a0020")}
-<polygon class="sb-bolt" points="268,30 240,124 260,124 246,240 282,118 260,118 280,30" fill="url(#${u}b)" stroke="#07050c" stroke-width="3" stroke-linejoin="round"/>
-<circle cx="260" cy="138" r="27" fill="#07050c" stroke="#f3eee8" stroke-width="3"/>
-<text x="259" y="147" text-anchor="middle" style="font-family:var(--f-shout);font-style:italic;font-weight:900;font-size:24px" fill="#f3eee8">VS</text>
-<polygon points="14,250 506,250 503,260 11,260" fill="#ff2350"/>
-<polygon points="14,250 ${(14 + 492 * wr / 100).toFixed(1)},250 ${(11 + 492 * wr / 100).toFixed(1)},260 11,260" fill="#6dffb0"/>
-<text x="16" y="296" style="font-family:var(--f-hud);font-weight:700;font-size:14px;letter-spacing:3px" fill="#b98aff">MMR</text>
-<g data-k="mmr"><text x="62" y="301" style="font-family:var(--f-num);font-size:40px" fill="#f3eee8">${s.mmr}</text></g>
-${streak || `<text x="260" y="296" text-anchor="middle" style="font-family:var(--f-hud);font-weight:700;font-size:14px;letter-spacing:3px" fill="rgba(243,238,232,.6)">WR ${wr}%</text>`}
-<g data-k="globalRank"><text x="504" y="301" text-anchor="end" style="font-family:var(--f-num);font-size:40px" fill="#ffcf4a">#${s.globalRank}</text></g>
-<text x="${504 - 28 - String(s.globalRank).length * 19}" y="296" text-anchor="end" style="font-family:var(--f-hud);font-weight:700;font-size:14px;letter-spacing:3px" fill="#b98aff">GLOBAL</text>
+    const fs = v => String(v).length >= 3 ? 56 : 74;
+    const num = (v, x, anchor, k, grad, dark) => `<g class="sb-n" data-k="${k}">
+<text x="${x + 3}" y="91" text-anchor="${anchor}" style="font-family:var(--f-disp);font-size:${fs(v)}px" fill="${dark}">${v}</text>
+<text x="${x}" y="88" text-anchor="${anchor}" style="font-family:var(--f-disp);font-size:${fs(v)}px;paint-order:stroke" stroke="#07050c" stroke-width="6" stroke-linejoin="round" fill="url(#${u}${grad})">${v}</text>
+<clipPath id="${u}c${k}"><text x="${x}" y="88" text-anchor="${anchor}" style="font-family:var(--f-disp);font-size:${fs(v)}px">${v}</text></clipPath>
+<rect class="sb-sheen" x="-140" y="10" width="34" height="100" fill="#fff" opacity=".6" transform="skewX(-20)" clip-path="url(#${u}c${k})"/></g>`;
+    const streak = s.streak >= 2 ? `<g transform="translate(40 12)"><polygon points="0,-10 104,-10 98,10 -6,10" fill="#ffcf4a"/><text x="49" y="5" text-anchor="middle" style="font-family:var(--f-hud);font-weight:700;font-size:13px;letter-spacing:2px" fill="#07050c">WIN STREAK ${s.streak}</text></g>` : "";
+    return `<svg viewBox="0 0 508 108" aria-hidden="true"><defs>
+<linearGradient id="${u}p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a0b12"/><stop offset="1" stop-color="#0b0507"/></linearGradient>
+<linearGradient id="${u}w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#ffe7a6"/><stop offset="1" stop-color="#ffb800"/></linearGradient>
+<linearGradient id="${u}l" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#ffc0ca"/><stop offset="1" stop-color="#ff2346"/></linearGradient>
+<linearGradient id="${u}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#ff2346"/></linearGradient>
+<filter id="${u}g" x="-10%" y="-30%" width="120%" height="160%"><feGaussianBlur stdDeviation="3"/></filter></defs>
+<polygon points="14,16 240,16 230,104 4,104" fill="url(#${u}p)"/>
+<polygon class="sb-edge" points="14,16 240,16 230,104 4,104" fill="none" stroke="#ffcf4a" stroke-width="6" filter="url(#${u}g)"/>
+<polygon points="14,16 240,16 230,104 4,104" fill="none" stroke="#ffcf4a" stroke-width="2"/>
+<polygon points="268,16 494,16 504,104 278,104" fill="url(#${u}p)"/>
+<polygon class="sb-edge" points="268,16 494,16 504,104 278,104" fill="none" stroke="#ff2346" stroke-width="6" filter="url(#${u}g)"/>
+<polygon points="268,16 494,16 504,104 278,104" fill="none" stroke="#ff2346" stroke-width="2"/>
+<text x="26" y="74" style="font-family:var(--f-shout);font-style:italic;font-weight:900;font-size:30px" fill="#ffcf4a">WIN</text>
+<text x="490" y="74" text-anchor="end" style="font-family:var(--f-shout);font-style:italic;font-weight:900;font-size:30px" fill="#ff2346">LOSE</text>
+${num(s.wins, 214, "end", "wins", "w", "#6b4a00")}
+${num(s.losses, 294, "start", "losses", "l", "#6a0012")}
+<polygon class="sb-bolt" points="262,10 244,58 256,58 246,108 272,52 260,52 272,10" fill="url(#${u}b)" stroke="#07050c" stroke-width="2.5" stroke-linejoin="round"/>
+<circle cx="254" cy="60" r="19" fill="#07050c" stroke="#f3eee8" stroke-width="2.5"/>
+<text x="253" y="67" text-anchor="middle" style="font-family:var(--f-shout);font-style:italic;font-weight:900;font-size:17px" fill="#f3eee8">VS</text>
+${streak}
+<text x="494" y="10" text-anchor="end" style="font-family:var(--f-hud);font-weight:700;font-size:12px;letter-spacing:3px" fill="rgba(243,238,232,.65)">WR ${wr}%</text>
 </svg>`;
   }
 
@@ -370,14 +435,14 @@ ${streak || `<text x="260" y="296" text-anchor="middle" style="font-family:var(-
     const u = uid("en");
     const lines = L.energy.map((y, i) => `<g class="en" data-y="${y}" data-i="${i}">
 <rect x="0" y="${y - 9}" width="${W}" height="18" fill="url(#${u}v)" opacity=".75" class="en-glow"/>
-<path class="en-wave" fill="none" stroke="#b98aff" stroke-width="3" filter="url(#${u}b)"/>
-<path class="en-wave2" fill="none" stroke="#ff2350" stroke-width="2" opacity=".8"/>
+<path class="en-wave" fill="none" stroke="${TH.hi}" stroke-width="3" filter="url(#${u}b)"/>
+<path class="en-wave2" fill="none" stroke="${CFG.theme === "red" ? "#ffb35c" : "#ff2350"}" stroke-width="2" opacity=".8"/>
 <rect x="0" y="${y - 1.5}" width="${W}" height="3" fill="#f6efff"/>
 <path class="en-arc" fill="none" stroke="#fff" stroke-width="2.4" stroke-linejoin="bevel" filter="url(#${u}a)"/>
 <circle class="en-spark" r="6" cy="${y}" fill="#fff" filter="url(#${u}a)"/></g>`).join("");
     const wrap = el("div", "ov-layer");
     wrap.innerHTML = `<svg class="ov-layer" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true"><defs>
-<linearGradient id="${u}v" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7b2cff" stop-opacity="0"/><stop offset=".5" stop-color="#9b5bff" stop-opacity=".9"/><stop offset="1" stop-color="#7b2cff" stop-opacity="0"/></linearGradient>
+<linearGradient id="${u}v" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${TH.a}" stop-opacity="0"/><stop offset=".5" stop-color="${TH.a}" stop-opacity=".9"/><stop offset="1" stop-color="${TH.a}" stop-opacity="0"/></linearGradient>
 <filter id="${u}b" x="-5%" y="-200%" width="110%" height="500%"><feGaussianBlur stdDeviation="3"/></filter>
 <filter id="${u}a" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>${lines}</svg>`;
     const groups = [...wrap.querySelectorAll(".en")];
@@ -414,7 +479,7 @@ ${streak || `<text x="260" y="296" text-anchor="middle" style="font-family:var(-
   function mount(root, opts = {}) {
     Store.init();
     const L = resolveLayout(opts.layout, opts);
-    const stage = el("div", "ov-stage ov-l" + (opts.layout || 1));
+    const stage = el("div", `ov-stage ov-l${opts.layout || 1} theme-${CFG.theme || "violet"}`);
 
     if (opts.demo) for (const s of L.slots) {
       const d = el("div", "ov-demo"); pos(d, s);
@@ -425,20 +490,25 @@ ${streak || `<text x="260" y="296" text-anchor="middle" style="font-family:var(-
     }
     stage.insertAdjacentHTML("beforeend", bgSVG(L));
     if (opts.bgfx !== false) stage.appendChild(bgFx(L));
-    if (L.energy) stage.appendChild(energyLayer(L));
     stage.insertAdjacentHTML("beforeend", frameSVG(L));
 
     // band between facecam and gameplay
+    // band under the facecam: LIVE · stream timer · clock · YouTube viewers
     const band = el("div", "ov-band", `<span class="sweep"></span><span class="live"><span class="dot"></span><span>LIVE</span></span>
-<span>${esc(CFG.status)}</span><span class="sep"></span><span>${esc(CFG.server)}</span><span class="sep"></span><span class="clock">--:--</span>`);
+<span class="itm timer" hidden><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M12 13V9M9 2h6M19 6l-1.5 1.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><b>00:00:00</b></span>
+<span class="itm clock">--:--</span>
+<span class="itm yt" hidden><svg viewBox="0 0 24 24"><rect x="1" y="5" width="22" height="14" rx="4" fill="#ff0000"/><path d="M10 9l5 3-5 3z" fill="#fff"/></svg><b></b></span>`);
     band.style.top = L.band + "px"; if (L.band != null) stage.appendChild(band);
-    const clock = band.querySelector(".clock"); let lastClock = "";
+    const clock = band.querySelector(".clock"), timerEl = band.querySelector(".timer"), timerTxt = timerEl.querySelector("b");
+    const ytEl = band.querySelector(".yt"), ytTxt = ytEl.querySelector("b");
+    let lastClock = "", lastTimer = "", lastYt = "";
 
+    // caption under the handcam border
     for (const t of L.tags) {
       const s = L.slots.find(x => x.id === t.slot);
-      const tag = el("div", "ov-tag", `${SLOT_NAMES[s.id]} <em>${esc(CFG.device)}</em>`);
-      tag.style.left = (s.x + (s.cut || 0) + 6) + "px"; tag.style.top = (s.y + s.h - 40) + "px";
-      stage.appendChild(tag);
+      const cap = el("div", "ov-caption", `<i></i><span>DEVICE: <b>${esc(CFG.device)}</b></span><i></i>`);
+      Object.assign(cap.style, { left: s.x + "px", top: (s.y + s.h + 6) + "px", width: s.w + "px" });
+      stage.appendChild(cap);
     }
 
     const panels = L.panels.map(p => {
@@ -449,18 +519,19 @@ ${streak || `<text x="260" y="296" text-anchor="middle" style="font-family:var(-
     const api = { stage, layout: L, banner: null };
     api.setBanner = (st, acc) => {
       if (api.banner) api.banner.destroy();
-      api.banner = st === "none" ? null : mountBanner(stage, { style: st, accent: acc || opts.accent, y: BY, inStage: true });
+      api.banner = st === "none" ? null : mountBanner(stage, { style: st, accent: acc || opts.accent, y: L.bannerY != null ? L.bannerY : BY, inStage: true });
       if (api.banner) api.banner.el.style.display = Store.state.showBanner ? "" : "none";
     };
     api.setBanner(opts.banner || "pro");
+    if (L.energy) { const en = energyLayer(L); en.style.zIndex = 4; stage.appendChild(en); }
 
     function render(s, prev) {
       const prevIds = prev ? new Set(prev.playing.concat(prev.queue).map(p => p.id)) : null;
       for (const { def, e } of panels) {
-        const wide = def.variant === "wide";
+        const v = def.variant ? " " + def.variant : "";
         if (def.type === "queue") {
-          e.className = "ov-card " + (s.showQueue ? "ov-queue" : "ov-prices") + (wide ? " wide" : "");
-          e.innerHTML = s.showQueue ? queueHTML(s, wide, prevIds) : pricesHTML();
+          e.className = "ov-card " + (s.showQueue ? "ov-queue" : "ov-prices") + v;
+          e.innerHTML = s.showQueue ? queueHTML(s, def.variant, prevIds) : pricesHTML();
         } else if (def.type === "stats") {
           e.className = "ov-card ov-stats" + (def.variant ? " " + def.variant : "");
           e.innerHTML = statsHTML(s);
@@ -474,7 +545,7 @@ ${streak || `<text x="260" y="296" text-anchor="middle" style="font-family:var(-
           if (!e.firstChild) { e.className = "ov-welcome"; e.innerHTML = welcomeSVG(); }
           e.style.display = s.showWelcome ? "" : "none";
         } else if (def.type === "music") {
-          e.className = "ov-music"; if (!e.firstChild && opts.demo) e.innerHTML = `<span>♪</span><b>LAGU · MUSIC WIDGET</b><small>${def.x}, ${def.y} · ${def.w}×${def.h}</small>`;
+          if (!e.firstChild) { e.className = "ov-music"; e.innerHTML = `<div class="mu-tab"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="17" cy="16" r="3" fill="currentColor"/></svg>NOW PLAYING</div>${opts.demo ? `<div class="mu-demo">widget lagu · ${def.w}×${def.h}</div>` : ""}`; }
         }
       }
       if (api.banner) api.banner.el.style.display = s.showBanner ? "" : "none";
@@ -495,10 +566,27 @@ ${streak || `<text x="260" y="296" text-anchor="middle" style="font-family:var(-
       });
     });
     tickers.push(() => {
-      if (manualT != null || L.band == null) return;
-      const d = new Date(), c = String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
-      if (c !== lastClock) { clock.textContent = c; lastClock = c; }
+      if (L.band == null) return;
+      const st = Store.state, nowMs = Date.now();
+      if (manualT == null) {
+        const d = new Date(), c = String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+        if (c !== lastClock) { clock.textContent = c; lastClock = c; }
+      }
+      const el_ = liveElapsed(st, nowMs), tt = el_ > 0 || st.live.running ? fmtTime(el_) : "";
+      if (tt !== lastTimer) { timerTxt.textContent = tt; timerEl.hidden = !tt; timerEl.classList.toggle("paused", !st.live.running); lastTimer = tt; }
+      const fresh = st.yt && st.yt.viewers != null && nowMs - (st.yt.at || 0) < 180000;
+      const yv = fresh ? Number(st.yt.viewers).toLocaleString("en-US") : "";
+      if (yv !== lastYt) { ytTxt.textContent = yv; ytEl.hidden = !yv; lastYt = yv; }
     });
+
+    // automation: start the stream timer when OBS starts streaming (browser source needs
+    // "Page permissions: Read access to OBS status information" or higher)
+    if (!api.autoHooked && window.obsstudio) {
+      api.autoHooked = true;
+      window.addEventListener("obsStreamingStarted", () => { if (!Store.state.live.running) Q.timer("restart"); });
+      window.addEventListener("obsStreamingStopped", () => Q.timer("pause"));
+      try { window.obsstudio.getStatus(st => { if (st && st.streaming && !Store.state.live.running && !liveElapsed(Store.state)) Q.timer("start"); }); } catch (e) {}
+    }
 
     root.appendChild(stage);
     return api;
@@ -609,7 +697,6 @@ ${streak || `<text x="260" y="296" text-anchor="middle" style="font-family:var(-
     return `<svg viewBox="0 0 262 192" aria-hidden="true"><defs>
 <linearGradient id="${u}g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f3eee8"/><stop offset=".55" stop-color="#b98aff"/><stop offset="1" stop-color="#7b2cff"/></linearGradient></defs>
 ${crescent(u + "m", 118, 86, 70, `url(#${u}g)`, 'class="moon"')}
-<text x="206" y="30" style="font-family:var(--f-brush);font-size:30px;writing-mode:vertical-rl;letter-spacing:4px" fill="#ff2350">八稚女</text>
 <text x="112" y="150" text-anchor="middle" style="font-family:var(--f-disp);font-size:76px;letter-spacing:1px" fill="#07050c" transform="translate(4 4)">${esc(brandName())}</text>
 <text x="112" y="150" text-anchor="middle" style="font-family:var(--f-disp);font-size:76px;letter-spacing:1px" fill="#f3eee8">${esc(brandName())}</text>
 <text x="112" y="176" text-anchor="middle" style="font-family:var(--f-hud);font-weight:700;font-size:15px;letter-spacing:6px" fill="#b98aff">STORE · LINK DI BIO</text></svg>`;
@@ -678,6 +765,7 @@ ${crescent(u + "m", 118, 86, 70, `url(#${u}g)`, 'class="moon"')}
     let style = opts.style || "pro";
     if (/^pro/.test(style) && window.ChouOverlay.mountProBanner) return window.ChouOverlay.mountProBanner(root, opts);
     if (/^scene/.test(style) && window.ChouOverlay.mountSceneBanner) return window.ChouOverlay.mountSceneBanner(root, opts);
+    if (/^power/.test(style) && window.ChouOverlay.mountPowerBanner) return window.ChouOverlay.mountPowerBanner(root, opts);
     const B = CFG.banner, msgs = B.messages, N = msgs.length, D = B.secondsPerMessage, LOOP = N * D;
     const ch = B.character || {};
     const bn = el("div", "bn bn--" + style);
@@ -782,5 +870,5 @@ ${msgs.map(m => `<div class="bn-art">${m.art === "rank" && window.ChouOverlay &&
 
   requestAnimationFrame(loop);
   const util = { el, esc, clamp, seg, eOut, eBack, frac, rnd, TAU, fill, priceHL, uid, tickers, now, drawFx, artSVG, animArt, crescent };
-  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util };
+  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util, keyOf, liveElapsed, fmtTime };
 })();

@@ -1,6 +1,6 @@
 /* 3D rank sequence for the joki message.
    Uses the real MLBB rank icons you drop into assets/ranks/ (transparent PNG):
-     epic.png  legend.png  mythic.png  glory.png  immortal.png
+     epic.png  legend.png  mythic.png  honor.png  glory.png  immortal.png
    Each icon is stacked into a thick 3D coin (darkened back layers), flips in on the
    Y axis, swings slowly, floats over a soft floor shadow, with a tier-coloured glow
    and a specular sweep. Missing files fall back to the drawn badges. */
@@ -12,17 +12,19 @@
     { name: "EPIC", img: "assets/ranks/epic.png", glow: "#45f0bf" },
     { name: "LEGEND", img: "assets/ranks/legend.png", glow: "#ffcf4a" },
     { name: "MYTHIC", img: "assets/ranks/mythic.png", glow: "#c995ff" },
+    { name: "HONOR", img: "assets/ranks/honor.png", glow: "#7fb2ff" },
     { name: "GLORY", img: "assets/ranks/glory.png", glow: "#ff96d4" },
     { name: "IMMORTAL", img: "assets/ranks/immortal.png", glow: "#ff5874" }
   ];
   const tiers = () => (CFG.ranks && CFG.ranks.tiers) || DEF;
   const DEPTH = 6; // back layers that give the coin its thickness
-  const START = [.3, .9, 1.5, 2.1, 2.7];
+  const startOf = i => .3 + i * .45;          // fast pace: a new rank every 0.45 s
+  const FB = { EPIC: 0, LEGEND: 1, MYTHIC: 2, HONOR: 2, GLORY: 3, IMMORTAL: 4 }; // fallback badge per tier
 
   function html() {
     const T = tiers();
     return `<div class="rk3d">
-<div class="rk-rays"></div>
+<div class="rk-rays"></div><div class="rk-ring"></div><div class="rk-ring r2"></div>
 ${T.map((t, i) => `<div class="rk-tier" data-i="${i}" style="--g:${t.glow}">
  <div class="rk-glow"></div><div class="rk-shadow"></div>
  <div class="rk-card">${Array.from({ length: DEPTH + 1 }, (_, k) =>
@@ -40,7 +42,7 @@ ${T.map((t, i) => `<div class="rk-tier" data-i="${i}" style="--g:${t.glow}">
       const i = +tier.dataset.i, imgs = [...tier.querySelectorAll("img")];
       const fallback = () => {
         if (tier.dataset.fb) return; tier.dataset.fb = "1";
-        const svg = O.rankBadgeSVG ? O.rankBadgeSVG(i) : "";
+        const nm = (tiers()[i] || {}).name, svg = O.rankBadgeSVG ? O.rankBadgeSVG(FB[nm] != null ? FB[nm] : Math.min(i, 4)) : "";
         tier.querySelectorAll(".rk-l").forEach(l => { l.innerHTML = svg; });
       };
       imgs[0].addEventListener("error", fallback);
@@ -56,11 +58,13 @@ ${T.map((t, i) => `<div class="rk-tier" data-i="${i}" style="--g:${t.glow}">
     if (!root || !root.classList || !root.classList.contains("rk3d")) return;
     hydrate(root);
     const tiersEl = root.querySelectorAll(".rk-tier"), last = tiersEl.length - 1;
-    let cur = 0; for (let i = 0; i <= last; i++) if (u >= (START[i] ?? START[START.length - 1] + i)) cur = i;
+    let cur = 0; for (let i = 0; i <= last; i++) if (u >= startOf(i)) cur = i;
+    const curT = tiers()[cur] || {};
+    root.style.setProperty("--rg", curT.glow || "#ff5874");
     tiersEl.forEach((el, i) => {
       if (i !== cur) { if (el.style.visibility !== "hidden") el.style.visibility = "hidden"; return; }
       el.style.visibility = "visible";
-      const st = START[i], p = seg(u, st, st + .42);
+      const st = startOf(i), p = seg(u, st, st + .36);
       const flip = (1 - eOut(p)) * -110;                       // flips in on Y
       const swing = Math.sin((t + i) * TAU / 3.2) * (i === last ? 16 : 10) * eOut(p);
       const tilt = Math.sin((t + i) * TAU / 4.1) * 5;
@@ -79,7 +83,12 @@ ${T.map((t, i) => `<div class="rk-tier" data-i="${i}" style="--g:${t.glow}">
       el.querySelector(".rk-shine").style.backgroundPosition = `${(160 - seg(sp, .15, .5) * 220).toFixed(1)}% 0`;
     });
     const rays = root.querySelector(".rk-rays");
-    rays.style.opacity = cur === last ? (.5 + .2 * Math.sin(t * TAU / 2)).toFixed(3) : "0";
+    rays.style.opacity = ((cur === last ? .62 : .32) + .14 * Math.sin(t * TAU / 2)).toFixed(3);
+    root.querySelectorAll(".rk-ring").forEach((r, i) => {
+      const p = frac((u - startOf(cur)) / 1.2 + i * .5), on = u >= startOf(0);
+      r.style.transform = `translate(-50%, -50%) scale(${(.55 + p * .75).toFixed(3)})`;
+      r.style.opacity = on ? ((1 - p) * .9).toFixed(3) : "0";
+    });
     rays.style.transform = `translate(-50%, -50%) rotate(${(t * 20).toFixed(1)}deg)`;
     root.querySelectorAll(".rk-spk").forEach((s, i) => {
       const p = frac(t / 1.3 + i / 3), sc = cur === last ? Math.sin(p * Math.PI) : 0;

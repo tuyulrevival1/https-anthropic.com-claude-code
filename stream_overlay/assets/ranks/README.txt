@@ -3,6 +3,7 @@ Letak ikon rank MLBB asli di sini (PNG latar telus, segi empat, contoh 512x512):
   epic.png
   legend.png
   mythic.png
+  honor.png
   glory.png
   immortal.png
 
