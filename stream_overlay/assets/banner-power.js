@@ -76,6 +76,7 @@
 .bn-power .pw-glass::after { content: ""; position: absolute; left: 14%; right: 14%; top: 5%; height: 38%; border-radius: 50%; background: linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0)); }
 .bn-power .pw-art { position: absolute; inset: 6px; display: none; }
 .bn-power .pw-art .rk3d { inset: -4px; }
+.bn-power .pw-art .rk3d .rk-card { height: 98%; top: 47%; }
 .bn-power .pw-flare { position: absolute; inset: -30px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.95) 0%, rgba(255,214,120,.6) 18%, rgba(255,31,61,0) 60%); opacity: 0; mix-blend-mode: screen; }
 .bn-power .pw-blade { top: -20px; left: 0; width: 70px; height: 232px; background: linear-gradient(90deg, rgba(255,255,255,0), #fff 40%, #ffe4e8 60%, rgba(255,255,255,0)); opacity: 0; mix-blend-mode: screen; }
 .bn-power .pw-flash { left: 260px; width: 640px; top: 0; height: 192px; background: #fff; opacity: 0; mix-blend-mode: overlay; }
