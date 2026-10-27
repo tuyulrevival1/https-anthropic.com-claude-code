@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<title>Chou Overlay</title>
+<link rel="stylesheet" href="assets/overlay.css">
+<style>
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; }
+  #root { width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<!--
+  Browser source OBS / TikTok Live Studio: 1080 x 1920
+  ?layout=1  Klasik      (facecam atas, game tengah, queue + handcam bawah)
+  ?layout=2  Mabar       (facecam + handcam atas, queue besar bawah)
+  ?layout=3  Solo Push   (game besar, stats besar, tiada queue)
+  &banner=flame | slash | moon | none
+  &demo      tunjuk gambar contoh dalam lubang kamera (untuk preview sahaja)
+-->
+<div id="root"></div>
+<script src="assets/config.js"></script>
+<script src="assets/overlay.js"></script>
+<script>
+  const p = new URLSearchParams(location.search);
+  const root = document.getElementById("root");
+  const o = ChouOverlay.mount(root, { layout: +p.get("layout") || 1, banner: p.get("banner") || "flame", demo: p.has("demo") });
+  ChouOverlay.fitStage(o.stage, root);
+</script>
+</body>
+</html>

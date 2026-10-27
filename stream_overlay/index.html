@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--ARTIFACT-START-->
+<title>Chou KOF Overlay</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:ital,wght@1,900&family=Rajdhani:wght@600;700&family=Teko:wght@600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&text=%E5%85%AB%E7%A8%9A%E5%A5%B3&display=swap">
+<link rel="stylesheet" href="assets/overlay.css">
+<link rel="stylesheet" href="assets/control.css">
+<style>
+  /* Layout: one dark stream-desk page — style switch, three portrait previews, banners, live queue panel. */
+  :root {
+    --g-bg: #0b0712; --g-panel: #140c21; --g-line: rgba(185,138,255,.2); --g-fg: #f3eee8; --g-mut: rgba(243,238,232,.62);
+    --g-acc: #b98aff; --g-red: #ff2350;
+    --g-disp: "OV Anton", "Anton", Impact, sans-serif; --g-hud: "OV Raj", "Rajdhani", "Segoe UI", system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  body { background: var(--g-bg); color: var(--g-fg); font: 500 16px/1.5 var(--g-hud); margin: 0; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding-block: 28px 60px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 24px; margin-bottom: 22px; }
+  h1 { margin: 0; font: 400 clamp(40px, 7vw, 68px)/.9 var(--g-disp); letter-spacing: .01em; transform: skewX(-8deg); text-shadow: 3px 3px 0 var(--g-red); }
+  h1 small { display: block; font: 700 14px/1 var(--g-hud); letter-spacing: .32em; color: var(--g-acc); text-shadow: none; transform: none; margin-bottom: 10px; }
+  .lead { margin: 6px 0 0; color: var(--g-mut); max-width: 60ch; }
+  h2 { font: 400 30px/1 var(--g-disp); letter-spacing: .02em; margin: 44px 0 6px; text-wrap: balance; }
+  h2 + p { margin: 0 0 16px; color: var(--g-mut); max-width: 68ch; }
+  .seg { display: inline-flex; border: 1px solid var(--g-line); background: var(--g-panel); }
+  .seg button { font: 700 14px/1 var(--g-hud); letter-spacing: .14em; text-transform: uppercase; color: var(--g-mut); background: none; border: 0; padding: 12px 14px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--g-red); color: #fff; }
+  .seg button:focus-visible { outline: 2px solid var(--g-acc); outline-offset: -2px; }
+  .layouts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 18px; }
+  .lay { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .shot { position: relative; width: 100%; aspect-ratio: 9 / 16; overflow: hidden; background: #000; border: 1px solid var(--g-line); }
+  .shot .ov-stage, .bshot .bn-host { position: absolute; left: 0; top: 0; }
+  .lay > h3 { margin: 4px 0 0; font: 400 24px/1 var(--g-disp); letter-spacing: .02em; display: flex; gap: 10px; align-items: baseline; }
+  .lay > h3 span { font: 700 13px/1 var(--g-hud); letter-spacing: .24em; color: var(--g-red); }
+  .lay > p { margin: 0; color: var(--g-mut); }
+  code { font: 600 13px/1.4 ui-monospace, Menlo, Consolas, monospace; color: var(--g-acc); background: rgba(185,138,255,.08); padding: 2px 6px; overflow-wrap: anywhere; }
+  .banners { display: flex; flex-direction: column; gap: 16px; }
+  .bitem { display: flex; flex-direction: column; gap: 6px; }
+  .bitem b { font: 700 13px/1 var(--g-hud); letter-spacing: .24em; text-transform: uppercase; color: var(--g-acc); }
+  .bshot { position: relative; width: 100%; aspect-ratio: 1080 / 192; overflow: hidden; border: 1px solid var(--g-line); }
+  .bn-host { width: 1080px; height: 192px; transform-origin: 0 0; }
+  .tools { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+  .tools button { font: 700 14px/1 var(--g-hud); letter-spacing: .12em; text-transform: uppercase; color: var(--g-fg); background: #241338; border: 1px solid var(--g-line); padding: 10px 14px; cursor: pointer; }
+  .tools button:focus-visible { outline: 2px solid var(--g-acc); }
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 14px; }
+  .step { background: var(--g-panel); border: 1px solid var(--g-line); padding: 16px 18px; min-width: 0; }
+  .step h4 { margin: 0 0 8px; font: 700 14px/1 var(--g-hud); letter-spacing: .22em; text-transform: uppercase; color: var(--g-acc); }
+  .step p, .step li { color: var(--g-mut); margin: 0 0 6px; }
+  .step ul { margin: 0; padding-left: 18px; }
+  .tbl { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: 15px; }
+  th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--g-line); white-space: nowrap; }
+  th { color: var(--g-acc); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; font-size: 12px; }
+</style>
+<!--ARTIFACT-HEAD-END-->
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1><small>OVERLAY LIVE · PORTRAIT 1080×1920</small>CHOU KOF OVERLAY</h1>
+      <p class="lead">Tiga susunan layout, tiga gaya banner bawah, dan queue Mabar VIP yang dikawal dari panel. Tukar gaya banner di sini, semua preview ikut.</p>
+    </div>
+    <div class="seg" role="group" aria-label="Gaya banner">
+      <button type="button" data-style="flame" aria-pressed="true">Yagami Flame</button>
+      <button type="button" data-style="slash" aria-pressed="false">Crimson Slash</button>
+      <button type="button" data-style="moon" aria-pressed="false">Moonlight</button>
+    </div>
+  </header>
+
+  <section class="layouts">
+    <div class="lay"><div class="shot" data-layout="1"></div>
+      <h3>Klasik <span>LAYOUT 1</span></h3>
+      <p>Susunan macam sekarang. Queue Mabar di kiri bawah, handcam kanan. Bila queue ditutup, kad tu jadi senarai harga.</p>
+      <code>overlay.html?layout=1</code></div>
+    <div class="lay"><div class="shot" data-layout="2"></div>
+      <h3>Mabar <span>LAYOUT 2</span></h3>
+      <p>Untuk sesi mabar. Facecam dan handcam di atas, queue besar di bawah supaya penonton nampak giliran.</p>
+      <code>overlay.html?layout=2</code></div>
+    <div class="lay"><div class="shot" data-layout="3"></div>
+      <h3>Solo Push <span>LAYOUT 3</span></h3>
+      <p>Bila skrin dah penuh. Tiada queue, game lebih besar, W/L dan MMR jelas. Harga mabar tinggal satu jalur kecil.</p>
+      <code>overlay.html?layout=3</code></div>
+  </section>
+
+  <h2>Banner bawah</h2>
+  <p>Kekal dalam jalur 1080×192 sahaja, tak masuk kawasan atas. Empat mesej bertukar setiap 6 saat dengan sapuan pedang merah. Letak PNG Chou KOF di <code>assets/chou.png</code> untuk ganti logo bulan sabit.</p>
+  <div class="banners">
+    <div class="bitem"><b>Yagami Flame</b><div class="bshot"><div class="bn-host" data-banner="flame"></div></div></div>
+    <div class="bitem"><b>Crimson Slash</b><div class="bshot"><div class="bn-host" data-banner="slash"></div></div></div>
+    <div class="bitem"><b>Moonlight</b><div class="bshot"><div class="bn-host" data-banner="moon"></div></div></div>
+  </div>
+
+  <h2>Cuba queue Mabar VIP</h2>
+  <p>Panel ni sama macam <code>control.html</code>. Tambah nama, tekan Menang atau Kalah, dan tengok preview di atas berubah. Nama dalam preview ni contoh sahaja.</p>
+  <div class="tools">
+    <button type="button" id="g-sample">Isi contoh</button>
+    <button type="button" id="g-empty">Kosongkan</button>
+  </div>
+  <div id="cp"></div>
+
+  <h2>Cara pasang</h2>
+  <p>Overlay letak paling atas dalam scene. Kamera dan game letak di bawahnya, ikut kotak dalam jadual.</p>
+  <div class="steps">
+    <div class="step"><h4>1 · Jalankan</h4>
+      <ul><li>Windows: klik dua kali <code>START_OVERLAY.bat</code></li>
+      <li>Atau: <code>python -m http.server 8787</code> dalam folder <code>stream_overlay</code></li>
+      <li>Browser source 1080×1920: <code>http://localhost:8787/overlay.html?layout=1&amp;banner=flame</code></li>
+      <li>Panel: OBS › Docks › Custom Browser Docks › <code>http://localhost:8787/control.html</code></li></ul></div>
+    <div class="step"><h4>2 · Kedudukan kamera (x, y, w, h)</h4>
+      <div class="tbl"><table>
+        <thead><tr><th>Layout</th><th>Facecam</th><th>Game</th><th>Handcam</th></tr></thead>
+        <tbody>
+          <tr><td>1 Klasik</td><td>0, 0, 1080, 560</td><td>0, 588, 1080, 608</td><td>540, 1216, 504, 284</td></tr>
+          <tr><td>2 Mabar</td><td>0, 0, 652, 470</td><td>0, 498, 1080, 608</td><td>666, 14, 400, 225</td></tr>
+          <tr><td>3 Solo Push</td><td>0, 0, 1080, 520</td><td>0, 548, 1080, 760</td><td>540, 1326, 504, 284</td></tr>
+        </tbody></table></div>
+      <p>Layout 3: game di-zoom (1351×760) dan potong tepi kiri kanan.</p></div>
+  </div>
+</div>
+<!--ARTIFACT-BODY-END-->
+<script>window.OVERLAY_STORE_KEY = "chouOverlay.preview";</script>
+<script src="assets/config.js"></script>
+<script src="assets/overlay.js"></script>
+<script src="assets/control.js"></script>
+<script>
+(function () {
+  const O = window.ChouOverlay;
+  const SAMPLE = {
+    playing: [["Aqil.MY", 3, 2], ["Farhan2311", 1, 1], ["NAJWA", 3, 3]],
+    queue: [["Haziq_", 3], ["zul.gg", 1], ["Mira Hanis", 1], ["Danish99", 3], ["KudoX", 1]]
+  };
+  const seed = () => O.Store.set(s => {
+    let n = 0;
+    s.playing = SAMPLE.playing.map(([name, games, left]) => ({ id: "s" + n++, name, games, left }));
+    s.queue = SAMPLE.queue.map(([name, games]) => ({ id: "s" + n++, name, games, left: games }));
+    s.showQueue = true; s.showBanner = true;
+  });
+  O.Store.init();
+  if (!O.Store.read()) seed();
+
+  const overlays = [...document.querySelectorAll(".shot")].map(box => {
+    const o = O.mount(box, { layout: +box.dataset.layout, banner: "flame", demo: true });
+    O.fitStage(o.stage, box);
+    return o;
+  });
+  document.querySelectorAll(".bn-host").forEach(host => {
+    O.mountBanner(host, { style: host.dataset.banner });
+    O.fitStage(host, host.parentElement, 1080, 192);
+  });
+  document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => {
+    document.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    overlays.forEach(o => o.banner && o.banner.setStyle(b.dataset.style));
+  }));
+  O.mountControl(document.getElementById("cp"));
+  document.getElementById("g-sample").addEventListener("click", seed);
+  document.getElementById("g-empty").addEventListener("click", () => O.Q.clear());
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<title>Chou Banner</title>
+<link rel="stylesheet" href="assets/overlay.css">
+<style>
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; }
+  #root { position: relative; width: 100vw; height: 100vh; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 192px; transform-origin: 0 0; }
+</style>
+</head>
+<body>
+<!-- Browser source: 1080 x 192.  ?style=flame | slash | moon -->
+<div id="root"><div id="stage"></div></div>
+<script src="assets/config.js"></script>
+<script src="assets/overlay.js"></script>
+<script>
+  const p = new URLSearchParams(location.search);
+  const stage = document.getElementById("stage");
+  ChouOverlay.mountBanner(stage, { style: p.get("style") || "flame" });
+  ChouOverlay.fitStage(stage, document.getElementById("root"), 1080, 192);
+</script>
+</body>
+</html>
