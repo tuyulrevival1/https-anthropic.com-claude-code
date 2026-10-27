@@ -260,7 +260,38 @@ function Get-MediaJson {
       }
     } catch { }
   }
-  return '{"winrt":' + ([string][bool]$npWinRT).ToLower() + ',"audioOk":' + ([string]$audioOk).ToLower() + ',"smtc":[' + ($sm -join ',') + '],"audio":[' + ($au -join ',') + ']}'
+  # baca teks IndoFinity setiap 3 saat, hanya bila ia berbunyi (supaya server tak lambat)
+  $ifLoud = $false; foreach ($x in $au) { if ($x -match '"name":"IndoFinity"' -and $x -notmatch '"peak":0[,}]' -and $x -notmatch '"peak":0\.0(0|1)') { $ifLoud = $true } }
+  if ($ifLoud -and ((Get-Date) - $script:ifxAt).TotalSeconds -ge 3) { $script:ifxJson = Get-IfxTexts; $script:ifxAt = Get-Date }
+  elseif (-not $ifLoud -and ((Get-Date) - $script:ifxAt).TotalSeconds -ge 20) { $script:ifxJson = '[]' }
+  return '{"winrt":' + ([string][bool]$npWinRT).ToLower() + ',"audioOk":' + ([string]$audioOk).ToLower() + ',"uia":' + ([string]$uiaOk).ToLower() + ',"smtc":[' + ($sm -join ',') + '],"audio":[' + ($au -join ',') + '],"ifx":' + $script:ifxJson + '}'
+}
+# teks yang tertera dalam tetingkap IndoFinity (tajuk lagu + @peminta), dibaca guna Windows UI Automation
+$uiaOk = $false
+try { Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes -ErrorAction Stop; $uiaOk = $true } catch { }
+$ifxJson = '[]'; $ifxAt = [DateTime]::MinValue
+function Get-IfxTexts {
+  if (-not $uiaOk) { return '[]' }
+  $out = New-Object System.Collections.ArrayList
+  try {
+    $pids = @(Get-Process -Name 'IndoFinity' -ErrorAction SilentlyContinue | ForEach-Object { $_.Id })
+    if ($pids.Count -eq 0) { return '[]' }
+    $A = [System.Windows.Automation.AutomationElement]
+    $c1 = New-Object System.Windows.Automation.PropertyCondition -ArgumentList $A::ControlTypeProperty, ([System.Windows.Automation.ControlType]::Text)
+    $c2 = New-Object System.Windows.Automation.PropertyCondition -ArgumentList $A::ControlTypeProperty, ([System.Windows.Automation.ControlType]::Hyperlink)
+    $arr = [System.Windows.Automation.Condition[]]@($c1, $c2)
+    $tc = New-Object System.Windows.Automation.OrCondition -ArgumentList (,$arr)
+    $wins = $A::RootElement.FindAll([System.Windows.Automation.TreeScope]::Children, [System.Windows.Automation.Condition]::TrueCondition)
+    foreach ($w in $wins) {
+      if ($pids -notcontains $w.Current.ProcessId) { continue }
+      foreach ($e in $w.FindAll([System.Windows.Automation.TreeScope]::Descendants, $tc)) {
+        $n = CleanTxt ([string]$e.Current.Name)
+        if ($n -and $n.Length -le 200) { [void]$out.Add((JsonStr $n)) }
+        if ($out.Count -ge 300) { break }
+      }
+    }
+  } catch { }
+  return '[' + ($out -join ',') + ']'
 }
 $mediaJson = ''; $mediaAt = [DateTime]::MinValue
 $hookHits = New-Object System.Collections.ArrayList   # 15 cubaan webhook terakhir (untuk App > Status webhook)

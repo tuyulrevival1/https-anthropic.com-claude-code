@@ -573,13 +573,15 @@
       // a song = title reported by Windows, or sound from the player app for 2 s;
       // paused / finished = quiet for ~2 s -> Spotify comes back right away
       const active = !!sm || (MEDIA.loudAt > 0 && now - MEDIA.loudAt < 1900 && now - MEDIA.loudSince >= 2000);
-      const title = songTitleOf(sm, (j.audio || []).find(x => hit(x.name)), want);
-      const s0 = Store.state, curT = s0.songNow ? s0.songNow.title || "" : "";
-      if (active && (!s0.songNow || (title !== curT && (title || /indofinity/i.test(curT))))) {
+      // title + requester as shown inside the IndoFinity window (read by the PC server), else Windows media title
+      const ifx = ifxNow(j.ifx);
+      const title = ifx ? ifx.title : songTitleOf(sm, (j.audio || []).find(x => hit(x.name)), want), user = ifx ? ifx.user : "";
+      const s0 = Store.state, curT = s0.songNow ? s0.songNow.title || "" : "", curU = s0.songNow ? s0.songNow.user || "" : "";
+      if (active && (!s0.songNow || ((title !== curT || user !== curU) && (title || /indofinity/i.test(curT))))) {
         Store.set(s => {
-          s.songNow = { title, at: now };
+          s.songNow = { title, user, at: now };
           s.songs = (s.songs || []).filter(x => x.src !== "app");
-          if (title) { s.songs = s.songs || []; s.songs.unshift({ id: uid("s"), user: "", title, at: now, done: false, src: "app" }); s.songs = s.songs.slice(0, 60); }
+          if (title) { s.songs = s.songs || []; s.songs.unshift({ id: uid("s"), user, title, at: now, done: false, src: "app" }); s.songs = s.songs.slice(0, 60); }
         }, { noHist: true });
       } else if (!active && s0.songNow) {
         Store.set(s => { s.songNow = null; s.songs = (s.songs || []).filter(x => x.src !== "app"); }, { noHist: true });
@@ -590,6 +592,19 @@
     }).catch(() => {}).finally(() => { MEDIA.busy = false; });
   }
   setInterval(mediaTick, 1000);
+  const tidyTitle = t => String(t || "").replace(/\s*[(\[](official|lirik|lyrics?|lyric video|audio|music video|mv|video klip|visualizer|hd|4k)[^)\]]*[)\]]/gi, "").replace(/[….]{1,3}$/, "").replace(/\s{2,}/g, " ").trim();
+  // IndoFinity now-playing card: "<title>", "<channel>", "@<requester>" (first @name that follows a song title)
+  function ifxNow(texts) {
+    if (!Array.isArray(texts) || !texts.length) return null;
+    const songish = t => t.length >= 6 && !/^@/.test(t) && !/^\d{1,2}[:.]\d{2}/.test(t) && !/indofinity|^https?:|^(update|subathon|settings?|pengaturan|song requests?|queue|antrian)\b/i.test(t);
+    for (let i = 0; i < texts.length; i++) {
+      const m = String(texts[i]).match(/^@([\w.]{2,32})$/); if (!m) continue;
+      const prev = texts.slice(Math.max(0, i - 3), i).map(String);
+      const t = prev.length >= 2 && songish(prev[prev.length - 2]) ? prev[prev.length - 2] : prev.length && songish(prev[prev.length - 1]) ? prev[prev.length - 1] : "";
+      if (t) return { title: tidyTitle(t).slice(0, 90), user: m[1] };
+    }
+    return null;
+  }
   // song title only: never the app's own name ("IndoFinity"), a web address or "YouTube"
   function songTitleOf(sm, au, want) {
     const clean = t => String(t || "").replace(/\s*[-|–—:•·]\s*(indofinity|youtube music|youtube|google chrome|microsoft edge)\b.*$/i, "").replace(/^(indofinity|youtube music|youtube)\s*[-|–—:•·]\s*/i, "").trim();
@@ -658,7 +673,9 @@
     const tick = () => { if (!Store.remote) return; fetch("api/nowplaying", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(j => { if (j && typeof j.t === "string") NP.text = j.t.trim().slice(0, 120); }).catch(() => {}); };
     setInterval(tick, 3000); setTimeout(tick, 900);
   } };
-  const songText = st => !st.song || st.song.on === false ? "" : String(st.song.manual || (st.songNow && st.songNow.title) || NP.text || "").trim();
+  // LIVE band: manual text, else the IndoFinity request (with who asked), else Spotify
+  const reqText = n => n && n.title ? n.title + (n.user ? `  ·  req @${n.user}` : "") : "";
+  const songText = st => !st.song || st.song.on === false ? "" : String(st.song.manual || reqText(st.songNow) || NP.text || "").trim();
 
   const fmtTime = ms => { const x = Math.floor(ms / 1000), h = Math.floor(x / 3600), m = Math.floor(x / 60) % 60, sec = x % 60; return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`; };
 
@@ -678,8 +695,7 @@
       ],
       panels: [
         { type: "queue", variant: "compact", x: 24, y: 1474, w: 500, h: 290 },
-        { type: "score", x: 548, y: 1798, w: 508, h: 108 },
-        { type: "songs", x: 24, y: 1780, w: 500, h: 126 }
+        { type: "score", x: 548, y: 1798, w: 508, h: 108 }
       ],
       tags: [{ slot: "hand" }]
     }
@@ -813,25 +829,22 @@
     const extra = s.queue.length - lim;
     if (extra > 0 && !compact) next += `<li class="nx more">+${extra} LAGI</li>`;
     const nextBlock = s.queue.length ? `<ol${compact ? ' class="q2"' : ""}>${next}</ol>` : `<p class="q-empty">${full ? "Queue kosong" : "Slot masih ada"}</p>`;
-    return `<div class="q-head"><div><div class="q-open${full ? " full" : ""}">${full ? "OPEN · MASUK QUEUE" : "OPEN"}</div><h3 class="ov-h">${esc(CFG.mabar.title)}</h3></div><div class="q-prices">${chipsHTML()}</div></div>
+    return `<div class="q-head">${titleHTML(s)}<div class="q-prices">${chipsHTML()}</div></div>
 <div class="q-cols"><section><h4 class="ov-lbl">Sedang main <i>${s.playing.length}/${max}</i></h4><ol class="slots">${slots}</ol></section>
 <section><h4 class="ov-lbl">Queue ${compact && extra > 0 ? `<em class="q-more">+${extra} lagi</em>` : ""}<i>${s.queue.length}</i></h4>${nextBlock}</section></div>`;
   }
 
-  // Mabar VIP closed (App switch / Stream Deck): one clear card instead of the queue or prices
-  function closedHTML() {
-    return `<div class="q-head"><div><div class="q-open closed">CLOSED</div><h3 class="ov-h">${esc(CFG.mabar.title)}</h3></div></div>
-<div class="cl-body"><b class="cl-stamp">CLOSED</b><span>Slot mabar tutup buat masa ni.<br>Nantikan slot dibuka semula!</span></div>`;
-  }
-  function pricesHTML(variant) {
+  // title + OPEN / CLOSED badge (App switch / Stream Deck), same on the queue and the prices card
+  const titleHTML = s => `<div class="q-tt"><h3 class="ov-h">${esc(CFG.mabar.title)}</h3><span class="oc-b ${s && s.mabarClosed ? "closed" : "open"}">${s && s.mabarClosed ? "CLOSED" : "OPEN"}</span></div>`;
+  function pricesHTML(variant, s) {
     if (variant === "compact") {
       const tiles = CFG.mabar.prices.map(p => `<div class="pt"><span>${esc(p.qty)}</span><b>${esc(p.price)}${p.note ? `<small>${esc(p.note)}</small>` : ""}</b></div>`).join("");
       const sv = CFG.services.map(v => `<span>${esc(v.label)} <b>${esc(v.price)}</b></span>`).join("");
-      return `<div class="q-head"><div><div class="q-open">OPEN</div><h3 class="ov-h">${esc(CFG.mabar.title)}</h3></div></div>
+      return `<div class="q-head">${titleHTML(s)}</div>
 <div class="pt-grid">${tiles}</div>${sv ? `<div class="pt-svc">${sv}</div>` : ""}`;
     }
     const pr = CFG.mabar.prices.map(p => `<div class="pr"><span>${esc(p.qty)}</span><b>${esc(p.price)}</b></div>`).join("");
-    return `<div class="q-head"><div><div class="q-open">OPEN</div><h3 class="ov-h">${esc(CFG.mabar.title)}</h3></div></div>
+    return `<div class="q-head">${titleHTML(s)}</div>
 <div class="pr-list">${pr}</div>
 <h4 class="ov-lbl">Servis lain</h4><div class="svc">${svcHTML()}</div>`;
   }
@@ -993,8 +1006,8 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
       for (const { def, e } of panels) {
         const v = def.variant ? " " + def.variant : "";
         if (def.type === "queue") {
-          e.className = "ov-card " + (s.mabarClosed ? "ov-closed" : s.showQueue ? "ov-queue" : "ov-prices") + v;
-          e.innerHTML = s.mabarClosed ? closedHTML() : s.showQueue ? queueHTML(s, def.variant, prevIds) : pricesHTML(def.variant);
+          e.className = "ov-card " + (s.showQueue ? "ov-queue" : "ov-prices") + v + (s.mabarClosed ? " is-closed" : "");
+          e.innerHTML = s.showQueue ? queueHTML(s, def.variant, prevIds) : pricesHTML(def.variant, s);
         } else if (def.type === "score") {
           e.className = "ov-score"; e.innerHTML = scoreSVG(s);
           if (prev) e.querySelectorAll("[data-k]").forEach(g => { const k = g.dataset.k; if (prev[k] !== s[k]) { g.classList.remove("sb-pop"); void g.getBBox(); g.classList.add("sb-pop"); } });
@@ -1100,5 +1113,5 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
 
   requestAnimationFrame(loop);
   const util = { el, esc, clamp, seg, eOut, eBack, frac, rnd, TAU, fill, priceHL, uid, tickers, now };
-  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util, keyOf, liveElapsed, fmtTime, parseOrder, NP, MEDIA, songText, ACTIONS, ROLES: ["EXP", "JUNGLE", "MID", "GOLD", "ROAM"], roleTag };
+  window.ChouOverlay = { mount, mountBanner, fitStage, setTime, Store, Q, LAYOUTS, CFG, util, keyOf, liveElapsed, fmtTime, parseOrder, NP, MEDIA, ifxNow, songText, ACTIONS, ROLES: ["EXP", "JUNGLE", "MID", "GOLD", "ROAM"], roleTag };
 })();

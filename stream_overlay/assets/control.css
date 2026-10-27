@@ -312,6 +312,7 @@
 /* Mabar VIP OPEN / CLOSED */
 .app .oc { align-items: center; gap: 6px; }
 .app .oc .oc-l { font: 700 12px/1 "OV Raj", Rajdhani, sans-serif; letter-spacing: .16em; text-transform: uppercase; color: var(--c-mut); margin-right: 4px; }
-.app .oc .oc-b { min-width: 120px; opacity: .55; }
+.app .oc .ocbtn { min-width: 120px; opacity: .55; }
 .app .oc .oc-open[aria-pressed="true"] { opacity: 1; background: var(--c-win); border-color: var(--c-win); color: #0b0507; }
 .app .oc .oc-closed[aria-pressed="true"] { opacity: 1; background: var(--c-red); border-color: var(--c-red); color: #fff; }
+.app .sgifx code { display: block; margin-top: 4px; padding: 6px 8px; background: #0a0405; font: 12px/1.4 ui-monospace, Consolas, monospace; color: #ffb3bf; overflow-wrap: anywhere; white-space: pre-wrap; max-height: 220px; overflow: auto; }

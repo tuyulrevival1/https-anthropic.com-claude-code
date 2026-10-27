@@ -41,11 +41,11 @@ ${embedded ? "" : `<header class="app-top">
     <p class="muted">Timer mula sendiri bila OBS tekan Start Streaming (kalau dibenarkan dalam OBS).</p>
     <div class="row oc" role="group" aria-label="Mabar VIP">
       <b class="oc-l">Mabar VIP</b>
-      <button class="btn oc-b oc-open" type="button" id="ap-open" aria-pressed="true">● OPEN</button>
-      <button class="btn oc-b oc-closed" type="button" id="ap-close" aria-pressed="false">■ CLOSED</button>
+      <button class="btn ocbtn oc-open" type="button" id="ap-open" aria-pressed="true">OPEN</button>
+      <button class="btn ocbtn oc-closed" type="button" id="ap-close" aria-pressed="false">CLOSED</button>
+      <label class="tog"><input id="ap-showq" type="checkbox"><span>Senarai queue</span></label>
     </div>
     <div class="row toggles">
-      <label class="tog"><input id="ap-showq" type="checkbox"><span>Queue</span></label>
       <label class="tog"><input id="ap-showb" type="checkbox"><span>Banner</span></label>
       <label class="tog"><input id="ap-shows" type="checkbox"><span>Lagu</span></label>
     </div>
@@ -131,11 +131,9 @@ ${embedded ? "" : `<header class="app-top">
   <section class="card songs">
     <h3>Song Request <span id="ap-sgc"></span></h3>
     <div class="row toggles">
-      <label class="tog"><input id="ap-sgshow" type="checkbox"><span>Tunjuk di overlay</span></label>
     </div>
     <div class="row"><button class="btn" type="button" id="ap-sppause">❚❚ Jeda Spotify</button><button class="btn gold" type="button" id="ap-spplay">▶ Sambung Spotify</button><span class="muted" id="ap-spst"></span></div>
     <ol class="list sglist" id="ap-songs"></ol>
-    <div class="row"><button class="btn ghost" type="button" id="ap-sgclear" data-confirm="Tekan lagi: buang yang dah main">Buang yang dah main</button></div>
     <div class="sgdet">
       <b class="ctest-h">Lagu request IndoFinity</b>
       <div class="row"><label class="tog"><input id="ap-sgdetect" type="checkbox"><span>Jeda Spotify bila IndoFinity main lagu</span></label>
@@ -603,14 +601,14 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
           : `<li class="empty">${q ? "Tiada nama sepadan." : "Belum ada."}</li>`;
       }
       // song requests
-      const sg = s.songs || [], sgWait = sg.filter(x => !x.done).length;
+      const sg = (s.songs || []).filter(x => !x.done), sgWait = sg.length;
       tabc("lagu", sgWait || "");
       $("ap-sgc").textContent = sg.length ? `${sgWait} menunggu` : "";
       const cfg = s.songCfg || {};
-      $("ap-sgshow").checked = cfg.show !== false; $("ap-sgdetect").checked = cfg.detect !== false;
+      $("ap-sgdetect").checked = cfg.detect !== false;
       $("ap-songs").innerHTML = sg.length ? sg.map(x => `<li class="sgrow${x.done ? " done" : ""}"><span class="who"><span class="nm">♪ ${esc(x.title)}</span><span class="sub">${x.user ? `@${esc(x.user)} · ` : x.src === "app" ? "dari app · " : ""}${fmtDate(x.at)}</span></span>
-<button class="btn small ${x.done ? "ghost" : "gold"}" type="button" data-a="sgdone" data-id="${x.id}">${x.done ? "✓ Dah main" : "Tanda dah main"}</button><button class="btn sq ghost" type="button" data-a="sgdel" data-id="${x.id}" aria-label="Buang ${esc(x.title)}">✕</button></li>`).join("")
-        : `<li class="empty">Belum ada song request. Sambung IndoFinity di bawah.</li>`;
+<button class="btn sq ghost" type="button" data-a="sgdel" data-id="${x.id}" aria-label="Buang ${esc(x.title)}">✕</button></li>`).join("")
+        : `<li class="empty">Tiada lagu request sedang main.</li>`;
       const sl = s.songLast, slBox = $("ap-sglast");
       if (sl && slBox) slBox.innerHTML = `<b>Data terakhir dari IndoFinity · ${fmtDate(sl.at)}</b><span>${sl.kind === "play" && sl.title ? `Dibaca: <b>@${esc(sl.user)}</b> minta <b>${esc(sl.title)}</b> ✓` : sl.kind !== "play" ? `Dibaca: !${esc(sl.kind)} oleh @${esc(sl.user)} ✓` : `<em>Tajuk lagu tak jumpa</em>. Tambah <b>?user={username}&comment={comment}</b> pada hujung link, atau hantar gambar data ni.`}</span><code>${esc(sl.raw || "(kosong)")}</code>`;
       // komen album
@@ -683,7 +681,6 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
     $("ap-rules").addEventListener("input", e => { e.target.dataset.dirty = "1"; });
     $("ap-rulesave").addEventListener("click", () => { Q.patch({ rules: $("ap-rules").value.trim() }); delete $("ap-rules").dataset.dirty; toast("Peraturan disimpan"); });
     $("ap-akadd").addEventListener("click", () => Q.akaunAdd());
-    $("ap-sgshow").addEventListener("change", e => Q.songCfg({ show: e.target.checked }));
     $("ap-sgdetect").addEventListener("change", e => Q.songCfg({ detect: e.target.checked }));
     // IndoFinity only: is it playing (sound level), is Spotify paused for it
     setInterval(() => {
@@ -691,15 +688,16 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
       const st = Store.state || {}, cfg = st.songCfg || {}, want = String(cfg.player || "indofinity").toLowerCase();
       const au = (j.audio || []).filter(x => x.name.toLowerCase().includes(want)).sort((a, b) => b.peak - a.peak)[0];
       const pk = au ? au.peak : 0, now = st.songNow;
-      const head = cfg.detect === false ? "Dimatikan." : now ? `<b class="on">▶ Lagu request sedang main${now.title ? `: ${esc(now.title)}` : ""}</b>${st.spotAuto ? " · Spotify dijeda" : ""}`
+      const head = cfg.detect === false ? "Dimatikan." : now ? `<b class="on">▶ Lagu request sedang main${now.title ? `: ${esc(now.title)}` : ""}${now.user ? ` · req @${esc(now.user)}` : ""}</b>${st.spotAuto ? " · Spotify dijeda" : ""}`
         : au ? "IndoFinity senyap · Spotify main biasa" : `<b class="warn">IndoFinity tak dikesan.</b> Buka app IndoFinity di PC ni.`;
-      const html = `<p class="sgst"><span class="nm">🔊 IndoFinity</span> <i class="vu"><i style="width:${Math.min(100, Math.round(pk * 160))}%"></i></i> ${head}</p>${!j.audioOk && !j.winrt ? `<p class="muted">Windows tak benarkan server baca bunyi app. Buka semula START_OVERLAY.bat.</p>` : ""}`;
+      const ifx = (j.ifx || []).slice(0, 80);
+      const dbg = `<details class="quick sgifx"${box.querySelector(".sgifx[open]") ? " open" : ""}><summary>Teks dibaca dari IndoFinity (${ifx.length})</summary><code>${ifx.length ? esc(ifx.join("  |  ")) : j.uia === false ? "Windows tak benarkan baca teks app." : "Kosong. Main satu lagu request di IndoFinity, buka tetingkap Song Request."}</code></details>`;
+      const html = `<p class="sgst"><span class="nm">🔊 IndoFinity</span> <i class="vu"><i style="width:${Math.min(100, Math.round(pk * 160))}%"></i></i> ${head}</p>${!j.audioOk && !j.winrt ? `<p class="muted">Windows tak benarkan server baca bunyi app. Buka semula START_OVERLAY.bat.</p>` : ""}${dbg}`;
       if (box._h !== html) { box.innerHTML = html; box._h = html; }
     }, 1000);
     const spMsg = r => r === "ok" ? "" : r === "tiada-spotify" ? " (Spotify tak dibuka?)" : r ? ` (${r})` : " (perlu START_OVERLAY.bat)";
     $("ap-sppause").addEventListener("click", () => Q.spotify("pause").then(r => toast("Spotify dijeda" + spMsg(r))));
     $("ap-spplay").addEventListener("click", () => Q.spotify("play").then(r => toast("Spotify disambung" + spMsg(r))));
-    twoStep($("ap-sgclear"), () => { Q.songClearDone(); toast("Lagu yang dah main dibuang"); });
     setInterval(() => {
       const at = (Store.state || {}).songResumeAt, el = $("ap-spst"); if (!el) return;
       if (at && at > Date.now()) { const left = Math.ceil((at - Date.now()) / 1000); el.textContent = `Spotify disambung sendiri dalam ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`; }

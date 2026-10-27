@@ -357,13 +357,18 @@
 .ov-prices .pt b small { font: 700 12px/1 var(--f-hud); letter-spacing: .08em; text-shadow: none; margin-left: 3px; color: var(--muted); }
 .ov-prices .pt-svc { display: flex; gap: 14px; flex-wrap: wrap; font: 600 15px/1 var(--f-hud); letter-spacing: .04em; color: var(--muted); border-top: 1px dashed rgba(var(--flame-rgb),.3); padding-top: 7px; }
 .ov-prices .pt-svc b { font: 400 20px/1 var(--f-disp); color: var(--flame); margin-left: 4px; }
-/* Mabar VIP ditutup */
-.ov-closed { padding: 16px 20px 16px; display: flex; flex-direction: column; gap: 10px; }
-.ov-closed.compact { --cut: 16px; }
-.ov-closed .q-open.closed { color: var(--crimson); }
-.ov-closed .q-open.closed::before { background: var(--crimson); box-shadow: 0 0 10px var(--crimson); animation: none; }
-.ov-closed.compact .q-open { font-size: 12px; margin-bottom: 4px; }
-.ov-closed.compact .ov-h { font-size: 34px; }
-.ov-closed .cl-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; text-align: center; }
-.ov-closed .cl-stamp { font: 400 64px/1 var(--f-disp); letter-spacing: .06em; color: var(--crimson); border: 4px solid var(--crimson); padding: 6px 20px 2px; transform: rotate(-4deg); font-size: 56px; text-shadow: 0 0 18px rgba(255,35,80,.45); }
-.ov-closed .cl-body span { font: 600 17px/1.3 var(--f-hud); letter-spacing: .04em; color: var(--muted); }
+/* Mabar VIP OPEN / CLOSED badge beside the title */
+.q-tt { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.oc-b { flex: none; display: inline-flex; align-items: center; gap: 7px; font: 700 15px/1 var(--f-hud); letter-spacing: .22em; padding: 6px 10px 5px; transform: skewX(-10deg); }
+.oc-b::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.oc-b.open { color: var(--win); background: rgba(56,255,154,.12); border: 1px solid rgba(56,255,154,.55); }
+.oc-b.open::before { box-shadow: 0 0 10px currentColor; animation: ov-blink 1.6s steps(2, jump-none) infinite; }
+.oc-b.closed { color: #fff; background: var(--crimson); border: 1px solid var(--crimson); box-shadow: 0 0 14px rgba(255,35,80,.5); }
+.ov-queue.compact .oc-b, .ov-prices.compact .oc-b { font-size: 12px; padding: 5px 8px 4px; }
+.ov-queue .q-tt { flex-direction: column-reverse; align-items: flex-start; gap: 5px; }
+.ov-queue .q-tt .ov-h { white-space: nowrap; }
+.ov-queue.compact .oc-b { font-size: 11px; padding: 4px 8px 3px; letter-spacing: .24em; }
+.ov-queue.compact .q-tt { gap: 3px; }
+.ov-queue.compact .oc-b { font-size: 10px; padding: 3px 7px 2px; }
+.ov-queue.compact .oc-b::before { width: 6px; height: 6px; }
+.ov-queue.compact { padding-bottom: 8px; gap: 4px; }

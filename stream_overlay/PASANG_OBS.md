@@ -78,7 +78,7 @@ Banner minimal: `http://127.0.0.1:8787/overlay.html?banner=minimal` · tanpa han
 
 **Undo / Redo**: butang **↶ / ↷** di tajuk setiap kad (Live, Win/Lose, Game habis, Queue, Hutang Mabar, MVP, Slot Akaun, Peraturan). Setiap kad undo perubahannya sendiri sahaja (contoh undo MVP tak sentuh baki). Tuding pada butang untuk lihat apa yang akan diundo. Papan kekunci: **Ctrl+Z** / **Ctrl+Y**. Sejarah disimpan selagi App tu terbuka.
 
-**Mabar VIP OPEN / CLOSED**: tab Live › butang **● OPEN** atau **■ CLOSED**. CLOSED = kad Mabar VIP di overlay tunjuk cop **CLOSED**, halaman penonton tunjuk "MABAR VIP CLOSED". Stream Deck: `deck\MABAR_OPEN.bat` / `deck\MABAR_CLOSED.bat`.
+**Mabar VIP OPEN / CLOSED**: tab Live › butang **OPEN** atau **CLOSED**. Label kecil OPEN / CLOSED keluar di atas tajuk MABAR VIP (queue tetap keluar). **Senarai queue** tutup = kad harga, label di sebelah tajuk. Halaman penonton tunjuk "MABAR VIP CLOSED". Stream Deck: `deck\MABAR_OPEN.bat` / `deck\MABAR_CLOSED.bat`.
 
 **Tab** di atas App: Live · Hutang Mabar · MVP · Slot Akaun · Peraturan · Lagu · Order · Tetapan · Semua (link terus: `control.html#mvp`).
 **Susun layout**: tekan **⠿ Susun layout** › tarik **tab di atas** untuk tukar urutan tab, tarik **⠿ Tarik** untuk pindah kad, tarik bucu kanan bawah untuk ubah saiz, atau tekan 1 / 2 / 3 untuk lebar › **✓ Siap**. Disimpan dalam peranti tu (PC dan phone boleh lain). **Reset** = susunan asal.
@@ -250,17 +250,18 @@ Setiap tekan keluar dalam tetingkap hitam ("Stream Deck: end-win") dan App tunju
 
 ---
 
-## 12. Lagu request IndoFinity: Spotify dijeda sendiri
+## 12. Lagu request IndoFinity: tajuk + nama peminta di bar LIVE, Spotify dijeda sendiri
 
-Server di PC dengar bunyi app **IndoFinity**. Bila IndoFinity main lagu request: Spotify dijeda (lebih kurang 2 saat). Bila lagu tu pause / habis: Spotify sambung terus.
+Server di PC dengar bunyi app **IndoFinity** dan baca teks dalam tetingkapnya (tajuk lagu + @peminta).
+
+- IndoFinity main lagu request: Spotify dijeda (lebih kurang 2 saat). Bar LIVE sebelah timer tunjuk **tajuk lagu · req @nama**.
+- Lagu pause / habis: Spotify sambung terus, lagu tu dibuang sendiri dari senarai.
 
 1. Jalankan **KEMASKINI.bat**, tutup dan buka semula **START_OVERLAY.bat**.
-2. Buka app IndoFinity di PC yang sama.
-3. App › tab **Lagu**: baris **🔊 IndoFinity** tunjuk meter bunyi. Main satu lagu request: keluar **▶ Lagu request sedang main · Spotify dijeda**.
+2. Buka app IndoFinity di PC yang sama. Biarkan tetingkap Song Request terbuka (boleh di belakang, jangan minimize).
+3. App › tab **Lagu**: keluar **▶ Lagu request sedang main: tajuk · req @nama**.
 
-- Tutup suis **Jeda Spotify bila IndoFinity main lagu** kalau tak mahu.
-- Butang **Jeda Spotify** / **Sambung Spotify** untuk kawal sendiri.
-- Tajuk lagu dan nama peminta tak dapat dikesan: IndoFinity tak beritahu Windows (tetingkap cuma tulis "Youtube Music Player").
+Tajuk / nama tak keluar? App › Lagu › buka **Teks dibaca dari IndoFinity** dan hantar screenshot.
 
 ## Masalah biasa
 
