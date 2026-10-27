@@ -105,7 +105,7 @@ ${embedded ? "" : `<header class="app-top">
     <b class="kstep">2 · Kill siapa</b>
     <div class="row toggles"><label class="fld kteam"><select id="ap-kteam"><option value="hero">Kill saya: banner biru + logo hero saya (Chou)</option><option value="me">Kill saya: banner biru + nama saya</option><option value="kda">Kill saya: ikut KDA sahaja</option><option value="ally">Pasukan kita (biru)</option><option value="all">Semua kill</option></select></label>
       <label class="tog ksolo"><input id="ap-ksolo" type="checkbox"><span>Kill biasa = SOLO KILL</span></label>
-      <label class="tog kkdaon"><input id="ap-kkdaon" type="checkbox"><span>KDA sebagai sandaran</span></label></div>
+      <label class="tog kkdaon"><input id="ap-kkdaon" type="checkbox"><span>Kill tanpa notis = SOLO (guna KDA)</span></label></div>
     <div class="khero">
       <div class="row khrow"><span class="khimg" id="ap-khimg"></span><span id="ap-khtxt" class="muted">Belum ada logo hero.</span><button class="btn small ghost" type="button" id="ap-khclr" hidden>Padam logo</button></div>
       <p class="muted">Cara ambil logo (sekali sahaja): main sampai <b>anda</b> dapat kill. Gambar banner kill disimpan di bawah. Tekan gambar yang ada <b>muka Chou</b>, kemudian tekan <b>✎ Pilih logo hero</b> dan lukis kotak kecil tepat di atas muka Chou dalam banner.</p>
@@ -597,7 +597,7 @@ ${embedded ? "" : `<header class="app-top">
         }).catch(() => toast("Server tak dapat dihubungi"));
         return;
       }
-      kSave(which === "kda" ? { kx: r[0], ky: r[1], kw: r[2], kh: r[3] } : { x: r[0], y: r[1], w: r[2], h: r[3] }).then(() => toast("Kotak " + (which === "kda" ? "KDA" : "BANNER") + " disimpan"));
+      kSave(which === "kda" ? { kx: r[0], ky: r[1], kw: r[2], kh: r[3], kdaOn: 1 } : { x: r[0], y: r[1], w: r[2], h: r[3] }).then(() => toast("Kotak " + (which === "kda" ? "KDA" : "BANNER") + " disimpan"));
     });
     setInterval(() => {
       if (kCard.offsetParent === null || !kCfg) return;

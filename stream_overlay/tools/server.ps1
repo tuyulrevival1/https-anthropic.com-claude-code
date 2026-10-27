@@ -692,19 +692,21 @@ function Ocr([byte[]]$png) {
     return @{ res = $r; w = [double]$sbm.PixelWidth }
   } finally { $ms.Dispose() }
 }
-$words = @('FIRSTBLOOD=first', 'DOUBLEKILL=double', 'TRIPLEKILL=triple', 'MANIAC=maniac', 'SAVAGE=savage', 'SHUTDOWN=shutdown', 'KILLINGSPREE=spree', 'MONSTERKILL=monster', 'MEGAKILL=mega', 'UNSTOPPABLE=unstoppable', 'GODLIKE=godlike', 'LEGENDARY=legendary', 'RAMPAGE=rampage', 'WIPEDOUT=wiped')
+$words = @('FIRSTBLOOD=first', 'DOUBLEKILL=double', 'TRIPLEKILL=triple', 'MANIAC=maniac', 'SAVAGE=savage', 'SHUTDOWN=shutdown', 'KILLINGSPREE=spree', 'MONSTERKILL=monster', 'MEGAKILL=mega', 'UNSTOPPABLE=unstoppable', 'GODLIKE=godlike', 'LEGENDARY=legendary', 'RAMPAGE=rampage', 'WIPEDOUT=wiped', 'HASSLAIN=solo', 'SLAIN=solo')
 $lastAt = @{}; $lastAny = [DateTime]::MinValue; $firstAt = [DateTime]::MinValue; $hitName = ''; $hitAt = 0
 $obs = $null; $obsNext = [DateTime]::MinValue; $frame = 0; $evId = 0
 $kStable = -1; $dStable = -1; $aStable = -1; $kRead = -2; $kSame = 0; $pendAt = $null; $soloAt = $null; $credit = 0; $creditAt = [DateTime]::MinValue
 $prevFound = ''; $wordType = ''; $wordAt = [DateTime]::MinValue; $kdaTxt = ''
 $heroBmp = $null; $heroVerLoaded = -1
 # banner kill saya: banAt = bila banner baru muncul, banFired = jenis yang dah keluar, chainN = kill berturut (multi-kill)
-$markSeen = $false; $markLast = [DateTime]::MinValue; $banAt = $null; $banFired = ''; $banTxt = ''; $chainN = 0; $chainAt = [DateTime]::MinValue
+$markSeen = $false; $markLast = [DateTime]::MinValue; $banAt = $null; $banFired = ''; $banWord = $false; $banTxt = ''; $chainN = 0; $chainAt = [DateTime]::MinValue
 $ic = [Globalization.CultureInfo]::InvariantCulture
 # jenis kill dari teks banner: padanan tepat menang, kemudian perkataan paling panjang
 function MatchWord([string]$t) {
   $n = ($t.ToUpper() -replace '[^A-Z]', ''); $f = ''; $best = 0; $bl = 0
   foreach ($w in $words) { $p = $w.Split('='); $sc = Score $n $p[0]; if ($sc -gt $best -or ($sc -eq $best -and $sc -gt 0 -and $p[0].Length -gt $bl)) { $best = $sc; $bl = $p[0].Length; $f = $p[1] } }
+  # "has slain" = kill biasa (SOLO). "You have been slain" = anda yang mati: abaikan
+  if ($f -eq 'solo' -and $n -match 'BEENSLAIN|SLAINBY|YOUHAVEBEEN') { $f = '' }
   return $f
 }
 # tengah tulisan banner (pecahan lebar kawasan); -1 = tak tahu
@@ -802,7 +804,7 @@ while ($true) {
       $waiting = ($pendAt -or $soloAt -or ($banAt -and -not $banFired))
       # bila baca teks banner: mod Chou = hanya bila muka Chou ada (frame lain jadi pantas);
       # mod lain = bila ada warna banner di skrin
-      $needOcr = $(if ($mode -eq 'hero' -and $heroBmp) { $heroOn -or $waiting } else { ($blue + $red) -ge 6 -or $waiting })
+      $needOcr = $(if ($mode -eq 'hero' -and $heroBmp) { $heroOn -or $waiting -or ($allyCol -and ($blue + $red) -ge 6 -and ($frame % 2) -eq 0) } else { ($blue + $red) -ge 6 -or $waiting })
       if (-not $previewOnly -and $needOcr) {
         $o1 = Ocr $png
         if ($o1) { $res = $o1.res; $imgW = $o1.w; $txt = [string]$res.Text }
@@ -814,6 +816,13 @@ while ($true) {
           if ($oE) { $tE = [string]$oE.res.Text; $fE = MatchWord $tE; if ($fE) { $found = $fE; $txt = ($txt + ' | ' + $tE).Trim(' |'); $res = $oE.res; $imgW = $oE.w } }
         }
         if ($found -and $res) { $wx = WordCenter $res $found $imgW }
+        # notis "has slain" (susun atur lain): cari Chou di seluruh kotak banner, mesti di kiri tulisan (pembunuh)
+        if ($mode -eq 'hero' -and $heroBmp -and $found -eq 'solo' -and -not $heroOn) {
+          $hm2 = ([SynoCap.Cap]::Match($bmp, [double]$K.x, [double]$K.y, [double]$K.w, [double]$K.h, $heroBmp)).Split(',')
+          $s2 = [double]::Parse($hm2[0], $ic); $x2 = [double]::Parse($hm2[1], $ic)
+          $wxF = $(if ($wx -ge 0) { [double]$K.x + $wx * [double]$K.w } else { 1.0 })
+          if ($s2 -ge [double]$K.heroMin -and $x2 -lt $wxF) { $heroOn = $true; $hScore = $s2; $hX = $x2; $hY = [double]::Parse($hm2[2], $ic) }
+        }
         # teks di sebelah kanan muka Chou (nama mangsa): lain untuk setiap kill, jadi banner baru dapat dikesan
         if ($res) {
           $pivot = $(if ($hX -ge 0) { $hX + [double]$K.heroW * 0.5 } else { [double]$K.x + [double]$K.w * 0.5 })
@@ -883,7 +892,7 @@ while ($true) {
       elseif ($banAt -and ($now - $banAt).TotalSeconds -ge 0.9 -and $banTxt.Length -ge 5 -and $vicTxt.Length -ge 5 -and (Sim $banTxt $vicTxt) -lt 0.45) { $newBan = $true }
       $markSeen = $true; $markLast = $now
     } elseif ($markSeen -and ($now - $markLast).TotalSeconds -gt 0.5) { $markSeen = $false }
-    if ($newBan) { $banAt = $now; $banFired = ''; $banTxt = $vicTxt }
+    if ($newBan) { $banAt = $now; $banFired = ''; $banWord = $false; $banTxt = $vicTxt }
     elseif ($banAt -and $mark -and $vicTxt.Length -gt $banTxt.Length -and ($banTxt.Length -lt 5 -or (Sim $banTxt $vicTxt) -ge 0.45)) { $banTxt = $vicTxt }   # simpan versi teks paling lengkap
     # 2) jenis kill: tulisan banner (kalau terbaca) > kill berturut (multi-kill) > SOLO
     if ($banAt -and -not $banFired -and ($now - $banAt).TotalSeconds -le 3) {
@@ -893,13 +902,14 @@ while ($true) {
       elseif ($n -ge 2) { $fire = ChainType $n }                                   # terus, tak perlu tunggu tulisan
       elseif (($now - $banAt).TotalSeconds -ge 0.3) { if ($K.solo) { $fire = 'solo' } else { $banFired = '-' } }
       if ($fire) {
-        $banFired = $fire; $wordType = ''
-        $mn = MultiN $fire; $chainN = $(if ($mn -gt 0) { $mn } else { $n }); $chainAt = $now
+        $banFired = $fire; $banWord = [bool]$wordNow; $wordType = ''
+        # "has slain" terbaca = kill biasa: rangkaian kill bermula semula dari 1
+        $mn = MultiN $fire; $chainN = $(if ($mn -gt 0) { $mn } elseif ($fire -eq 'solo' -and $wordNow) { 1 } else { $n }); $chainAt = $now
         if ($pendAt) { $pendAt = $null } else { $credit = 1; $creditAt = $now }
       }
-    } elseif ($banFired -eq 'solo' -and $wordType -and $found -eq $wordType -and ($now - $banAt).TotalSeconds -le 2.5) {
-      # tulisan terbaca lambat: tukar SOLO KILL kepada jenis sebenar
-      $fire = $wordType; $banFired = $fire; $wordType = ''; $mn = MultiN $fire; if ($mn -gt 0) { $chainN = $mn }; $chainAt = $now
+    } elseif ($banFired -and $banFired -ne '-' -and -not $banWord -and $wordType -and $found -eq $wordType -and $wordType -ne $banFired -and ($now - $banAt).TotalSeconds -le 2.5) {
+      # jenis tadi cuma agakan; tulisan sebenar terbaca lambat: betulkan (SOLO -> TRIPLE, atau DOUBLE -> SOLO kalau "has slain")
+      $fire = $wordType; $banFired = $fire; $banWord = $true; $wordType = ''; $mn = MultiN $fire; $chainN = $(if ($mn -gt 0) { $mn } else { 1 }); $chainAt = $now
     }
   }
   if ($kInc) {
@@ -912,7 +922,7 @@ while ($true) {
       if ($wordType -and ($pendAt - $wordAt).TotalSeconds -le 2.5 -and -not ($wordType -eq 'first' -and $kStable -gt 1)) { $fire = $wordType }
       elseif ($n -ge 2) { $fire = ChainType $n }
       elseif (($now - $pendAt).TotalSeconds -ge 0.9) { if ($K.solo) { $fire = 'solo'; $soloAt = $now }; $pendAt = $null }
-      if ($fire) { $wordType = ''; $pendAt = $null; $mn = MultiN $fire; $chainN = $(if ($mn -gt 0) { $mn } else { $n }); $chainAt = $now }
+      if ($fire) { $wasWord = ($fire -eq $wordType); $wordType = ''; $pendAt = $null; $mn = MultiN $fire; $chainN = $(if ($mn -gt 0) { $mn } elseif ($fire -eq 'solo' -and $wasWord) { 1 } else { $n }); $chainAt = $now }
     } elseif ($soloAt) {
       # banner sampai lambat: tukar SOLO KILL kepada jenis sebenar (DOUBLE KILL ...)
       if ($wordType -and $wordType -ne 'first' -and ($wordAt - $soloAt).TotalSeconds -ge -1.2) { $fire = $wordType; $wordType = ''; $soloAt = $null; $mn = MultiN $fire; if ($mn -gt 0) { $chainN = $mn } }
