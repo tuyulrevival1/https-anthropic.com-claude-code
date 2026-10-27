@@ -53,6 +53,7 @@
     s.album = Array.isArray(s.album) ? s.album : [];
     if (!Array.isArray(s.akaun)) s.akaun = defaultAkaun();
     if (typeof s.rules !== "string") s.rules = CFG.rules || "";
+    s.rules = s.rules.replace(/5 game RM20/gi, "6 game RM20"); // harga lama yang dah tersimpan
     if (typeof s.mvpRules !== "string") s.mvpRules = CFG.mvpRules || "";
     const fix = e => {
       if (e.key) return e;

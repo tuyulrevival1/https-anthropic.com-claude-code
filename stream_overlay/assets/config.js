@@ -13,7 +13,7 @@ window.OVERLAY_CONFIG = {
     prices: [
       { qty: "1 GAME", price: "RM4", games: 1 },
       { qty: "3 GAME", price: "RM10", games: 3 },
-      { qty: "5 GAME", price: "RM20", games: 5, overlay: false },   // overlay: false = tak keluar dalam chip harga overlay (ruang kecil)
+      { qty: "6 GAME", price: "RM20", games: 6, overlay: false },   // overlay: false = tak keluar dalam chip harga overlay (ruang kecil)
       { qty: "9 GAME", price: "RM30", games: 9, overlay: false },
       { qty: "IMMORTAL", price: "RM6", games: 1, note: "/ GAME" }
     ],
@@ -30,7 +30,7 @@ window.OVERLAY_CONFIG = {
     autoQueue: true,
     alertTestAsOrder: true,   // Test Alert / Custom Test Alert di halaman Alert Sociabuzz dikira macam order sebenar (ditanda TEST ALERT)
     toMYR: { MYR: 1, RM: 1, IDR: 0.00028, SGD: 3.3, USD: 4.4 },   // anggaran tukaran ke RM
-    packs: [{ rm: 30, games: 9 }, { rm: 20, games: 5 }, { rm: 10, games: 3 }, { rm: 4, games: 1 }], // pakej besar dulu
+    packs: [{ rm: 30, games: 9 }, { rm: 20, games: 6 }, { rm: 10, games: 3 }, { rm: 4, games: 1 }], // pakej besar dulu
     immortalPerGame: 6,                                            // kalau mesej sebut "immortal"
     immortalPacks: [{ rm: 15, games: 3 }, { rm: 6, games: 1 }],    // Immortal RM6 / 3 game RM15
     vvipPacks: [{ rm: 20, games: 3 }, { rm: 8, games: 1 }],        // mesej sebut "vvip" / "fast track": RM8 / 3 game RM20
@@ -48,7 +48,6 @@ window.OVERLAY_CONFIG = {
       { match: "immortal 1|immortal.{0,12}1 game", games: 1 },
       { match: "package 9|9 game", games: 9 },
       { match: "package 6|6 game", games: 6 },
-      { match: "package 5|5 game", games: 5 },
       { match: "package 3|3 game", games: 3 },
       { match: "^\\s*1 game|\\b1 game\\b", games: 1 }
     ]
@@ -62,7 +61,7 @@ Untuk VVIP: MVP Win free 1 game
 # Harga Mabar
 Immortal RM6 per game | 3 game RM15
 Bawah Immortal semua RM4 per game
-Pakej: 3 game RM10 | 5 game RM20 | 9 game RM30
+Pakej: 3 game RM10 | 6 game RM20 | 9 game RM30
 # Sistem Rotation
 2 orang rotate setiap 3 game
 Queue tak ramai boleh habiskan balance

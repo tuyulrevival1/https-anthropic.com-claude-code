@@ -164,7 +164,7 @@ Bila orang bayar:
 
 | Bayar | Masuk ke |
 |---|---|
-| RM4 / RM10 / RM20 / RM30 | Mabar VIP: 1 / 3 / 5 / 9 game, terus masuk queue |
+| RM4 / RM10 / RM20 / RM30 | Mabar VIP: 1 / 3 / 6 / 9 game, terus masuk queue |
 | RM6 / RM15 + mesej "immortal" | Immortal: 1 / 3 game |
 | RM8 / RM20 + mesej "vvip" | VVIP fast track: 1 / 3 game |
 | **RM5** (atau mesej "album") | Tab **Komen Album** (tekan *Tanda siap* bila dah komen) |
