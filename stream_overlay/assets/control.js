@@ -489,7 +489,7 @@ ${embedded ? "" : `<header class="app-top">
         : `<li class="empty">Queue kosong.</li>`;
       const ords = (s.orders || []).slice(0, 40);
       $("ap-oc").textContent = ords.length ? `${ords.length}` : "";
-      const SVL = { album: "KOMEN ALBUM", akaun: "MAIN AKAUN" };
+      const SVL = { album: "KOMEN ALBUM", akaun: "MAIN AKAUN", joki: "JOKI MINIGAME" };
       const srcTag = o => o.trial ? `<span class="tag test">TEST ALERT${o.svc ? " · " + (SVL[o.svc] || o.svc) : ""}</span>` : o.svc && o.src !== "test" ? `<span class="tag sb">${SVL[o.svc] || o.svc}</span>` : o.src === "sociabuzz" ? `<span class="tag sb">SOCIABUZZ</span>` : o.src === "test" ? `<span class="tag test">TEST</span>` : o.src === "sim" ? `<span class="tag test">ALERT</span>` : `<span class="tag man">MANUAL</span>`;
       $("ap-orders").innerHTML = ords.length ? ords.map(o => `<li class="${o.warn ? "warn" : ""}">${srcTag(o)}<span class="who"><span class="nm">${esc(o.name)}</span><span class="sub">${o.mlid ? `ID ${esc(o.mlid)} · ` : "tiada ID · "}${fmtDate(o.at)}${o.amount ? ` · ${esc(o.cur || "")} ${o.amount}` : ""}${o.warn ? ` · ${esc(o.warn)}` : ""}</span></span><span class="bal">${o.games ? `+${o.games} game${o.vip ? " VVIP" : ""}` : o.svc && o.src !== "test" ? "✓" : "—"}</span><button class="btn sq ghost" type="button" data-a="orddel" data-rx="${o.rx}" aria-label="Buang order ${esc(o.name)}">✕</button>${o.raw ? `<details class="raw"><summary>Data asal</summary><code>${esc(o.raw)}</code></details>` : ""}</li>`).join("")
         : `<li class="empty">Belum ada order.</li>`;
@@ -588,7 +588,7 @@ ${(x.hist || []).length ? `<button class="btn small ghost" data-a="mvhdel" data-
     if (!/^https?:$/.test(location.protocol)) setTimeout(tryAutoImport, 800);
     Store.on((s, prev) => {
       const a = (s.orders || [])[0], b = prev && (prev.orders || [])[0];
-      if (a && (!b || a.rx !== b.rx) && a.src !== "manual" && a.src !== "sim") toast(a.src === "test" ? "Test Sociabuzz diterima ✓ (lihat tab Order)" : a.warn ? `Order Sociabuzz: ${a.name} · ${a.warn}` : a.svc === "album" ? `Komen album: ${a.name}` : a.svc === "akaun" ? `Mainkan akaun: ${a.name}` : `Order Sociabuzz: ${a.name} +${a.games} game`, 5000);
+      if (a && (!b || a.rx !== b.rx) && a.src !== "manual" && a.src !== "sim") toast(a.src === "test" ? "Test Sociabuzz diterima ✓ (lihat tab Order)" : a.warn ? `Order Sociabuzz: ${a.name} · ${a.warn}` : a.svc === "album" ? `Komen album: ${a.name}` : a.svc === "akaun" ? `Mainkan akaun: ${a.name}` : a.svc === "joki" ? `Joki minigame: ${a.name}` : `Order Sociabuzz: ${a.name} +${a.games} game`, 5000);
     });
 
     /* ---------- YouTube viewers ---------- */

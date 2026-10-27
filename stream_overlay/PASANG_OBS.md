@@ -170,6 +170,7 @@ Bila orang bayar:
 | **RM5** (atau mesej "album") | Tab **Komen Album** (tekan *Tanda siap* bila dah komen) |
 | **RM40** (atau mesej "akaun") | Slot kosong pertama dalam **Slot Mainkan Akaun** |
 
+  **Pakej TRIBE** (sociabuzz.com/synoplays/tribe): kalau data order ada nama pakej, nama tu dipakai dulu (KOMEN ALBUM, 1 GAME, PACKAGE 3/6/9 GAME, RANK IMMORTAL 1/3 GAME, FAST TRACK (VVIP), JOKI MINIGAME LAYLA). Ini bezakan pakej yang sama harga (Joki minigame dan Package 3 game, dua-dua MYR10). Senarai dalam `config.js` › `sociabuzz.items`.
   Mesej "3 game" dalam order menang atas kiraan jumlah. Ubah harga dalam `assets\config.js` › `sociabuzz` (packs, services).
 - **Test Alert / Custom Test Alert** di halaman Alert Sociabuzz dikira **macam order sebenar** (ditanda **TEST ALERT**): ikut jumlah masuk Mabar VIP / Komen Album, masuk queue dan alert keluar di live. Padam nama test dalam Hutang Mabar / Komen Album lepas cuba. (Tutup dalam `config.js` › `sociabuzz.alertTestAsOrder: false`.)
 - **Pemberitahuan Ujian** di halaman Integrations › Webhook cuma keluar sebagai **TEST** (tak tambah game).

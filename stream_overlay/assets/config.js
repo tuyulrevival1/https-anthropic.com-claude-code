@@ -36,7 +36,22 @@ window.OVERLAY_CONFIG = {
     vvipPacks: [{ rm: 20, games: 3 }, { rm: 8, games: 1 }],        // mesej sebut "vvip" / "fast track": RM8 / 3 game RM20
     // Servis ikut jumlah TEPAT (selepas tukar ke RM). Mesej sebut "album" / "akaun" juga dikira.
     //  album -> tab Komen Album · akaun -> slot kosong pertama dalam Slot Mainkan Akaun
-    services: [{ rm: 5, type: "album", label: "Komen album" }, { rm: 40, type: "akaun", label: "Mainkan akaun" }]
+    services: [{ rm: 5, type: "album", label: "Komen album" }, { rm: 40, type: "akaun", label: "Mainkan akaun" }],
+    // Pakej TRIBE (sociabuzz.com/synoplays/tribe). Kalau data order ada nama pakej, ini yang dipakai dulu
+    // (lebih tepat dari jumlah: JOKI MINIGAME dan PACKAGE 3 GAME sama-sama MYR10). Susunan penting: yang lebih khusus dulu.
+    items: [
+      { match: "joki minigame|layla", type: "joki", label: "Joki minigame" },
+      { match: "komen album", type: "album" },
+      { match: "main(kan)? akaun", type: "akaun" },
+      { match: "fast ?track|vvip", games: 1, vip: true },
+      { match: "immortal 3|immortal.{0,12}3 game", games: 3 },
+      { match: "immortal 1|immortal.{0,12}1 game", games: 1 },
+      { match: "package 9|9 game", games: 9 },
+      { match: "package 6|6 game", games: 6 },
+      { match: "package 5|5 game", games: 5 },
+      { match: "package 3|3 game", games: 3 },
+      { match: "^\\s*1 game|\\b1 game\\b", games: 1 }
+    ]
   },
 
   // Peraturan (nilai permulaan; edit terus dalam App > Peraturan). Baris "# ..." = tajuk.

@@ -401,17 +401,24 @@
     const test = /ini hanya test notifikasi|test notifi/i.test(msg);
     const trial = !test && (/nama penyokong|penyokong anda|your supporter|supporter name|message from (your )?supporter/i.test(name + " " + msg)
       || /@example\.com$/i.test(String(pick(b, ["email_supporter", "email", "buyer_email"]) || "")));
-    // service by exact amount (RM5 = komen album, RM40 = mainkan akaun) or by a word in the message
-    let svc = "";
-    const SV = SB.services || [];
-    const byWord = SV.find(x => new RegExp("\\b" + x.type + "\\b", "i").test(msg) || (x.label && new RegExp(x.label, "i").test(msg)));
-    if (byWord) svc = byWord.type;
-    else if (!/\b(mabar|game|vip|immortal)\b/i.test(msg)) { const ex = SV.find(x => x.rm === Math.round(rm)); if (ex) svc = ex.type; }
+    // 1) TRIBE package name in the order data (not the buyer's name / message): most exact
+    let svc = "", item = null;
+    const pkgText = Object.entries(b).filter(([k, v]) => (typeof v === "string" || typeof v === "number") && !skip.test(k)
+      && !/^(supporter|supporter_name|buyer_name|name|nama|message|note|notes|buyer_note|supporter_message|pesan)$/i.test(k)).map(([, v]) => String(v)).join(" | ");
+    for (const it of (SB.items || [])) { let re; try { re = new RegExp(it.match, "i"); } catch (e) { continue; } if (re.test(pkgText)) { item = it; break; } }
+    if (item) { if (item.type) svc = item.type; else games = item.games || games; }
+    else {
+      // 2) service by a word in the message, or by exact amount (RM5 = komen album, RM40 = mainkan akaun)
+      const SV = SB.services || [];
+      const byWord = SV.find(x => new RegExp("\\b" + x.type + "\\b", "i").test(msg) || (x.label && new RegExp(x.label, "i").test(msg)));
+      if (byWord) svc = byWord.type;
+      else if (!/\b(mabar|game|vip|immortal)\b/i.test(msg)) { const ex = SV.find(x => x.rm === Math.round(rm)); if (ex) svc = ex.type; }
+    }
     if (svc) games = 0;
     // same order sent twice (Sociabuzz retry) = same id AND same content; Custom Test Alerts reuse one id with new content
     const dk = [id, amount, cur, name, msg, pick(b, ["created_at", "paid_at", "date"]) || ""].join("|");
     const asTest = trial && SB.alertTestAsOrder === false;
-    return { id, dk, name, mlid, games, at, amount, cur, msg: msg.slice(0, 120), test: test || asTest, trial: trial && !asTest, vip, svc, raw: text.slice(0, 500) };
+    return { id, dk, name, mlid, games, at, amount, cur, msg: msg.slice(0, 120), test: test || asTest, trial: trial && !asTest, vip: vip || !!(item && item.vip), svc, item: item ? (item.label || item.match) : "", raw: text.slice(0, 500) };
   }
   let ordersBusy = false;
   // Orders stay in the server journal with a number; the shared state remembers the last number
@@ -444,6 +451,7 @@
           if (!o.test && !o.trial) s.seenOrders.unshift(o.dk);
           if (o.test) { Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "test" }, info)); continue; }
           if (o.svc === "album") { Q._albumAdd(s, o.name, o.mlid, o.msg.replace(/\b(?:id\s*(?:ml)?\s*[:=]?\s*)?\d{6,12}\s*[(\[]?\s*\d{3,5}\s*[)\]]?/i, "").replace(/\s{2,}/g, " ").trim(), o.at, "sociabuzz"); Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz" }, info)); continue; }
+          if (o.svc === "joki") { Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz" }, info)); continue; }
           if (o.svc === "akaun") { Q._akaunBook(s, o.name, o.at); Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz" }, info)); continue; }
           const k = keyOf(o.name);
           if (o.games > 0 && k) Q._add(s, k, o.name, o.games, SB.autoQueue, o.at, o.mlid, "sociabuzz", info);
@@ -798,7 +806,7 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
       if (prev && pop && (!po || o.rx !== po.rx)) {
         const qc = panels.find(p => p.def.type === "queue");
         if (qc) {
-          const al = el("div", "q-alert", `<b>TERIMA KASIH</b><span>${esc(o.name)}</span><i>${o.src === "test" ? "TEST ✓" : o.svc === "album" ? "KOMEN ALBUM" : o.svc === "akaun" ? "MAIN AKAUN" : o.games > 0 ? `+${o.games} GAME` : "SOCIABUZZ"}</i>`);
+          const al = el("div", "q-alert", `<b>TERIMA KASIH</b><span>${esc(o.name)}</span><i>${o.src === "test" ? "TEST ✓" : o.svc === "album" ? "KOMEN ALBUM" : o.svc === "akaun" ? "MAIN AKAUN" : o.svc === "joki" ? "JOKI" : o.games > 0 ? `+${o.games} GAME` : "SOCIABUZZ"}</i>`);
           qc.e.parentNode.appendChild(al);
           Object.assign(al.style, { left: qc.def.x + "px", top: (qc.def.y - 26) + "px", width: qc.def.w + "px" });
           setTimeout(() => al.remove(), 6000);
