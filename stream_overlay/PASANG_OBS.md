@@ -74,6 +74,7 @@ Data sama dengan portrait (queue, W/L, timer, lagu, OPEN/CLOSED). **KEMASKINI.ba
 
 3. Letak source gameplay & kamera di **bawah** overlay, ikut kotak dalam jadual (klik kanan › Transform › Edit Transform).
 - Kolum kiri: facecam (atas), Mabar VIP, WIN / LOSE, banner, handcam (bawah). Kedudukan kamera tetap. Matikan apa-apa (App › Live › Tunjuk di overlay › Landscape, atau Stream Deck) dan kad Mabar VIP membesar isi ruang tu, tiada ruang kosong.
+- Bar LIVE landscape: LIVE, timer, jam, penonton YouTube. Tiada lagu (live YouTube tak pasang lagu).
 4. Landscape guna **banner minimal** (portrait kekal banner power). Tukar: `?banner=power`. PC lag: `?bgfx=0`. Kamera / WIN-LOSE / dll boleh on-off dari App › Live › Tunjuk di overlay › Landscape.
 
 ## 6. App Kawalan SYNO

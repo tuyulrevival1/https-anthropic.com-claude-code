@@ -720,7 +720,7 @@
     kiri: landSide("kiri"),
     kanan: landSide("kanan"),
     tengah: {
-      name: "Landscape tengah", w: 1920, h: 1080, banner: "minimal",
+      name: "Landscape tengah", w: 1920, h: 1080, banner: "minimal", noSong: true,
       band: 1048, bandX: 0, bandW: 1920,
       bannerY: 922, bannerX: 622, bannerScale: .625,
       slots: [
@@ -741,7 +741,7 @@
   function landSide(side) {
     const colX = side === "kiri" ? 0 : 1536, gx = side === "kiri" ? 384 : 0, px = colX + 12;
     return {
-      name: "Landscape " + side, w: 1920, h: 1080, banner: "minimal",
+      name: "Landscape " + side, w: 1920, h: 1080, banner: "minimal", noSong: true,   // YouTube live: no music
       band: 1024, bandX: 0, bandW: 1920, bandScale: 2,
       bannerY: 948, bannerX: px, bannerScale: 360 / 1080,
       slots: [
@@ -1189,7 +1189,7 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
       const fresh = st.yt && st.yt.viewers != null && nowMs - (st.yt.at || 0) < 180000;
       const yv = fresh ? Number(st.yt.viewers).toLocaleString("en-US") : "";
       if (yv !== lastYt) { ytTxt.textContent = yv; ytEl.hidden = !yv; lastYt = yv; }
-      const np = songText(st);
+      const np = L.noSong ? "" : songText(st);
       if (np !== lastNp) {
         // ticker: two copies scroll right to left without a break, short titles too
         lastNp = np; npEl.hidden = !np;
