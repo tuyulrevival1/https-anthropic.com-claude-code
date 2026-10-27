@@ -39,6 +39,11 @@ ${embedded ? "" : `<header class="app-top">
       <button class="btn" type="button" data-t="reset" data-confirm="Tekan lagi untuk reset">↺ Reset</button>
     </div>
     <p class="muted">Timer mula sendiri bila OBS tekan Start Streaming (kalau dibenarkan dalam OBS).</p>
+    <div class="row oc" role="group" aria-label="Mabar VIP">
+      <b class="oc-l">Mabar VIP</b>
+      <button class="btn oc-b oc-open" type="button" id="ap-open" aria-pressed="true">● OPEN</button>
+      <button class="btn oc-b oc-closed" type="button" id="ap-close" aria-pressed="false">■ CLOSED</button>
+    </div>
     <div class="row toggles">
       <label class="tog"><input id="ap-showq" type="checkbox"><span>Queue</span></label>
       <label class="tog"><input id="ap-showb" type="checkbox"><span>Banner</span></label>
@@ -221,7 +226,7 @@ ${embedded ? "" : `<header class="app-top">
     }
     /* ---------- undo / redo per card ---------- */
     const HIST_FIELDS = {
-      live: ["live", "song", "showQueue", "showBanner"], wl: ["wins", "losses", "streak"],
+      live: ["live", "song", "showQueue", "showBanner", "mabarClosed"], wl: ["wins", "losses", "streak"],
       end: ["wins", "losses", "streak", "playing", "queue", "members"], queue: ["playing", "queue", "members"],
       vip: ["members", "playing", "queue"], mvp: ["mvp", "mvpRules"], akaun: ["akaun"], album: ["album"], songs: ["songs", "songCfg"], rules: ["rules"], orders: ["orders"]
     };
@@ -389,6 +394,8 @@ ${embedded ? "" : `<header class="app-top">
     }));
     twoStep($("ap-clearq"), () => { Q.clear(); toast("Queue dikosongkan"); });
     $("ap-showq").addEventListener("change", e => Q.patch({ showQueue: e.target.checked }));
+    $("ap-open").addEventListener("click", () => { Q.patch({ mabarClosed: false }); toast("Mabar VIP OPEN"); });
+    $("ap-close").addEventListener("click", () => { Q.patch({ mabarClosed: true }); toast("Mabar VIP CLOSED"); });
     $("ap-showb").addEventListener("change", e => Q.patch({ showBanner: e.target.checked }));
     const songPatch = o => Store.set(s => { s.song = Object.assign({ on: true, manual: "" }, s.song || {}, o); });
     $("ap-shows").addEventListener("change", e => songPatch({ on: e.target.checked }));
@@ -530,7 +537,7 @@ ${embedded ? "" : `<header class="app-top">
       const newOrd = (s.orders || []).filter(o => o.rx > appOpen && o.src !== "manual").length;
       tabc("order", newOrd ? `${newOrd} baru` : "");
       $("ap-streak").textContent = s.streak >= 2 ? `Win streak ${s.streak}` : s.streak <= -2 ? `Lose streak ${-s.streak}` : "";
-      $("ap-showq").checked = !!s.showQueue; $("ap-showb").checked = !!s.showBanner; $("ap-shows").checked = !s.song || s.song.on !== false;
+      $("ap-showq").checked = !!s.showQueue; $("ap-open").setAttribute("aria-pressed", String(!s.mabarClosed)); $("ap-close").setAttribute("aria-pressed", String(!!s.mabarClosed)); $("ap-showb").checked = !!s.showBanner; $("ap-shows").checked = !s.song || s.song.on !== false;
       if (document.activeElement !== $("ap-song")) $("ap-song").value = (s.song && s.song.manual) || "";
       $("ap-pc").textContent = `${s.playing.length}/${max}`; $("ap-qc").textContent = s.queue.length;
       if (qDrag) { pending.queue = true; } else {

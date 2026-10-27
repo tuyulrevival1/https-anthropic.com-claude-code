@@ -343,3 +343,27 @@
 .ov-songs li .u { flex: none; font-size: 14px; color: var(--muted); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ov-songs li.now .t { color: #ffd84f; }
 .ov-queue .ov-lbl .q-more + i { margin-left: 0; }
+
+/* prices card in the small queue slot: 2-column tiles that always fit */
+.ov-prices.compact { --cut: 16px; padding: 12px 16px 12px; gap: 8px; }
+.ov-prices.compact .q-head { display: flex; align-items: flex-end; justify-content: space-between; }
+.ov-prices.compact .q-open { font-size: 12px; margin-bottom: 4px; }
+.ov-prices.compact .ov-h { font-size: 34px; }
+.ov-prices .pt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.ov-prices .pt { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; padding: 6px 10px 4px; background: linear-gradient(90deg, rgba(var(--flame-rgb),.22), rgba(var(--flame-rgb),.05)); border-left: 3px solid var(--crimson); }
+.ov-prices .pt:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.ov-prices .pt span { font: 700 14px/1 var(--f-hud); letter-spacing: .1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ov-prices .pt b { font: 400 28px/1 var(--f-disp); color: var(--bone); text-shadow: 2px 2px 0 var(--crimson); white-space: nowrap; }
+.ov-prices .pt b small { font: 700 12px/1 var(--f-hud); letter-spacing: .08em; text-shadow: none; margin-left: 3px; color: var(--muted); }
+.ov-prices .pt-svc { display: flex; gap: 14px; flex-wrap: wrap; font: 600 15px/1 var(--f-hud); letter-spacing: .04em; color: var(--muted); border-top: 1px dashed rgba(var(--flame-rgb),.3); padding-top: 7px; }
+.ov-prices .pt-svc b { font: 400 20px/1 var(--f-disp); color: var(--flame); margin-left: 4px; }
+/* Mabar VIP ditutup */
+.ov-closed { padding: 16px 20px 16px; display: flex; flex-direction: column; gap: 10px; }
+.ov-closed.compact { --cut: 16px; }
+.ov-closed .q-open.closed { color: var(--crimson); }
+.ov-closed .q-open.closed::before { background: var(--crimson); box-shadow: 0 0 10px var(--crimson); animation: none; }
+.ov-closed.compact .q-open { font-size: 12px; margin-bottom: 4px; }
+.ov-closed.compact .ov-h { font-size: 34px; }
+.ov-closed .cl-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; text-align: center; }
+.ov-closed .cl-stamp { font: 400 64px/1 var(--f-disp); letter-spacing: .06em; color: var(--crimson); border: 4px solid var(--crimson); padding: 6px 20px 2px; transform: rotate(-4deg); font-size: 56px; text-shadow: 0 0 18px rgba(255,35,80,.45); }
+.ov-closed .cl-body span { font: 600 17px/1.3 var(--f-hud); letter-spacing: .04em; color: var(--muted); }

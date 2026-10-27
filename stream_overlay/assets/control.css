@@ -308,3 +308,10 @@
 .app .sgmedia .sgst { margin: 0; font-size: 13px; } .app .sgmedia .sgst .on { color: var(--c-win); } .app .sgmedia .sgst .warn { color: var(--c-gold); }
 .app .sgmedia .list li.me { outline: 1px solid var(--c-win); }
 .app .sgmedia .vu { display: inline-block; width: 70px; height: 6px; background: #2a1418; margin-right: 6px; vertical-align: 1px; } .app .sgmedia .vu i { display: block; height: 100%; background: var(--c-win); }
+
+/* Mabar VIP OPEN / CLOSED */
+.app .oc { align-items: center; gap: 6px; }
+.app .oc .oc-l { font: 700 12px/1 "OV Raj", Rajdhani, sans-serif; letter-spacing: .16em; text-transform: uppercase; color: var(--c-mut); margin-right: 4px; }
+.app .oc .oc-b { min-width: 120px; opacity: .55; }
+.app .oc .oc-open[aria-pressed="true"] { opacity: 1; background: var(--c-win); border-color: var(--c-win); color: #0b0507; }
+.app .oc .oc-closed[aria-pressed="true"] { opacity: 1; background: var(--c-red); border-color: var(--c-red); color: #fff; }

@@ -79,6 +79,8 @@
   .rl svg { width: 16px; height: 16px; }
   .rl-exp { color: #ff7a45; } .rl-jungle { color: #3ddc84; } .rl-mid { color: #b388ff; } .rl-gold { color: #ffcf4a; } .rl-roam { color: #4fc3f7; }
   @media (max-width: 420px) { table { font-size: 14px; } td.id { font-size: 15px; } col.c-id { width: 26%; } col.c-dt { width: 22%; } col.c-g { width: 21%; } }
+  .closed-note { margin: 0 0 10px; padding: 10px 12px; background: rgba(255,35,70,.14); border-left: 3px solid #ff2346; font-size: 14px; }
+  .closed-note b { color: #ff2346; letter-spacing: .1em; margin-right: 6px; }
 </style>
 </head>
 <body>
@@ -200,6 +202,7 @@
       const g = que.slice(i, i + max);
       html += `<div class="grp que">QUE ${i / max + 1} <i>No. ${i + 1}–${i + g.length}</i></div>` + table(g.map(p => row(p, mem(p), mem(p).last)).join(""));
     }
+    if (S.mabarClosed) html = `<p class="closed-note"><b>MABAR VIP CLOSED</b> Slot tutup buat masa ni. Baki game anda kekal.</p>` + html;
     $("v-wait").innerHTML = html; $("v-wc").textContent = `${play.length} main · ${que.length} queue`;
     // hutang mabar: everyone with balance
     const hq = ($("v-hq").value || "").trim().toLowerCase();

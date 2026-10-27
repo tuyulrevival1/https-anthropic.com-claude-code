@@ -38,7 +38,7 @@
   const keyOf = n => String(n || "").trim().toLowerCase();
   const defaults = () => ({
     wins: CFG.defaults.wins, losses: CFG.defaults.losses, streak: 0,
-    showQueue: true, showBanner: true, playing: [], queue: [], members: {},
+    showQueue: true, showBanner: true, mabarClosed: false, playing: [], queue: [], members: {},
     live: { running: false, start: 0, acc: 0 }, yt: { viewers: null, at: 0 }, song: { on: true, manual: "" }, mvp: [], rev: 0, updated: 0
   });
   // upgrade older saves (queue entries with name/games) to members + balance
@@ -436,6 +436,7 @@
     "end-win": () => Q.endGame("W"), "end-lose": () => Q.endGame("L"), "end": () => Q.endGame("X"),
     "timer-start": () => Q.timer("start"), "timer-pause": () => Q.timer("pause"), "timer-reset": () => Q.timer("reset"),
     "queue-on": () => Q.patch({ showQueue: true }), "queue-off": () => Q.patch({ showQueue: false }),
+    "mabar-open": () => Q.patch({ mabarClosed: false }), "mabar-close": () => Q.patch({ mabarClosed: true }), "mabar-toggle": () => Q.patch({ mabarClosed: !Store.state.mabarClosed }),
     "banner-on": () => Q.patch({ showBanner: true }), "banner-off": () => Q.patch({ showBanner: false }),
     "wl-reset": () => Q.patch({ wins: 0, losses: 0, streak: 0 }),
     "win-reset": () => Q.patch({ wins: 0, streak: 0 }), "lose-reset": () => Q.patch({ losses: 0, streak: 0 })
@@ -812,14 +813,25 @@
     const extra = s.queue.length - lim;
     if (extra > 0 && !compact) next += `<li class="nx more">+${extra} LAGI</li>`;
     const nextBlock = s.queue.length ? `<ol${compact ? ' class="q2"' : ""}>${next}</ol>` : `<p class="q-empty">${full ? "Queue kosong" : "Slot masih ada"}</p>`;
-    return `<div class="q-head"><div><div class="q-open${full ? " full" : ""}">${full ? "PENUH · MASUK QUEUE" : "SLOT DIBUKA"}</div><h3 class="ov-h">${esc(CFG.mabar.title)}</h3></div><div class="q-prices">${chipsHTML()}</div></div>
+    return `<div class="q-head"><div><div class="q-open${full ? " full" : ""}">${full ? "OPEN · MASUK QUEUE" : "OPEN"}</div><h3 class="ov-h">${esc(CFG.mabar.title)}</h3></div><div class="q-prices">${chipsHTML()}</div></div>
 <div class="q-cols"><section><h4 class="ov-lbl">Sedang main <i>${s.playing.length}/${max}</i></h4><ol class="slots">${slots}</ol></section>
 <section><h4 class="ov-lbl">Queue ${compact && extra > 0 ? `<em class="q-more">+${extra} lagi</em>` : ""}<i>${s.queue.length}</i></h4>${nextBlock}</section></div>`;
   }
 
-  function pricesHTML() {
+  // Mabar VIP closed (App switch / Stream Deck): one clear card instead of the queue or prices
+  function closedHTML() {
+    return `<div class="q-head"><div><div class="q-open closed">CLOSED</div><h3 class="ov-h">${esc(CFG.mabar.title)}</h3></div></div>
+<div class="cl-body"><b class="cl-stamp">CLOSED</b><span>Slot mabar tutup buat masa ni.<br>Nantikan slot dibuka semula!</span></div>`;
+  }
+  function pricesHTML(variant) {
+    if (variant === "compact") {
+      const tiles = CFG.mabar.prices.map(p => `<div class="pt"><span>${esc(p.qty)}</span><b>${esc(p.price)}${p.note ? `<small>${esc(p.note)}</small>` : ""}</b></div>`).join("");
+      const sv = CFG.services.map(v => `<span>${esc(v.label)} <b>${esc(v.price)}</b></span>`).join("");
+      return `<div class="q-head"><div><div class="q-open">OPEN</div><h3 class="ov-h">${esc(CFG.mabar.title)}</h3></div></div>
+<div class="pt-grid">${tiles}</div>${sv ? `<div class="pt-svc">${sv}</div>` : ""}`;
+    }
     const pr = CFG.mabar.prices.map(p => `<div class="pr"><span>${esc(p.qty)}</span><b>${esc(p.price)}</b></div>`).join("");
-    return `<div class="q-head"><div><div class="q-open">BUKA SEKARANG</div><h3 class="ov-h">${esc(CFG.mabar.title)}</h3></div></div>
+    return `<div class="q-head"><div><div class="q-open">OPEN</div><h3 class="ov-h">${esc(CFG.mabar.title)}</h3></div></div>
 <div class="pr-list">${pr}</div>
 <h4 class="ov-lbl">Servis lain</h4><div class="svc">${svcHTML()}</div>`;
   }
@@ -981,8 +993,8 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
       for (const { def, e } of panels) {
         const v = def.variant ? " " + def.variant : "";
         if (def.type === "queue") {
-          e.className = "ov-card " + (s.showQueue ? "ov-queue" : "ov-prices") + v;
-          e.innerHTML = s.showQueue ? queueHTML(s, def.variant, prevIds) : pricesHTML();
+          e.className = "ov-card " + (s.mabarClosed ? "ov-closed" : s.showQueue ? "ov-queue" : "ov-prices") + v;
+          e.innerHTML = s.mabarClosed ? closedHTML() : s.showQueue ? queueHTML(s, def.variant, prevIds) : pricesHTML(def.variant);
         } else if (def.type === "score") {
           e.className = "ov-score"; e.innerHTML = scoreSVG(s);
           if (prev) e.querySelectorAll("[data-k]").forEach(g => { const k = g.dataset.k; if (prev[k] !== s[k]) { g.classList.remove("sb-pop"); void g.getBBox(); g.classList.add("sb-pop"); } });
