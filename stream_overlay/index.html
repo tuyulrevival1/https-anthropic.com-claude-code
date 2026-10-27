@@ -52,6 +52,8 @@
   .lay.info { gap: 12px; }
   .lay { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
   .shot { position: relative; width: 100%; aspect-ratio: 9 / 16; overflow: hidden; background: #000; border: 1px solid var(--g-line); }
+  .shot.land { aspect-ratio: 16 / 9; }
+  .layouts.land1 { grid-template-columns: 1fr; margin-top: 18px; }
   .shot .ov-stage, .bshot .bn-host { position: absolute; left: 0; top: 0; }
   .lay > h3 { margin: 4px 0 0; font: 400 24px/1 var(--g-disp); letter-spacing: .02em; display: flex; gap: 10px; align-items: baseline; }
   .lay > h3 span { font: 700 13px/1 var(--g-hud); letter-spacing: .24em; color: var(--g-red); }
@@ -81,8 +83,8 @@
 <div class="wrap">
   <header>
     <div>
-      <h1><small>OVERLAY LIVE · PORTRAIT 1080×1920</small>SYNO STREAM OVERLAY</h1>
-      <p class="lead">Satu layout portrait, banner merah beranimasi di bawah gameplay, dan app kawalan untuk timer, W/L, queue Mabar dan baki VIP. Tukar gaya banner di sini, semua preview ikut.</p>
+      <h1><small>OVERLAY LIVE · PORTRAIT 1080×1920 · LANDSCAPE 1920×1080</small>SYNO STREAM OVERLAY</h1>
+      <p class="lead">Dua layout dengan data yang sama: <b>portrait</b> (TikTok) dan <b>landscape kiri</b> (YouTube / PC), dan app kawalan untuk timer, W/L, queue Mabar, OPEN / CLOSED dan baki VIP. Tukar gaya banner portrait di sini.</p>
     </div>
     <div class="ctl">
     <div class="seg" role="group" aria-label="Gaya banner">
@@ -95,14 +97,26 @@
   <section class="layouts one">
     <div class="lay"><div class="shot" data-layout="1"></div></div>
     <div class="lay info">
-      <h3>Layout 1 <span>SATU-SATUNYA LAYOUT</span></h3>
-      <p>Facecam di atas dengan bar LIVE (timer stream, jam, penonton YouTube). Gameplay 1080×720 ikut skrin tablet. Banner terus di bawah gameplay. Queue Mabar + baki VIP di kiri (bawahnya dibiar kosong); handcam dengan DEVICE dan W/L kecil di kanan.</p>
+      <h3>Portrait <span>1080×1920 · BANNER POWER</span></h3>
+      <p>Facecam di atas dengan bar LIVE (timer stream, lagu request + nama peminta, jam, penonton YouTube). Gameplay 1080×720 ikut skrin tablet. Banner terus di bawah gameplay. Mabar VIP (OPEN / CLOSED) di kiri; handcam dengan DEVICE dan W/L kecil di kanan.</p>
       <div class="tbl"><table><thead><tr><th>Source OBS</th><th>x, y</th><th>w × h</th></tr></thead><tbody>
         <tr><td>Facecam</td><td>0, 0</td><td>1080 × 522</td></tr>
         <tr><td>Gameplay</td><td>0, 550</td><td>1080 × 720</td></tr>
         <tr><td>Handcam</td><td>548, 1474</td><td>508 × 286</td></tr>
         <tr><td>Overlay</td><td>0, 0</td><td>1080 × 1920</td></tr></tbody></table></div>
       <code>http://127.0.0.1:8787/overlay.html</code>
+    </div>
+  </section>
+  <section class="layouts land1">
+    <div class="lay"><div class="shot land" data-layout="kiri"></div></div>
+    <div class="lay info">
+      <h3>Landscape kiri <span>1920×1080 · BANNER MINIMAL</span></h3>
+      <p>Kolum overlay di kiri: kamera, Mabar VIP (sampai 8 menunggu), WIN / LOSE dan banner minimal. Gameplay 3:2 besar di kanan, bar LIVE di bawah sekali. Data sama dengan portrait. Setiap bahagian boleh on / off dari App › Live › Tunjuk di overlay.</p>
+      <div class="tbl"><table><thead><tr><th>Source OBS</th><th>x, y</th><th>w × h</th></tr></thead><tbody>
+        <tr><td>Kamera</td><td>12, 14</td><td>360 × 252</td></tr>
+        <tr><td>Gameplay</td><td>384, 14</td><td>1536 × 1024</td></tr>
+        <tr><td>Overlay</td><td>0, 0</td><td>1920 × 1080</td></tr></tbody></table></div>
+      <code>http://127.0.0.1:8787/landscape.html</code>
     </div>
   </section>
 
@@ -118,7 +132,7 @@
   <h2>Logo</h2>
   <p>Maskot 3D awak dalam tiga gaya (bertukar sendiri dalam banner) dan wordmark SYNO STORE. PNG latar telus ada dalam folder <code>logos/</code> untuk gambar profil, thumbnail dan watermark.</p>
   <div class="logos">
-    <div class="logo"><div class="lbox" data-logo="game"></div><b>Maskot · main</b><small>Main tablet, ibu jari tekan skrin.</small></div>
+    <div class="logo"><div class="lbox" data-logo="game"></div><b>Maskot · main</b><small>Tablet putih, liquid cooling biru beranimasi.</small></div>
     <div class="logo"><div class="lbox" data-logo="win"></div><b>Maskot · GG</b><small>Gaya menang.</small></div>
     <div class="logo"><div class="lbox" data-logo="wink"></div><b>Maskot · wink</b><small>Thumbs-up.</small></div>
     <div class="logo"><div class="lbox wide" data-logo="word"></div><b>Wordmark</b><small>SYNO STORE 3D dengan kilauan &amp; glitch.</small></div>
@@ -208,8 +222,8 @@
   if (!O.Store.read()) seed();
 
   const overlays = [...document.querySelectorAll(".shot")].map(box => {
-    const o = O.mount(box, { layout: +box.dataset.layout, banner: "power", demo: true });
-    O.fitStage(o.stage, box);
+    const d = box.dataset.layout, o = O.mount(box, { layout: /^\d+$/.test(d) ? +d : d, demo: true });
+    O.fitStage(o.stage, box, o.layout.w || 1080, o.layout.h || 1920);
     return o;
   });
   document.querySelectorAll(".bn-host").forEach(host => {
@@ -217,7 +231,8 @@
     O.fitStage(host, host.parentElement, 1080, 192);
   });
   let curStyle = "power";
-  const apply = () => overlays.forEach(o => o.setBanner(curStyle));
+  // the switch changes the portrait banner; landscape always uses the minimal banner
+  const apply = () => overlays.filter(o => !(o.layout.w > o.layout.h)).forEach(o => o.setBanner(curStyle));
   document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => {
     document.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
     curStyle = b.dataset.style; apply();
