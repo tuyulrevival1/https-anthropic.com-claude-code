@@ -43,6 +43,7 @@
   <div class="cp-row">
     <label class="cp-tog"><input id="cp-showq" type="checkbox"> Tunjuk queue</label>
     <label class="cp-tog"><input id="cp-showb" type="checkbox"> Tunjuk banner</label>
+    <label class="cp-tog"><input id="cp-showw" type="checkbox"> Tunjuk Welcome</label>
   </div>
   <div class="cp-row">
     <button class="cp-btn" id="cp-resetwl" type="button">Reset W/L</button>
@@ -65,6 +66,7 @@
     $("cp-glob").addEventListener("change", e => Q.patch({ globalRank: Math.max(1, parseInt(e.target.value, 10) || 1) }));
     $("cp-showq").addEventListener("change", e => Q.patch({ showQueue: e.target.checked }));
     $("cp-showb").addEventListener("change", e => Q.patch({ showBanner: e.target.checked }));
+    $("cp-showw").addEventListener("change", e => Q.patch({ showWelcome: e.target.checked }));
     $("cp-resetwl").addEventListener("click", () => Q.patch({ wins: 0, losses: 0, streak: 0 }));
     let armed = null;
     $("cp-clear").addEventListener("click", e => {
@@ -92,7 +94,7 @@
       $("cp-wins").textContent = s.wins; $("cp-losses").textContent = s.losses;
       if (document.activeElement !== $("cp-mmr")) $("cp-mmr").value = s.mmr;
       if (document.activeElement !== $("cp-glob")) $("cp-glob").value = s.globalRank;
-      $("cp-showq").checked = !!s.showQueue; $("cp-showb").checked = !!s.showBanner;
+      $("cp-showq").checked = !!s.showQueue; $("cp-showb").checked = !!s.showBanner; $("cp-showw").checked = !!s.showWelcome;
     }
     render(Store.state); Store.on(render);
   }

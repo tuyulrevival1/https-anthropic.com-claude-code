@@ -427,3 +427,15 @@
   -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; }
 .rk3d .rk-spk { position: absolute; width: 22px; height: 22px; background: #fff;
   clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%); filter: drop-shadow(0 0 6px #ffcf4a); }
+
+/* ================= ARENA (layout 4) ================= */
+.ov-score, .ov-welcome, .ov-music { position: absolute; }
+.ov-score svg, .ov-welcome svg { width: 100%; height: 100%; overflow: visible; display: block; }
+.ov-score .sb-n, .ov-score [data-k] { transform-box: fill-box; transform-origin: 50% 60%; }
+.sb-pop { animation: sb-pop .7s cubic-bezier(.2,1.5,.4,1); }
+@keyframes sb-pop { 0% { transform: scale(1.45); filter: brightness(2.2); } 100% { transform: scale(1); filter: none; } }
+.ov-music { display: flex; align-items: center; gap: 14px; padding: 0 20px; border: 2px dashed rgba(185,138,255,.4); border-radius: 14px; color: rgba(243,238,232,.6); }
+.ov-music:empty { border: 0; }
+.ov-music span { font-size: 40px; color: #b98aff; }
+.ov-music b { font: 700 18px/1 var(--f-hud); letter-spacing: .2em; }
+.ov-music small { margin-left: auto; font: 600 13px/1 var(--f-hud); letter-spacing: .1em; }

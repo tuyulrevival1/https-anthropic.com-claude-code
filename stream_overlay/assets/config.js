@@ -27,7 +27,7 @@ window.OVERLAY_CONFIG = {
 
   // Banner bawah. art: diamond | rank | mabar | link
   banner: {
-    secondsPerMessage: 6,
+    secondsPerMessage: 4.8,
     // Letak PNG Chou KOF (latar telus) di assets/chou.png.
     // scale = besarkan, x/y = anjak (px). Kalau fail tiada, logo bulan sabit keluar.
     character: { src: "assets/chou.png", scale: 1.15, x: 0, y: 8 },
@@ -35,6 +35,7 @@ window.OVERLAY_CONFIG = {
       { kicker: "SERVIS TOPUP", main: "TOPUP DIAMOND MURAH", tags: ["LINK DI BIO"], art: "diamond" },
       { kicker: "SERVIS JOKI", main: "JOKI RANK MURAH", tags: ["& TERPERCAYA"], art: "rank" },
       { kicker: "MAIN DENGAN SAYA", main: "MABAR VIP", tags: ["RM4 / GAME", "3 GAME RM10"], art: "mabar" },
+      { kicker: "SERVIS LAIN", main: "KOMEN ALBUM RM5", tags: ["MAINKAN AKAUN RM40"], art: "album" },
       { kicker: "SEMUA DI {store}", main: "TEKAN LINK DI BIO", tags: ["{store}"], art: "link" }
     ]
   },
@@ -50,12 +51,13 @@ window.OVERLAY_CONFIG = {
 
   // Banner gaya "scene" (minimal, macam rujukan SOLOZ)
   scene: {
-    brandSeconds: 4.8,
-    itemSeconds: 4.8,
+    brandSeconds: 4,
+    itemSeconds: 4,
     items: [
       { bold: "TOPUP DIAMOND", light: "MURAH · LINK DI BIO", icon: "diamond" },
       { bold: "JOKI RANK", light: "MURAH & TERPERCAYA", icon: "rank" },
       { bold: "MABAR VIP", light: "RM4 / GAME · 3 GAME RM10", icon: "mabar" },
+      { bold: "KOMEN ALBUM", light: "RM5 · MAINKAN AKAUN RM40", icon: "album" },
       { bold: "synostore", light: "", pill: "Link in Bio", icon: "link" }
     ]
   },

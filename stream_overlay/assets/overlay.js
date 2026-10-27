@@ -25,6 +25,7 @@
   const rnd = i => frac(Math.sin(i * 127.1 + 311.7) * 43758.5453);
   const TAU = Math.PI * 2;
   const fill = s => String(s).replace(/\{store\}/g, CFG.storeName);
+  const brandName = () => (CFG.brand && CFG.brand.name) || CFG.storeName.replace(/STORE$/i, "");
   const priceHL = s => esc(s).replace(/(RM\s?\d+)/g, "<b>$1</b>");
   let uidN = 0; const uid = p => p + (++uidN) + Math.random().toString(36).slice(2, 5);
   const pos = (e, r) => Object.assign(e.style, { left: r.x + "px", top: r.y + "px", width: r.w + "px", height: r.h + "px" });
@@ -33,7 +34,7 @@
   const KEY = window.OVERLAY_STORE_KEY || "chouOverlay.v1";
   const defaults = () => ({
     wins: CFG.defaults.wins, losses: CFG.defaults.losses, mmr: CFG.defaults.mmr, globalRank: CFG.defaults.globalRank,
-    streak: 0, showQueue: true, showBanner: true, playing: [], queue: [], rev: 0
+    streak: 0, showQueue: true, showBanner: true, showWelcome: false, playing: [], queue: [], rev: 0
   });
   const Store = {
     state: null, subs: [], bc: null,
@@ -128,7 +129,31 @@
       tags: [{ slot: "hand", corner: "bl" }]
     }
   };
+  LAYOUTS[4] = {
+    name: "Arena",
+    band: null,
+    energy: [612, 1220],
+    chatSafe: { x: 0, y: 1220, w: 640, h: 508 },
+    slots: [
+      { id: "face", x: 0, y: 0, w: 1080, h: 612, frame: false },
+      { id: "game", x: 0, y: 612, w: 1080, h: 608, frame: false },
+      { id: "hand", x: 716, y: 398, w: 340, h: 191, cut: 16, optional: true }
+    ],
+    panels: [
+      { type: "score", x: 536, y: 1238, w: 520, h: 322 },
+      { type: "strip", x: 548, y: 1584, w: 500, h: 84 },
+      { type: "welcome", x: 22, y: 1246, w: 500, h: 214 },
+      { type: "music", x: 36, y: 1598, w: 470, h: 110 }
+    ],
+    tags: [{ slot: "hand", corner: "bl" }]
+  };
   const SLOT_NAMES = { face: "FACECAM", game: "GAMEPLAY", hand: "HANDCAM" };
+  // copy a layout, dropping the optional handcam when ?hand=0
+  function resolveLayout(n, opts) {
+    const L = JSON.parse(JSON.stringify(LAYOUTS[n] || LAYOUTS[1]));
+    if (opts.hand === false) { L.slots = L.slots.filter(s => !s.optional); L.tags = L.tags.filter(t => L.slots.some(s => s.id === t.slot)); }
+    return L;
+  }
 
   function slotPath(r, inset = 0) {
     const x = r.x + inset, y = r.y + inset, w = r.w - inset * 2, h = r.h - inset * 2, c = r.cut ? Math.max(0, r.cut - inset * .4) : 0;
@@ -160,8 +185,9 @@
  <rect width="${W}" height="${H}" fill="url(#${g}c)"/>
  <rect width="${W}" height="${H}" fill="url(#${g}h)"/>
  ${crescent(c1, 120, 1600, 330, `url(#${g}d)`)}
- <text x="1100" y="1716" text-anchor="end" style="font-family:var(--f-disp);font-size:430px;letter-spacing:-6px" fill="none" stroke="#b98aff" stroke-opacity=".09" stroke-width="2">CHOU</text>
  <rect width="${W}" height="${H}" filter="url(#${g}n)"/>
+ ${L.chatSafe ? `<linearGradient id="${g}s" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#050309" stop-opacity=".78"/><stop offset=".75" stop-color="#050309" stop-opacity=".45"/><stop offset="1" stop-color="#050309" stop-opacity="0"/></linearGradient>
+ <rect x="${L.chatSafe.x}" y="${L.chatSafe.y}" width="${L.chatSafe.w}" height="${L.chatSafe.h}" fill="url(#${g}s)"/>` : ""}
 </g>
 </svg>`;
   }
@@ -170,6 +196,7 @@
     const f = uid("blur");
     let out = "";
     for (const s of L.slots) {
+      if (s.frame === false) continue;
       const d = slotPath(s, 1.5);
       out += `<path class="ov-frame-base" d="${d}"/>`;
       out += `<path class="ov-laser glow v" d="${d}" pathLength="1000" style="filter:url(#${f})"/>`;
@@ -214,6 +241,7 @@
         const ph = frac(t * (2 + Math.floor(rnd(i + 2301) * 4)) / LOOP + rnd(i + 2401));
         const x = rnd(i + 2501) * 270 + Math.sin(ph * TAU * 2 + i) * 6;
         const y = 480 - ph * 300;
+        if (L.chatSafe && x < (L.chatSafe.w / 4) && y > L.chatSafe.y / 4) continue;
         const a = Math.sin(ph * Math.PI) * .8;
         ctx.fillStyle = i % 4 ? `rgba(205,170,255,${a})` : `rgba(255,110,140,${a})`;
         ctx.fillRect(x, y, 1.2, 1.2);
@@ -279,10 +307,113 @@
     return `<h3 class="ov-h">${esc(CFG.mabar.title)}</h3><div class="chips">${chipsHTML()}</div>`;
   }
 
+
+  /* ---------- Arena: W/L scoreboard ---------- */
+  function scoreSVG(s) {
+    const u = uid("sb"), tot = s.wins + s.losses, wr = tot ? Math.round(s.wins / tot * 100) : 0;
+    const fs = v => { const n = String(v).length; return n >= 3 ? 112 : n === 2 ? 148 : 176; };
+    const num = (v, x, k, grad, dark) => `<g class="sb-n" data-k="${k}">
+<text x="${x + 8}" y="214" text-anchor="middle" style="font-family:var(--f-disp);font-size:${fs(v)}px" fill="#05030a" opacity=".85">${v}</text>
+<text x="${x + 4}" y="209" text-anchor="middle" style="font-family:var(--f-disp);font-size:${fs(v)}px" fill="${dark}">${v}</text>
+<text x="${x}" y="204" text-anchor="middle" style="font-family:var(--f-disp);font-size:${fs(v)}px;paint-order:stroke" stroke="#07050c" stroke-width="10" stroke-linejoin="round" fill="url(#${u}${grad})">${v}</text>
+<clipPath id="${u}c${k}"><text x="${x}" y="204" text-anchor="middle" style="font-family:var(--f-disp);font-size:${fs(v)}px">${v}</text></clipPath>
+<rect class="sb-sheen" x="-140" y="40" width="46" height="190" fill="#fff" opacity=".55" transform="skewX(-20)" clip-path="url(#${u}c${k})"/></g>`;
+    const streak = s.streak >= 2 ? `<g transform="translate(255 290)"><polygon points="-74,-14 78,-14 70,14 -82,14" fill="#ffcf4a"/><text x="-2" y="6" text-anchor="middle" style="font-family:var(--f-hud);font-weight:700;font-size:16px;letter-spacing:3px" fill="#07050c">WIN STREAK ${s.streak}</text></g>`
+      : s.streak <= -2 ? `<g transform="translate(255 290)"><text x="0" y="6" text-anchor="middle" style="font-family:var(--f-hud);font-weight:700;font-size:15px;letter-spacing:3px" fill="rgba(243,238,232,.55)">LOSE ${-s.streak} BERTURUT</text></g>` : "";
+    return `<svg viewBox="0 0 520 322" aria-hidden="true"><defs>
+<linearGradient id="${u}p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#26123f"/><stop offset=".6" stop-color="#120a20"/><stop offset="1" stop-color="#0a0612"/></linearGradient>
+<linearGradient id="${u}w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#c9ffe3"/><stop offset="1" stop-color="#33dd8b"/></linearGradient>
+<linearGradient id="${u}l" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#ffc4cf"/><stop offset="1" stop-color="#ff2350"/></linearGradient>
+<linearGradient id="${u}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#b98aff"/><stop offset="1" stop-color="#ff2350"/></linearGradient>
+<filter id="${u}g" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="4"/></filter></defs>
+<text x="260" y="16" text-anchor="middle" style="font-family:var(--f-hud);font-weight:700;font-size:15px;letter-spacing:5px" fill="#b98aff">${esc(CFG.status)} · ${esc(CFG.server)}</text>
+<polygon points="30,36 248,36 232,234 14,234" fill="url(#${u}p)"/>
+<polygon class="sb-edge" points="30,36 248,36 232,234 14,234" fill="none" stroke="#6dffb0" stroke-width="7" filter="url(#${u}g)"/>
+<polygon points="30,36 248,36 232,234 14,234" fill="none" stroke="#6dffb0" stroke-width="2.5"/>
+<polygon points="272,36 490,36 506,234 288,234" fill="url(#${u}p)"/>
+<polygon class="sb-edge" points="272,36 490,36 506,234 288,234" fill="none" stroke="#ff2350" stroke-width="7" filter="url(#${u}g)"/>
+<polygon points="272,36 490,36 506,234 288,234" fill="none" stroke="#ff2350" stroke-width="2.5"/>
+<polygon points="40,24 138,24 132,52 34,52" fill="#6dffb0"/><text x="86" y="45" text-anchor="middle" style="font-family:var(--f-shout);font-style:italic;font-weight:900;font-size:21px" fill="#07050c">WIN</text>
+<polygon points="382,24 480,24 486,52 388,52" fill="#ff2350"/><text x="434" y="45" text-anchor="middle" style="font-family:var(--f-shout);font-style:italic;font-weight:900;font-size:21px" fill="#fff">LOSE</text>
+${num(s.wins, 128, "wins", "w", "#0b6b44")}
+${num(s.losses, 392, "losses", "l", "#7a0020")}
+<polygon class="sb-bolt" points="268,30 240,124 260,124 246,240 282,118 260,118 280,30" fill="url(#${u}b)" stroke="#07050c" stroke-width="3" stroke-linejoin="round"/>
+<circle cx="260" cy="138" r="27" fill="#07050c" stroke="#f3eee8" stroke-width="3"/>
+<text x="259" y="147" text-anchor="middle" style="font-family:var(--f-shout);font-style:italic;font-weight:900;font-size:24px" fill="#f3eee8">VS</text>
+<polygon points="14,250 506,250 503,260 11,260" fill="#ff2350"/>
+<polygon points="14,250 ${(14 + 492 * wr / 100).toFixed(1)},250 ${(11 + 492 * wr / 100).toFixed(1)},260 11,260" fill="#6dffb0"/>
+<text x="16" y="296" style="font-family:var(--f-hud);font-weight:700;font-size:14px;letter-spacing:3px" fill="#b98aff">MMR</text>
+<g data-k="mmr"><text x="62" y="301" style="font-family:var(--f-num);font-size:40px" fill="#f3eee8">${s.mmr}</text></g>
+${streak || `<text x="260" y="296" text-anchor="middle" style="font-family:var(--f-hud);font-weight:700;font-size:14px;letter-spacing:3px" fill="rgba(243,238,232,.6)">WR ${wr}%</text>`}
+<g data-k="globalRank"><text x="504" y="301" text-anchor="end" style="font-family:var(--f-num);font-size:40px" fill="#ffcf4a">#${s.globalRank}</text></g>
+<text x="${504 - 28 - String(s.globalRank).length * 19}" y="296" text-anchor="end" style="font-family:var(--f-hud);font-weight:700;font-size:14px;letter-spacing:3px" fill="#b98aff">GLOBAL</text>
+</svg>`;
+  }
+
+  function welcomeSVG() {
+    const u = uid("wc");
+    return `<svg viewBox="0 0 500 214" aria-hidden="true"><defs>
+<linearGradient id="${u}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#e2d0ff"/><stop offset="1" stop-color="#8a45ff"/></linearGradient>
+<clipPath id="${u}c"><text x="6" y="200" style="font-family:var(--f-disp);font-size:150px;letter-spacing:2px">STREAM</text></clipPath></defs>
+<g class="wl-float">
+<text x="13" y="70" style="font-family:var(--f-shout);font-style:italic;font-weight:900;font-size:46px;paint-order:stroke" stroke="#ff2350" stroke-width="10" stroke-linejoin="round" fill="#ff2350">WELCOME TO MY</text>
+<text x="10" y="66" style="font-family:var(--f-shout);font-style:italic;font-weight:900;font-size:46px;paint-order:stroke" stroke="#07050c" stroke-width="8" stroke-linejoin="round" fill="#f3eee8">WELCOME TO MY</text>
+<text x="16" y="210" style="font-family:var(--f-disp);font-size:150px;letter-spacing:2px" fill="#07050c">STREAM</text>
+<text x="11" y="205" style="font-family:var(--f-disp);font-size:150px;letter-spacing:2px" fill="#ff2350">STREAM</text>
+<text x="6" y="200" style="font-family:var(--f-disp);font-size:150px;letter-spacing:2px;paint-order:stroke" stroke="#07050c" stroke-width="9" stroke-linejoin="round" fill="url(#${u}g)">STREAM</text>
+<rect class="sb-sheen" x="-140" y="60" width="50" height="150" fill="#fff" opacity=".5" transform="skewX(-20)" clip-path="url(#${u}c)"/>
+</g></svg>`;
+  }
+
+  /* ---------- Arena: energy lines on the gameplay edges ---------- */
+  function energyLayer(L) {
+    const u = uid("en");
+    const lines = L.energy.map((y, i) => `<g class="en" data-y="${y}" data-i="${i}">
+<rect x="0" y="${y - 9}" width="${W}" height="18" fill="url(#${u}v)" opacity=".75" class="en-glow"/>
+<path class="en-wave" fill="none" stroke="#b98aff" stroke-width="3" filter="url(#${u}b)"/>
+<path class="en-wave2" fill="none" stroke="#ff2350" stroke-width="2" opacity=".8"/>
+<rect x="0" y="${y - 1.5}" width="${W}" height="3" fill="#f6efff"/>
+<path class="en-arc" fill="none" stroke="#fff" stroke-width="2.4" stroke-linejoin="bevel" filter="url(#${u}a)"/>
+<circle class="en-spark" r="6" cy="${y}" fill="#fff" filter="url(#${u}a)"/></g>`).join("");
+    const wrap = el("div", "ov-layer");
+    wrap.innerHTML = `<svg class="ov-layer" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true"><defs>
+<linearGradient id="${u}v" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7b2cff" stop-opacity="0"/><stop offset=".5" stop-color="#9b5bff" stop-opacity=".9"/><stop offset="1" stop-color="#7b2cff" stop-opacity="0"/></linearGradient>
+<filter id="${u}b" x="-5%" y="-200%" width="110%" height="500%"><feGaussianBlur stdDeviation="3"/></filter>
+<filter id="${u}a" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>${lines}</svg>`;
+    const groups = [...wrap.querySelectorAll(".en")];
+    let last = -1;
+    tickers.push(t => {
+      if (manualT == null && t - last < 1 / 30) return; last = t;
+      groups.forEach(g => {
+        const y = +g.dataset.y, i = +g.dataset.i, dir = i === 0 ? -1 : 1;
+        let d1 = "", d2 = "";
+        for (let x = 0; x <= W; x += 24) {
+          const a = Math.sin(x * .017 + t * TAU / 6 + i) * 3.2 + Math.sin(x * .043 - t * TAU / 4) * 2;
+          const b = Math.sin(x * .023 - t * TAU / 8 + i * 2) * 3 + Math.sin(x * .061 + t * TAU / 3) * 1.4;
+          d1 += (x ? "L" : "M") + x + " " + (y + a).toFixed(1);
+          d2 += (x ? "L" : "M") + x + " " + (y + b).toFixed(1);
+        }
+        g.querySelector(".en-wave").setAttribute("d", d1);
+        g.querySelector(".en-wave2").setAttribute("d", d2);
+        // short lightning arc every 3 s, pointing away from the gameplay
+        const k = Math.floor(t / 3), lt = t - k * 3, arc = g.querySelector(".en-arc");
+        if (lt < .32) {
+          let x0 = 80 + rnd(k * 7 + i * 31) * 920, yy = y, d = `M${x0.toFixed(1)} ${y}`;
+          for (let j = 1; j <= 6; j++) { x0 += (rnd(k * 13 + j + i * 5) - .5) * 34; yy += dir * (6 + rnd(k * 17 + j) * 8); d += `L${x0.toFixed(1)} ${yy.toFixed(1)}`; }
+          arc.setAttribute("d", d); arc.setAttribute("opacity", (1 - lt / .32).toFixed(3));
+        } else arc.setAttribute("opacity", "0");
+        const sp = g.querySelector(".en-spark"), f = frac(t / 6 + i * .5);
+        sp.setAttribute("cx", (i ? W + 60 - f * (W + 120) : f * (W + 120) - 60).toFixed(1));
+        g.querySelector(".en-glow").setAttribute("opacity", (.55 + .25 * Math.sin(t * TAU / 4 + i * Math.PI)).toFixed(3));
+      });
+    });
+    return wrap;
+  }
+
   /* ---------- full overlay ---------- */
   function mount(root, opts = {}) {
     Store.init();
-    const L = LAYOUTS[opts.layout] || LAYOUTS[1];
+    const L = resolveLayout(opts.layout, opts);
     const stage = el("div", "ov-stage ov-l" + (opts.layout || 1));
 
     if (opts.demo) for (const s of L.slots) {
@@ -294,12 +425,13 @@
     }
     stage.insertAdjacentHTML("beforeend", bgSVG(L));
     if (opts.bgfx !== false) stage.appendChild(bgFx(L));
+    if (L.energy) stage.appendChild(energyLayer(L));
     stage.insertAdjacentHTML("beforeend", frameSVG(L));
 
     // band between facecam and gameplay
     const band = el("div", "ov-band", `<span class="sweep"></span><span class="live"><span class="dot"></span><span>LIVE</span></span>
 <span>${esc(CFG.status)}</span><span class="sep"></span><span>${esc(CFG.server)}</span><span class="sep"></span><span class="clock">--:--</span>`);
-    band.style.top = L.band + "px"; stage.appendChild(band);
+    band.style.top = L.band + "px"; if (L.band != null) stage.appendChild(band);
     const clock = band.querySelector(".clock"); let lastClock = "";
 
     for (const t of L.tags) {
@@ -335,6 +467,14 @@
           if (prev) e.querySelectorAll("b[data-k]").forEach(b => { const k = b.dataset.k; if (prev[k] !== s[k]) b.classList.add("pop"); });
         } else if (def.type === "strip") {
           e.className = "ov-card ov-strip"; e.innerHTML = stripHTML();
+        } else if (def.type === "score") {
+          e.className = "ov-score"; e.innerHTML = scoreSVG(s);
+          if (prev) e.querySelectorAll("[data-k]").forEach(g => { const k = g.dataset.k; if (prev[k] !== s[k]) { g.classList.remove("sb-pop"); void g.getBBox(); g.classList.add("sb-pop"); } });
+        } else if (def.type === "welcome") {
+          if (!e.firstChild) { e.className = "ov-welcome"; e.innerHTML = welcomeSVG(); }
+          e.style.display = s.showWelcome ? "" : "none";
+        } else if (def.type === "music") {
+          e.className = "ov-music"; if (!e.firstChild && opts.demo) e.innerHTML = `<span>♪</span><b>LAGU · MUSIC WIDGET</b><small>${def.x}, ${def.y} · ${def.w}×${def.h}</small>`;
         }
       }
       if (api.banner) api.banner.el.style.display = s.showBanner ? "" : "none";
@@ -342,8 +482,20 @@
     render(Store.state, null);
     Store.on(render);
 
+    tickers.push(t => {
+      stage.querySelectorAll(".ov-score svg, .ov-welcome svg").forEach(svg => {
+        const sh = svg.querySelectorAll(".sb-sheen");
+        sh.forEach((r, i) => r.setAttribute("x", (-140 + seg(frac(t / 8 + i * .12), .05, .3) * 760).toFixed(1)));
+        const edge = svg.querySelectorAll(".sb-edge");
+        edge.forEach((e, i) => e.setAttribute("stroke-opacity", (.55 + .45 * Math.sin(t * TAU / 4 + i * Math.PI)).toFixed(3)));
+        const bolt = svg.querySelector(".sb-bolt");
+        if (bolt) { const f = frac(t / 6); bolt.setAttribute("opacity", f < .06 ? (Math.floor(f * 100) % 2 ? ".35" : "1") : ".92"); }
+        const fl = svg.querySelector(".wl-float");
+        if (fl) fl.setAttribute("transform", `translate(0 ${(Math.sin(t * TAU / 4) * 3).toFixed(2)})`);
+      });
+    });
     tickers.push(() => {
-      if (manualT != null) return;
+      if (manualT != null || L.band == null) return;
       const d = new Date(), c = String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
       if (c !== lastClock) { clock.textContent = c; lastClock = c; }
     });
@@ -400,6 +552,16 @@
 <g transform="rotate(-45 134 96)" fill="none" stroke="#f3eee8" stroke-width="8">
 <rect x="98" y="84" width="42" height="24" rx="12"/><rect x="128" y="84" width="42" height="24" rx="12" stroke="#ff2350"/></g>
 <g class="tap"><path d="M178 132 l26 10 -11 4 9 13 -6 4 -9 -13 -7 9z" fill="#f3eee8" stroke="#07050c" stroke-width="2.5" stroke-linejoin="round"/></g></svg>`;
+    if (kind === "album") return `<svg viewBox="0 0 268 192" data-kind="album">
+<defs><linearGradient id="${u}p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7b2cff"/><stop offset="1" stop-color="#ff2350"/></linearGradient>
+<radialGradient id="${u}g"><stop offset="0" stop-color="#b98aff" stop-opacity=".55"/><stop offset="1" stop-color="#b98aff" stop-opacity="0"/></radialGradient></defs>
+<ellipse class="glow" cx="134" cy="100" rx="118" ry="82" fill="url(#${u}g)"/>
+<g class="ph1"><rect x="-44" y="-36" width="88" height="72" rx="6" fill="#f3eee8" stroke="#07050c" stroke-width="3"/><rect x="-36" y="-28" width="72" height="46" fill="url(#${u}p)"/>
+<path d="M-36 18 L-12 -6 L4 8 L14 0 L36 18Z" fill="#07050c" opacity=".55"/><circle cx="20" cy="-14" r="6" fill="#ffcf4a"/></g>
+<g class="ph2"><rect x="-44" y="-36" width="88" height="72" rx="6" fill="#f3eee8" stroke="#07050c" stroke-width="3"/><rect x="-36" y="-28" width="72" height="46" fill="#241038"/>
+<path d="M-36 18 L-16 -2 L-2 10 L12 -8 L36 18Z" fill="#b98aff"/><circle cx="-18" cy="-14" r="5" fill="#f3eee8"/></g>
+<g class="bub"><path d="M0 -26 C22 -26 36 -14 36 0 C36 14 22 26 0 26 C-6 26 -12 25 -17 23 L-32 30 L-26 17 C-33 12 -36 6 -36 0 C-36 -14 -22 -26 0 -26Z" fill="#ff2350" stroke="#f3eee8" stroke-width="4"/>
+<circle class="d0" cx="-14" cy="0" r="4.5" fill="#fff"/><circle class="d1" cx="0" cy="0" r="4.5" fill="#fff"/><circle class="d2" cx="14" cy="0" r="4.5" fill="#fff"/></g></svg>`;
     return "";
   }
 
@@ -432,6 +594,13 @@
       qa(".pulse").forEach((c, i) => { const p = frac(t / 2 + i * .5); c.setAttribute("r", (54 + p * 40).toFixed(1)); c.setAttribute("opacity", (1 - p).toFixed(3)); });
       const tp = frac(t / 1.5), press = tp < .2 ? Math.sin(tp / .2 * Math.PI) : 0;
       q(".tap").setAttribute("transform", `translate(${(-press * 6).toFixed(1)} ${(-press * 4).toFixed(1)})`);
+    } else if (kind === "album") {
+      const sw = Math.sin(t * TAU / 3);
+      q(".ph2").setAttribute("transform", `translate(${(150 + sw * 4).toFixed(1)} 104) rotate(${(10 + sw * 4).toFixed(1)})`);
+      q(".ph1").setAttribute("transform", `translate(${(112 - sw * 4).toFixed(1)} 96) rotate(${(-12 - sw * 4).toFixed(1)})`);
+      const bp = frac(t / 1.5), bb = Math.abs(Math.sin(bp * Math.PI)) * 6;
+      q(".bub").setAttribute("transform", `translate(196 ${(50 - bb).toFixed(1)})`);
+      [0, 1, 2].forEach(i => q(".d" + i).setAttribute("opacity", (.35 + .65 * Math.max(0, Math.sin((t * 2 - i * .25) * Math.PI))).toFixed(3)));
     }
   }
 
@@ -441,9 +610,9 @@
 <linearGradient id="${u}g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f3eee8"/><stop offset=".55" stop-color="#b98aff"/><stop offset="1" stop-color="#7b2cff"/></linearGradient></defs>
 ${crescent(u + "m", 118, 86, 70, `url(#${u}g)`, 'class="moon"')}
 <text x="206" y="30" style="font-family:var(--f-brush);font-size:30px;writing-mode:vertical-rl;letter-spacing:4px" fill="#ff2350">八稚女</text>
-<text x="112" y="150" text-anchor="middle" style="font-family:var(--f-disp);font-size:76px;letter-spacing:1px" fill="#07050c" transform="translate(4 4)">CHOU</text>
-<text x="112" y="150" text-anchor="middle" style="font-family:var(--f-disp);font-size:76px;letter-spacing:1px" fill="#f3eee8">CHOU</text>
-<text x="112" y="176" text-anchor="middle" style="font-family:var(--f-hud);font-weight:700;font-size:15px;letter-spacing:6px" fill="#b98aff">KOF · MAIN HERO</text></svg>`;
+<text x="112" y="150" text-anchor="middle" style="font-family:var(--f-disp);font-size:76px;letter-spacing:1px" fill="#07050c" transform="translate(4 4)">${esc(brandName())}</text>
+<text x="112" y="150" text-anchor="middle" style="font-family:var(--f-disp);font-size:76px;letter-spacing:1px" fill="#f3eee8">${esc(brandName())}</text>
+<text x="112" y="176" text-anchor="middle" style="font-family:var(--f-hud);font-weight:700;font-size:15px;letter-spacing:6px" fill="#b98aff">STORE · LINK DI BIO</text></svg>`;
   }
 
   /* ---------- banner fx (canvas, stateless => loops perfectly) ---------- */

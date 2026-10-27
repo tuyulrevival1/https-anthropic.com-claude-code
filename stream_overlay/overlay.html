@@ -15,6 +15,7 @@
   ?layout=1  Klasik      (facecam atas, game tengah, queue + handcam bawah)
   ?layout=2  Mabar       (facecam + handcam atas, queue besar bawah)
   ?layout=3  Solo Push   (game besar, stats besar, tiada queue)
+  ?layout=4  Arena       (garis tenaga pada gameplay, papan W/L besar, ruang chat & lagu) &hand=0 buang handcam
   &banner=pro | pro-crimson | flame | slash | moon | none
   &demo      tunjuk gambar contoh dalam lubang kamera (untuk preview sahaja)
 -->
@@ -26,10 +27,27 @@
 <script src="assets/logos.js"></script>
 <script src="assets/banner-scene.js"></script>
 <script>
-  const p = new URLSearchParams(location.search);
+  // Tetapan dari URL (?layout=4&banner=pro), atau dari fail preset (obs-*.html)
+  const P = Object.assign({}, window.OVERLAY_PRESET || {});
+  new URLSearchParams(location.search).forEach((v, k) => { P[k] = v; });
   const root = document.getElementById("root");
-  const o = ChouOverlay.mount(root, { layout: +p.get("layout") || 1, banner: p.get("banner") || "pro", accent: p.get("accent") || undefined, bgfx: p.get("bgfx") !== "0", demo: p.has("demo") });
+  const o = ChouOverlay.mount(root, {
+    layout: +P.layout || 1, banner: P.banner || "pro", accent: P.accent || undefined,
+    bgfx: String(P.bgfx) !== "0", hand: String(P.hand) !== "0", demo: "demo" in P
+  });
   ChouOverlay.fitStage(o.stage, root);
+
+  // Shortcut keyboard (OBS: klik kanan source > Interact, kemudian tekan kekunci)
+  //  W / L = tambah win / lose     Shift+W / Shift+L = tolak 1
+  //  Q = on/off queue    B = on/off banner    H = on/off Welcome
+  document.addEventListener("keydown", e => {
+    const S = ChouOverlay.Store, k = e.key.toLowerCase(), d = e.shiftKey ? -1 : 1;
+    if (k === "w") S.set(s => { s.wins = Math.max(0, s.wins + d); if (d > 0) s.streak = s.streak > 0 ? s.streak + 1 : 1; });
+    else if (k === "l") S.set(s => { s.losses = Math.max(0, s.losses + d); if (d > 0) s.streak = s.streak < 0 ? s.streak - 1 : -1; });
+    else if (k === "q") S.set(s => { s.showQueue = !s.showQueue; });
+    else if (k === "b") S.set(s => { s.showBanner = !s.showBanner; });
+    else if (k === "h") S.set(s => { s.showWelcome = !s.showWelcome; });
+  });
 </script>
 </body>
 </html>

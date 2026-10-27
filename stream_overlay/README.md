@@ -19,6 +19,7 @@ Semua dalam HTML, jadi teks, harga dan queue boleh ubah tanpa edit video.
 1. **Klasik** – facecam atas, game tengah, kad queue kiri bawah + handcam kanan + stats.
 2. **Mabar** – facecam + handcam sebelah-menyebelah di atas, queue besar di bawah. Untuk sesi mabar VIP.
 3. **Solo Push** – game lebih besar, stats W/L besar, tiada queue. Untuk bila skrin dah penuh.
+4. **Arena** (baru) – gameplay diapit garis tenaga beranimasi, papan W/L besar di kanan, kiri bawah dibiar tenang supaya chat TikTok senang dibaca, ruang untuk widget lagu, "Welcome To My Stream" boleh on/off.
 
 **Banner** (`&banner=...`):
 - `scene-grunge`, `scene-emblem`, `scene-mascot` – **Minimal** (rentak macam SOLOZ): babak jenama → babak servis, teks kabur-pudar, butang Link in Bio diketuk.
@@ -56,20 +57,23 @@ Tukar nama/huruf logo dalam `config.js` → `brand`, kemudian `node tools/export
 
 ## Pasang dalam OBS / TikTok Live Studio
 
-1. Klik dua kali `START_OVERLAY.bat` (perlu Python). Biar tetingkap hitam tu terbuka masa live.
-2. Tambah **Browser source**: URL `http://localhost:8787/overlay.html?layout=1&banner=pro`, lebar 1080, tinggi 1920.
+**Tutorial penuh langkah demi langkah: [PASANG_OBS.md](PASANG_OBS.md)** (tak perlu install Python).
+
+1. Klik dua kali `START_OVERLAY.bat` (guna PowerShell bawaan Windows, tiada install). Biar tetingkap hitam tu terbuka masa live.
+2. Tambah **Browser source**: URL `http://127.0.0.1:8787/overlay.html?layout=1&banner=pro`, lebar 1080, tinggi 1920.
 3. Letak source overlay **paling atas**. Kamera & game letak di bawah, ikut kotak ni:
 
 | Layout | Facecam (x, y, w, h) | Game | Handcam |
 |---|---|---|---|
+| 4 Arena | 0, 0, 1080, 612 | 0, 612, 1080, 608 | 716, 398, 340, 191 (lagu: 36, 1598, 470, 110) |
 | 1 Klasik | 0, 0, 1080, 560 | 0, 588, 1080, 608 | 540, 1216, 504, 284 |
 | 2 Mabar | 0, 0, 652, 470 | 0, 498, 1080, 608 | 666, 14, 400, 225 |
 | 3 Solo Push | 0, 0, 1080, 520 | 0, 548, 1080, 760 | 540, 1326, 504, 284 |
 
    Layout 3: besarkan game ke 1351×760 dan crop tepi kiri/kanan.
    Tip OBS: klik kanan source › Transform › Edit Transform, taip nilai x/y/w/h terus.
-4. Panel queue: OBS › **Docks › Custom Browser Docks**, URL `http://localhost:8787/control.html`.
-   Panel dan overlay mesti guna alamat `localhost:8787` yang sama supaya data sync.
+4. Panel queue: OBS › **Docks › Custom Browser Docks**, URL `http://127.0.0.1:8787/control.html`.
+   Panel dan overlay mesti guna alamat `127.0.0.1:8787` yang sama supaya data sync.
 
 Buat satu scene untuk setiap layout (contoh "Mabar", "Solo Push") dan tukar scene ikut sesi.
 
