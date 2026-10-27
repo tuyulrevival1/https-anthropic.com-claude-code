@@ -396,9 +396,11 @@
     }
     const at = Date.parse(pick(b, ["created_at", "paid_at", "date"]) || "") || entry.t || Date.now();
     const id = String(pick(b, ["id", "transaction_id", "order_id"]) || `${name}|${amount}|${at}`);
-    // Sociabuzz test (Webhook page and the Alert page's Test Alert use sample names / messages)
-    const test = /ini hanya test notifikasi|test notifi|nama penyokong|penyokong anda|your supporter|supporter name|message from (your )?supporter/i.test(name + " " + msg)
-      || /@example\.com$/i.test(String(pick(b, ["email_supporter", "email", "buyer_email"]) || ""));
+    // Webhook page "Pemberitahuan Ujian": only a TEST row. Alert page Test Alert / Custom Test Alert:
+    // handled like a real order (games / komen album / alert on live), marked TEST ALERT (sociabuzz.alertTestAsOrder)
+    const test = /ini hanya test notifikasi|test notifi/i.test(msg);
+    const trial = !test && (/nama penyokong|penyokong anda|your supporter|supporter name|message from (your )?supporter/i.test(name + " " + msg)
+      || /@example\.com$/i.test(String(pick(b, ["email_supporter", "email", "buyer_email"]) || "")));
     // service by exact amount (RM5 = komen album, RM40 = mainkan akaun) or by a word in the message
     let svc = "";
     const SV = SB.services || [];
@@ -406,7 +408,10 @@
     if (byWord) svc = byWord.type;
     else if (!/\b(mabar|game|vip|immortal)\b/i.test(msg)) { const ex = SV.find(x => x.rm === Math.round(rm)); if (ex) svc = ex.type; }
     if (svc) games = 0;
-    return { id, name, mlid, games, at, amount, cur, msg: msg.slice(0, 120), test, vip, svc, raw: text.slice(0, 500) };
+    // same order sent twice (Sociabuzz retry) = same id AND same content; Custom Test Alerts reuse one id with new content
+    const dk = [id, amount, cur, name, msg, pick(b, ["created_at", "paid_at", "date"]) || ""].join("|");
+    const asTest = trial && SB.alertTestAsOrder === false;
+    return { id, dk, name, mlid, games, at, amount, cur, msg: msg.slice(0, 120), test: test || asTest, trial: trial && !asTest, vip, svc, raw: text.slice(0, 500) };
   }
   let ordersBusy = false;
   // Orders stay in the server journal with a number; the shared state remembers the last number
@@ -434,9 +439,9 @@
             continue;
           }
           // Sociabuzz sends the same id on every Test Notification: never drop a test as a duplicate
-          const info = { amount: o.amount, cur: o.cur, note: o.msg, vip: !!o.vip, raw: o.raw, svc: o.svc };
-          if (!o.test && s.seenOrders.includes(o.id)) { Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz", warn: "Order sama dengan sebelum ni, diabaikan" }, info)); continue; }
-          if (!o.test) s.seenOrders.unshift(o.id);
+          const info = { amount: o.amount, cur: o.cur, note: o.msg, vip: !!o.vip, raw: o.raw, svc: o.svc, trial: !!o.trial };
+          if (!o.test && !o.trial && s.seenOrders.includes(o.dk)) { Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz", warn: "Order sama dengan sebelum ni, diabaikan" }, info)); continue; }
+          if (!o.test && !o.trial) s.seenOrders.unshift(o.dk);
           if (o.test) { Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "test" }, info)); continue; }
           if (o.svc === "album") { Q._albumAdd(s, o.name, o.mlid, o.msg.replace(/\b(?:id\s*(?:ml)?\s*[:=]?\s*)?\d{6,12}\s*[(\[]?\s*\d{3,5}\s*[)\]]?/i, "").replace(/\s{2,}/g, " ").trim(), o.at, "sociabuzz"); Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz" }, info)); continue; }
           if (o.svc === "akaun") { Q._akaunBook(s, o.name, o.at); Q._log(s, Object.assign({ key: "", name: o.name, mlid: o.mlid, games: 0, at: o.at, src: "sociabuzz" }, info)); continue; }

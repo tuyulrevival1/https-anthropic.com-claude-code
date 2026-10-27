@@ -28,6 +28,7 @@ window.OVERLAY_CONFIG = {
   // contoh: "ID 123456789 (1234) 3 game". Bilangan game dikira dari mesej atau jumlah bayaran.
   sociabuzz: {
     autoQueue: true,
+    alertTestAsOrder: true,   // Test Alert / Custom Test Alert di halaman Alert Sociabuzz dikira macam order sebenar (ditanda TEST ALERT)
     toMYR: { MYR: 1, RM: 1, IDR: 0.00028, SGD: 3.3, USD: 4.4 },   // anggaran tukaran ke RM
     packs: [{ rm: 30, games: 9 }, { rm: 20, games: 5 }, { rm: 10, games: 3 }, { rm: 4, games: 1 }], // pakej besar dulu
     immortalPerGame: 6,                                            // kalau mesej sebut "immortal"

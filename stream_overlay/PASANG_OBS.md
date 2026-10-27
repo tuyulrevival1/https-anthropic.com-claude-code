@@ -171,7 +171,8 @@ Bila orang bayar:
 | **RM40** (atau mesej "akaun") | Slot kosong pertama dalam **Slot Mainkan Akaun** |
 
   Mesej "3 game" dalam order menang atas kiraan jumlah. Ubah harga dalam `assets\config.js` › `sociabuzz` (packs, services).
-- Butang **Test Alert** di halaman Alert Sociabuzz dan **Test Notification** di halaman Webhook dua-dua keluar sebagai **TEST** dalam tab Order.
+- **Test Alert / Custom Test Alert** di halaman Alert Sociabuzz dikira **macam order sebenar** (ditanda **TEST ALERT**): ikut jumlah masuk Mabar VIP / Komen Album, masuk queue dan alert keluar di live. Padam nama test dalam Hutang Mabar / Komen Album lepas cuba. (Tutup dalam `config.js` › `sociabuzz.alertTestAsOrder: false`.)
+- **Pemberitahuan Ujian** di halaman Integrations › Webhook cuma keluar sebagai **TEST** (tak tambah game).
 - Setiap order dalam tab Order ada **Data asal** (apa Sociabuzz hantar), untuk semak kalau ada yang pelik, dan **✕** untuk buang baris tu (baki tak berubah; ↶ untuk batal). **Buang baris TEST** buang semua test sekali gus.
 - Order masa PC off tak dihantar semula oleh Sociabuzz: semak dashboard Sociabuzz dan tambah manual.
 - Semua order mentah disimpan dalam `data\orders_log.txt`.
