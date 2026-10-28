@@ -328,6 +328,7 @@ using System.Net.WebSockets;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Globalization;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 namespace SynoCap {
   public static class Cap {
@@ -585,10 +586,97 @@ namespace SynoCap {
     }
     public void Dispose() { Kill(); }
   }
+  // TikFinity / IndoFinity WebSocket (TikTok LIVE events): kira gift tertentu (contoh Heart Me) atau like
+  public class LiveWs {
+    public string Url = "ws://127.0.0.1:21213/", Mode = "gift", Gift = "Heart Me";
+    public long Count = 0, LastAdd = 0, LastAt = 0; public string LastUser = "";
+    public volatile string Status = "belum sambung"; public volatile bool Connected = false, Off = false; public int Seen = 0;
+    readonly List<string> log = new List<string>(); readonly Dictionary<string, long> streak = new Dictionary<string, long>();
+    Thread th; ClientWebSocket ws; volatile bool again = false;
+    public void Start() { if (th != null) return; th = new Thread(Loop); th.IsBackground = true; th.Start(); }
+    public void Reconnect() { again = true; try { if (ws != null) ws.Abort(); } catch { } }
+    static long Ms() { return (long)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalMilliseconds; }
+    static string Str(string j, string k) { var m = Regex.Match(j, "\"" + k + "\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\""); return m.Success ? Regex.Unescape(m.Groups[1].Value) : null; }
+    static long Num(string j, string k) { var m = Regex.Match(j, "\"" + k + "\"\\s*:\\s*\"?(\\d+)"); return m.Success ? long.Parse(m.Groups[1].Value) : -1; }
+    static int Flag(string j, string k) { var m = Regex.Match(j, "\"" + k + "\"\\s*:\\s*(true|false)"); return !m.Success ? -1 : (m.Groups[1].Value == "true" ? 1 : 0); }
+    static string Norm(string s) { return Regex.Replace((s ?? "").ToLowerInvariant(), "[^a-z0-9]", ""); }
+    void Note(string t) { lock (log) { log.Add(DateTime.Now.ToString("HH:mm:ss") + " " + t); while (log.Count > 12) log.RemoveAt(0); } }
+    public string[] Log() { lock (log) return log.ToArray(); }
+    void Bump(string u, long d) { LastUser = u ?? ""; LastAdd = d; LastAt = Ms(); }
+    public void Set(long c) { lock (this) { Count = Math.Max(0, c); streak.Clear(); } }
+    public void Add(long d, string u) { lock (this) { Count = Math.Max(0, Count + d); if (d > 0) Bump(u, d); } }
+    void Loop() {
+      while (true) {
+        if (Off) { Status = "dimatikan"; Connected = false; again = false; Thread.Sleep(1000); continue; }
+        try {
+          ws = new ClientWebSocket();
+          Status = "menyambung " + Url;
+          if (!ws.ConnectAsync(new Uri(Url), CancellationToken.None).Wait(4000)) throw new Exception("tiada jawapan (TikFinity / IndoFinity dibuka?)");
+          Connected = true; Status = "bersambung";
+          var buf = new byte[65536]; var ms = new MemoryStream();
+          while (!again && !Off && ws.State == WebSocketState.Open) {
+            var t = ws.ReceiveAsync(new ArraySegment<byte>(buf), CancellationToken.None); t.Wait();
+            if (t.Result.MessageType == WebSocketMessageType.Close) break;
+            ms.Write(buf, 0, t.Result.Count);
+            if (t.Result.EndOfMessage) { try { Handle(Encoding.UTF8.GetString(ms.ToArray())); } catch { } ms.SetLength(0); }
+          }
+          if (!again) Status = "terputus";
+        } catch (Exception e) { if (!again) Status = "tak dapat sambung: " + (e.InnerException != null ? e.InnerException.Message : e.Message); }
+        Connected = false;
+        try { ws.Abort(); ws.Dispose(); } catch { }
+        if (again) { again = false; Thread.Sleep(200); } else Thread.Sleep(3000);
+      }
+    }
+    void Handle(string j) {
+      Seen++;
+      string ev = (Str(j, "event") ?? Str(j, "type") ?? "").ToLowerInvariant();
+      string u = Str(j, "nickname") ?? Str(j, "uniqueId") ?? Str(j, "username") ?? "";
+      if (Mode == "likes") {
+        if (!ev.Contains("like")) return;
+        long tot = Num(j, "totalLikeCount"); if (tot < 0) tot = Num(j, "total_like_count");
+        long add = Num(j, "likeCount"); if (add < 0) add = Num(j, "like_count");
+        lock (this) { if (tot >= 0) { if (tot > Count) { Bump(u, tot - Count); Count = tot; } } else if (add > 0) { Count += add; Bump(u, add); } }
+        Note("like +" + Math.Max(0, add) + " " + u);
+        return;
+      }
+      if (!ev.Contains("gift")) return;
+      string name = Str(j, "giftName") ?? Str(j, "gift_name") ?? Str(j, "name") ?? "?";
+      long rc = Num(j, "repeatCount"); if (rc < 0) rc = Num(j, "repeat_count"); if (rc <= 0) rc = 1;
+      Note("gift " + name + " x" + rc + " " + u);
+      if (Norm(name) != Norm(Gift)) return;
+      long gt = Num(j, "giftType"); int end = Flag(j, "repeatEnd"); if (end < 0) end = Flag(j, "repeat_end");
+      string key = (Str(j, "uniqueId") ?? Str(j, "userId") ?? u) + "|" + Norm(name);
+      lock (this) {
+        long d;
+        // gift berangkai (x1, x2, x3 ... tamat): kira beza sahaja, tak kira dua kali
+        if (gt == 1 || end >= 0) { long prev; streak.TryGetValue(key, out prev); d = Math.Max(0, rc - prev); if (end == 1) streak.Remove(key); else streak[key] = rc; }
+        else d = rc;
+        if (d > 0) { Count += d; Bump(u, d); }
+      }
+    }
+  }
 }
 '@
 $capOk = $false
 try { Add-Type -TypeDefinition $capCs -ReferencedAssemblies System.Drawing -ErrorAction Stop; $capOk = $true } catch { Write-Host 'Pengesan kill (tangkap skrin) tak dapat dimuat.' -ForegroundColor DarkYellow }
+# ---------- goal Heart Me (TikFinity / IndoFinity WebSocket): kiraan di bar LIVE overlay ----------
+$goalFile = Join-Path $dataDir 'heartgoal.json'
+$live = $null; $goalSaved = -1; $goalOn = $true
+if ($capOk) {
+  try {
+    $live = New-Object SynoCap.LiveWs
+    if (Test-Path -LiteralPath $goalFile) {
+      $gj = [System.IO.File]::ReadAllText($goalFile) | ConvertFrom-Json
+      if ($gj.url) { $live.Url = [string]$gj.url }; if ($gj.mode) { $live.Mode = [string]$gj.mode }; if ($gj.gift) { $live.Gift = [string]$gj.gift }
+      if ($null -ne $gj.count) { $live.Count = [long]$gj.count }; if ($gj.on -eq $false) { $goalOn = $false }
+    }
+    $live.Off = -not $goalOn; $goalSaved = $live.Count; $live.Start()
+  } catch { $live = $null }
+}
+function Save-Goal {
+  if (-not $live) { return }
+  try { $o = [ordered]@{ on = $script:goalOn; url = $live.Url; mode = $live.Mode; gift = $live.Gift; count = $live.Count }; [System.IO.File]::WriteAllText($goalFile, (ConvertTo-Json $o -Compress), (New-Object System.Text.UTF8Encoding $false)); $script:goalSaved = $live.Count } catch { }
+}
 $killFile = Join-Path $dataDir 'killfx.json'
 $killOld = Join-Path $dataDir 'killfx.txt'
 # tetapan: src = 'win' (tetingkap) / 'obs' (source dalam OBS). team = 'kda' (kill saya ikut KDA) / 'me' (ikut nama) / 'ally' / 'all'
@@ -1142,7 +1230,8 @@ while ($true) {
         $act = $path.Substring(7).ToLower(); $qp = ''
         foreach ($pair in $query -split '&') { if ($pair -like 'pin=*') { $qp = [Uri]::UnescapeDataString($pair.Substring(4)) } }
         $okDo = $okPin -or (-not $locked -and $qp -and $qp -eq $pin)
-        if ($deckActs -notcontains $act) { $status = '404 Not Found'; $body = ToBytes ('Arahan tak dikenali: ' + $act) }
+        if ($act -eq 'goal-add' -and $live) { if ($okDo) { $live.Add(1, 'Stream Deck'); $body = ToBytes 'OK goal-add' } else { $status = '401 Unauthorized'; $body = ToBytes 'PIN salah' } }
+        elseif ($deckActs -notcontains $act) { $status = '404 Not Found'; $body = ToBytes ('Arahan tak dikenali: ' + $act) }
         elseif (-not $okDo) { $status = '401 Unauthorized'; $body = ToBytes 'PIN salah'; if ($qp) { $fails++ } }
         else {
           [void]$cmds.Add('{"a":' + (JsonStr $act) + ',"t":' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() + '}')
@@ -1154,7 +1243,9 @@ while ($true) {
         # semakan pantas (5 kali sesaat): nombor state + arahan Stream Deck menunggu
         $type = 'application/json'; $kev = ''
         if ($killShared.lastEv) { $kp = ([string]$killShared.lastEv).Split(','); $kev = ',"k":"' + $kp[0] + ',' + $kp[1] + '","ka":' + ([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() - [long]$kp[2]) }
-        $body = ToBytes ('{"s":' + $stateRev + ',"c":' + ($cmds.Count + $killShared.events.Count) + ',"v":"' + (SiteVer) + '"' + $kev + '}')
+        $hgs = ''
+        if ($live -and $goalOn) { if ($live.Count -ne $goalSaved) { Save-Goal }; $hgs = ',"hg":' + $live.Count + ',"hgu":' + (JsonStr ([string]$live.LastUser)) + ',"hga":' + $live.LastAdd + ',"hgt":' + $live.LastAt }
+        $body = ToBytes ('{"s":' + $stateRev + ',"c":' + ($cmds.Count + $killShared.events.Count) + ',"v":"' + (SiteVer) + '"' + $kev + $hgs + '}')
       } elseif ($path -eq 'api/cmds') {
         $type = 'application/json'
         if (-not $okPin) { $status = '401 Unauthorized'; $body = ToBytes '[]' }
@@ -1191,6 +1282,30 @@ while ($true) {
           $bq = [regex]::Match($query, '(?:^|&)ban=(\d+)')
           if ($bq.Success) { $bi = [int]$bq.Groups[1].Value; $sb2 = $null; if ($bi -lt $killShared.bans.Count) { $sb2 = $killShared.bans[$bi].img } }
           if ($sb2) { $body = [byte[]]$sb2; $type = 'image/jpeg' } else { $status = '404 Not Found'; $body = ToBytes 'Belum ada gambar' }
+        }
+      } elseif ($path -eq 'api/goalcfg') {
+        # goal Heart Me: sambungan TikFinity / IndoFinity + kiraan (App > Live > Goal Heart Me)
+        $type = 'application/json'
+        if (-not $live) { $body = ToBytes '{"ok":false,"err":"Tak dapat dimuat di PC ni"}' }
+        else {
+          if ($method -eq 'POST') {
+            if (-not $okPin) { $status = '401 Unauthorized' }
+            else {
+              $gf = @{}
+              foreach ($pair in ([System.Text.Encoding]::UTF8.GetString($bodyBytes)) -split '&') { $kp = $pair.Split('=', 2); if ($kp.Count -eq 2) { $gf[$kp[0]] = [Uri]::UnescapeDataString($kp[1].Replace('+', ' ')) } }
+              if ($gf.ContainsKey('url') -and $gf['url'] -match '^wss?://') { $live.Url = $gf['url'].Trim(); $live.Reconnect() }
+              if ($gf.ContainsKey('mode')) { if ($gf['mode'] -eq 'likes') { $live.Mode = 'likes' } else { $live.Mode = 'gift' } }
+              if ($gf.ContainsKey('gift') -and $gf['gift'].Trim()) { $live.Gift = $gf['gift'].Trim() }
+              if ($gf.ContainsKey('on')) { $goalOn = ($gf['on'] -eq '1'); $live.Off = -not $goalOn; $live.Reconnect() }
+              $gn = 0L
+              if ($gf.ContainsKey('set') -and [long]::TryParse($gf['set'], [ref]$gn)) { $live.Set($gn) }
+              if ($gf.ContainsKey('add') -and [long]::TryParse($gf['add'], [ref]$gn)) { $live.Add($gn, 'App') }
+              if ($gf['reset'] -eq '1') { $live.Set(0) }
+              Save-Goal
+            }
+          }
+          $gl = @(); foreach ($t in $live.Log()) { $gl += (JsonStr $t) }
+          $body = ToBytes ('{"ok":true,"on":' + ([string]$goalOn).ToLower() + ',"url":' + (JsonStr $live.Url) + ',"mode":' + (JsonStr $live.Mode) + ',"gift":' + (JsonStr $live.Gift) + ',"count":' + $live.Count + ',"status":' + (JsonStr ([string]$live.Status)) + ',"connected":' + ([string]$live.Connected).ToLower() + ',"seen":' + $live.Seen + ',"log":[' + ($gl -join ',') + ']}')
         }
       } elseif ($path -eq 'api/killbanners') {
         # gambar banner kill terakhir (untuk pilih logo hero dalam App)

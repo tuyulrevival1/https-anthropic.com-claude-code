@@ -92,7 +92,7 @@
         // change check every 0.4 s: fetch the full state / Stream Deck commands only when something changed.
         // (the PC server is single-threaded PowerShell, so every page keeps its requests light)
         // Older server without /api/rev: plain polling every 700 ms.
-        let lastRev = null, revBusy = false, legacy = false, lastFull = 0, revTick = 0, verSeen = null, reloading = false, killSeen = null;
+        let lastRev = null, revBusy = false, legacy = false, lastFull = 0, revTick = 0, verSeen = null, reloading = false, killSeen = null, goalSeen = null;
         // new files from KEMASKINI.bat: reload (OBS browser sources otherwise keep running the old code)
         const reloadNow = () => { const a = document.activeElement; if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && !window.obsstudio) { setTimeout(reloadNow, 4000); return; } location.reload(); };
         setInterval(() => {
@@ -103,6 +103,11 @@
             if (!j) return;
             if (j.k) { if (killSeen != null && j.k !== killSeen && (j.ka || 0) < 3000) window.dispatchEvent(new CustomEvent("ov-kill", { detail: String(j.k).split(",")[1] })); killSeen = j.k; }
             else if (killSeen == null) killSeen = "";
+            // Heart Me goal count from TikFinity / IndoFinity (counted by the PC server)
+            if (j.hg != null && +j.hg !== goalSeen) {
+              const g = { count: +j.hg, user: j.hgu || "", add: +j.hga || 0, first: goalSeen == null };
+              goalSeen = g.count; window.__ovGoal = g; window.dispatchEvent(new CustomEvent("ov-goal", { detail: g }));
+            }
             if (j.v) { if (verSeen == null) verSeen = j.v; else if (j.v !== verSeen && !reloading) { reloading = true; setTimeout(reloadNow, 3000); } }
             if (j.s !== lastRev || Date.now() - lastFull > 5000) { lastRev = j.s; lastFull = Date.now(); this.pull(); }
             if (j.c > 0) pullCmds();
@@ -1121,6 +1126,7 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
     // [● LIVE 01:23:45]  (live duration)   ·   [clock 2:04 PM]  (time now)   ·   [YouTube viewers]
     const band = el("div", "ov-band", `<span class="sweep"></span><span class="live"><span class="dot"></span><span>LIVE</span><b class="timer" hidden>00:00:00</b></span>
 <span class="itm np" hidden><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="currentColor" stroke-width="2.6"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="17" cy="16" r="3" fill="currentColor"/></svg><span class="npw"><b class="npt"></b></span></span>
+<span class="itm goal" hidden><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.3-4.4-9.3-8.9C1.3 8.3 3.3 4.6 6.9 4.6c2.1 0 3.5 1.1 5.1 3 1.6-1.9 3-3 5.1-3 3.6 0 5.6 3.7 4.2 7-2 4.5-9.3 8.9-9.3 8.9z" fill="currentColor"/></svg><span class="gl">HEART ME</span><b class="gc">0/50</b><i class="gb"><i></i></i></span>
 <span class="itm clock"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg><b>--:--</b><small></small></span>
 <span class="itm yt" hidden><svg viewBox="0 0 24 24"><rect x="1" y="5" width="22" height="14" rx="4" fill="#ff0000"/><path d="M10 9l5 3-5 3z" fill="#fff"/></svg><b></b></span>`);
     band.style.top = L.band + "px"; if (L.bandX != null) { band.style.left = L.bandX + "px"; band.style.width = (L.bandW / (L.bandScale || 1)) + "px"; }
@@ -1128,6 +1134,38 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
     if (L.band != null) stage.appendChild(band);
     const clockB = band.querySelector(".clock b"), clockAp = band.querySelector(".clock small"), timerEl = band.querySelector(".timer"), timerTxt = timerEl;
     const ytEl = band.querySelector(".yt"), ytTxt = ytEl.querySelector("b");
+    // Heart Me goal pill in the LIVE bar: "HEART ME 10/50"; a new one flashes "+1 NAME" in the pill; target steps up (50 -> 100 ...)
+    const goalEl = band.querySelector(".goal"), goalL = goalEl.querySelector(".gl"), goalC = goalEl.querySelector(".gc"), goalB = goalEl.querySelector(".gb i");
+    let goalCount = window.__ovGoal ? window.__ovGoal.count : null, goalT1 = 0, goalT2 = 0, goalShowUntil = 0, goalBusy = false;
+    const goalCfg = () => Object.assign({ show: "bar", label: "HEART ME", start: 50, step: 50 }, Store.state.heartGoal || {});
+    const goalTarget = (c, cfg) => { const st = Math.max(1, +cfg.start || 50), sp = Math.max(1, +cfg.step || st); return c < st ? st : st + (Math.floor((c - st) / sp) + 1) * sp; };
+    function goalPaint() {
+      const cfg = goalCfg(), off = goalCount == null || cfg.show === "off" || hideOf(Store.state).goal;
+      goalEl.hidden = off || (cfg.show === "pop" && Date.now() > goalShowUntil);
+      band.classList.toggle("has-goal", !goalEl.hidden);   // song ticker narrows so the clock still fits
+      if (goalBusy || goalCount == null) return;
+      const t = goalTarget(goalCount, cfg);
+      goalL.textContent = cfg.label || "HEART ME"; goalC.textContent = `${goalCount}/${t}`;
+      goalB.style.width = Math.min(100, goalCount / t * 100).toFixed(1) + "%";
+    }
+    window.addEventListener("ov-goal", e => {
+      const g = e.detail, cfg = goalCfg(), prev = goalCount; goalCount = g.count;
+      if (g.first || prev == null || g.count <= prev) { goalPaint(); return; }
+      const oldT = goalTarget(prev, cfg), reached = goalTarget(g.count, cfg) > oldT;
+      if (cfg.show === "pop") goalShowUntil = Date.now() + (reached ? 8000 : 6000);
+      clearTimeout(goalT1); clearTimeout(goalT2);
+      goalEl.classList.remove("bump", "done"); void goalEl.offsetWidth;
+      goalBusy = true; goalEl.hidden = false; band.classList.add("has-goal");
+      if (reached) {   // goal hit: gold "GOAL ✓ 50/50" for a moment, then the next target
+        goalEl.classList.add("done"); goalL.textContent = "GOAL ✓"; goalC.textContent = `${oldT}/${oldT}`; goalB.style.width = "100%";
+      } else {        // "+1 NAME" flashes in the pill
+        goalEl.classList.add("bump"); goalL.textContent = `+${g.add || 1} ${String(g.user || "").slice(0, 14)}`.trim(); goalC.textContent = `${g.count}/${oldT}`;
+        goalB.style.width = Math.min(100, g.count / oldT * 100).toFixed(1) + "%";
+      }
+      goalT1 = setTimeout(() => { goalBusy = false; goalEl.classList.remove("bump", "done"); goalPaint(); }, reached ? 3200 : 2200);
+      goalT2 = setTimeout(goalPaint, (reached ? 8000 : 6000) + 50);
+    });
+    Store.on(() => goalPaint()); goalPaint();
     const npEl = band.querySelector(".np"), npW = band.querySelector(".npw"), npT = band.querySelector(".npt");
     let lastClock = "", lastTimer = "", lastYt = "", lastNp = null, npW_ = 0, npTick = 0;
     const NP_SPEED = 48; // px per second, right to left

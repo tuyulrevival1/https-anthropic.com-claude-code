@@ -362,6 +362,21 @@ Kad kecil gelap muncul 6 saat di **tepi skrin game**, tempat berlainan setiap ka
 - Tukar ayat: buka **Ayat popup**. Satu baris setiap kad: `LABEL | ayat`. Contoh: `GIFT ALERT | Animasi keluar full skrin`. Pendek lebih baik.
 - Sembunyi untuk portrait atau landscape sahaja: **Tunjuk di overlay** › **Popup gift**.
 
+## 15. Goal Heart Me (dari TikFinity / IndoFinity) dalam bar LIVE
+
+Kiraan **HEART ME 10/50** kecil dalam **bar LIVE** overlay (sebelah jam), portrait dan landscape. Tak perlu lagi letak widget TikFinity atas banner.
+
+- Bila ada yang hantar: pil menyala dan tunjuk **+1 NAMA** sekejap.
+- Capai sasaran: **GOAL ✓** warna emas, kemudian sasaran naik sendiri (50 → 100 → 150…).
+- Server di PC kira sendiri dari **TikFinity** (app desktop mesti terbuka dan sambung ke live anda, alamat asal `ws://127.0.0.1:21213/`). IndoFinity: masukkan alamat WebSocket dari tetapan IndoFinity. Kiraan disimpan, tak hilang bila PC / server dibuka semula.
+
+App › **Live** › **Goal Heart Me**:
+- **−1 / +1 / +10 / Set… / Reset 0** untuk betulkan kiraan (contoh samakan dengan TikFinity masa mula live).
+- **Paparan**: *Sentiasa dalam bar LIVE* (asal), *Muncul sekejap bila naik*, atau *Tutup*. **Label**, **Sasaran pertama** (50) dan **Naik setiap** (50).
+- **Sambungan TikFinity / IndoFinity**: kira *Gift tertentu* (nama gift, asal `Heart Me`) atau *Like*. **Event terakhir** tunjuk gift yang masuk; nama gift mesti sama dengan yang tertulis di situ.
+- Sembunyi untuk portrait atau landscape sahaja: **Tunjuk di overlay** › **Goal Heart Me**.
+- Stream Deck +1: `deck\GOAL_TAMBAH.bat`.
+
 ## Masalah biasa
 
 | Masalah | Penyelesaian |

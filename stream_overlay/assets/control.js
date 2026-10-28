@@ -58,7 +58,7 @@ ${embedded ? "" : `<header class="app-top">
     </div>
     <div class="ovparts">
       <b class="ctest-h">Tunjuk di overlay</b>
-      ${[["p", "Portrait", [["cam", "Handcam"]]], ["l", "Landscape", [["cam", "Facecam"], ["hand", "Handcam"]]]].map(([o, t, cams]) => `<div class="ovp-col"><span class="ovp-t">${t}</span>${cams.concat([["score", "WIN / LOSE"], ["mabar", "Mabar VIP"], ["banner", "Banner"], ["band", "Bar LIVE"], ["gift", "Popup gift"]]).map(([k, n]) => `<label class="tog"><input type="checkbox" class="ovp" data-o="${o}" data-k="${k}" checked><span>${n}</span></label>`).join("")}${o === "l" ? `<p class="muted ovp-obs" id="ap-ovpobs"></p>` : ""}</div>`).join("")}
+      ${[["p", "Portrait", [["cam", "Handcam"]]], ["l", "Landscape", [["cam", "Facecam"], ["hand", "Handcam"]]]].map(([o, t, cams]) => `<div class="ovp-col"><span class="ovp-t">${t}</span>${cams.concat([["score", "WIN / LOSE"], ["mabar", "Mabar VIP"], ["banner", "Banner"], ["band", "Bar LIVE"], ["gift", "Popup gift"], ["goal", "Goal Heart Me"]]).map(([k, n]) => `<label class="tog"><input type="checkbox" class="ovp" data-o="${o}" data-k="${k}" checked><span>${n}</span></label>`).join("")}${o === "l" ? `<p class="muted ovp-obs" id="ap-ovpobs"></p>` : ""}</div>`).join("")}
     </div>
     <div class="ghbox">
       <b class="ctest-h">Popup "hantar gift" 🎁</b>
@@ -95,6 +95,24 @@ ${embedded ? "" : `<header class="app-top">
       <button class="btn lose" type="button" data-end="L">Kalah</button>
     </div>
     <p class="muted">Setiap tekan: tambah W/L, semua yang sedang main tolak 1 game (VVIP tolak baki VVIP dulu). Baki habis keluar. <b>Rotation:</b> lepas ${CFG.mabar.rotateEvery || 3} game, pemain keluar beri ruang kalau ada orang menunggu (queue tak ramai = boleh habiskan baki).</p>
+  </section>
+
+  <section class="card goal">
+    <h3>Goal Heart Me <span id="ap-gst"></span></h3>
+    <p class="muted">Kiraan dari TikFinity / IndoFinity, tunjuk kecil dalam <b>bar LIVE</b> overlay (sebelah jam). Bila ada yang hantar, pil menyala "+1 nama". Capai sasaran: "GOAL ✓" dan sasaran naik sendiri.</p>
+    <div class="gnum"><b id="ap-gcount">–</b><span>/</span><b id="ap-gtarget">50</b></div>
+    <div class="row gbtns"><button class="btn small ghost" type="button" data-gadd="-1">−1</button><button class="btn small" type="button" data-gadd="1">+1</button><button class="btn small" type="button" data-gadd="10">+10</button><button class="btn small ghost" type="button" id="ap-gset">Set…</button><button class="btn small ghost" type="button" id="ap-greset">Reset 0</button></div>
+    <div class="row grow"><label class="fld">Paparan<select id="ap-gshow"><option value="bar">Sentiasa dalam bar LIVE</option><option value="pop">Muncul sekejap bila naik</option><option value="off">Tutup</option></select></label>
+      <label class="fld">Label<input id="ap-glabel" maxlength="16" autocomplete="off"></label></div>
+    <div class="row grow"><label class="fld">Sasaran pertama<input id="ap-gstart" type="number" min="1" inputmode="numeric"></label><label class="fld">Naik setiap<input id="ap-gstep" type="number" min="1" inputmode="numeric"></label></div>
+    <details class="gconn"><summary>Sambungan TikFinity / IndoFinity</summary>
+      <div class="row grow"><label class="tog"><input id="ap-gon" type="checkbox"><span>Sambung</span></label>
+        <label class="fld">Kira<select id="ap-gmode"><option value="gift">Gift tertentu</option><option value="likes">Like (tap skrin)</option></select></label>
+        <label class="fld">Nama gift<input id="ap-ggift" placeholder="Heart Me" autocomplete="off"></label></div>
+      <label class="fld">Alamat WebSocket<input id="ap-gurl" placeholder="ws://127.0.0.1:21213/" autocomplete="off" spellcheck="false"></label>
+      <p class="muted">TikFinity: biarkan app TikFinity (desktop) terbuka dan sambung ke live anda, alamat asal <code>ws://127.0.0.1:21213/</code>. IndoFinity: masukkan alamat WebSocket dari tetapan IndoFinity. Nama gift mesti sama dengan yang keluar di "Event terakhir".</p>
+      <div class="kdbg" id="ap-glog"><b>Event terakhir</b><span>—</span></div>
+    </details>
   </section>
 
   <section class="card killfx">
@@ -340,7 +358,7 @@ ${embedded ? "" : `<header class="app-top">
     });
     if (layReset) layReset.addEventListener("click", () => {
       LAY = { span: Object.assign({}, LAY_DEF), h: {} }; laySave();
-      const def = ["live", "wl", "end", "killfx", "queue", "vip", "mvp", "akaun", "rules", "orders", "yt", "links"];
+      const def = ["live", "wl", "end", "goal", "killfx", "queue", "vip", "mvp", "akaun", "rules", "orders", "yt", "links"];
       LAY.order = def; layApply(); delete LAY.order; laySave(); layApplyTabs(); toast("Layout asal");
     });
     layGrid.addEventListener("click", e => {
@@ -385,7 +403,7 @@ ${embedded ? "" : `<header class="app-top">
 
     /* ---------- tabs: pick which part of the app to see (remembered, or #mvp in the link) ---------- */
     const TABS = [
-      { id: "live", label: "Live", cards: ["live", "wl", "end", "killfx", "queue"] },
+      { id: "live", label: "Live", cards: ["live", "wl", "end", "goal", "killfx", "queue"] },
       { id: "hutang", label: "Hutang Mabar", cards: ["vip"] },
       { id: "mvp", label: "MVP", cards: ["mvp"] },
       { id: "album", label: "Komen Album", cards: ["album"] },
@@ -637,6 +655,39 @@ ${embedded ? "" : `<header class="app-top">
       }).catch(() => {});
     }, 1000);
     $("ap-fxs").addEventListener("change", e => Q.patch({ fxSound: e.target.checked }));
+    // Heart Me goal: display settings live in the shared state; the count + connection live on the PC server
+    const gCard = root.querySelector(".card.goal");
+    const gCfg = () => Object.assign({ show: "bar", label: "HEART ME", start: 50, step: 50 }, Store.state.heartGoal || {});
+    const gSetCfg = patch => Store.set(s => { s.heartGoal = Object.assign({ show: "bar", label: "HEART ME", start: 50, step: 50 }, s.heartGoal || {}, patch); });
+    const gTarget = (c, cfg) => { const st = Math.max(1, +cfg.start || 50), sp = Math.max(1, +cfg.step || st); return c < st ? st : st + (Math.floor((c - st) / sp) + 1) * sp; };
+    let gLast = null;
+    const gPost = body => fetch("api/goalcfg", { method: "POST", headers: kHdr(), body }).then(r => r.ok ? r.json() : null).then(j => { if (j) gShow(j); else toast("Perlu START_OVERLAY.bat versi baru / PIN"); }).catch(() => toast("Server tak dapat dihubungi"));
+    function gShow(j) {
+      gLast = j; const cfg = gCfg();
+      if (!j || !j.ok) { $("ap-gst").textContent = j && j.err ? j.err : "perlu server baru"; return; }
+      $("ap-gcount").textContent = j.count; $("ap-gtarget").textContent = gTarget(j.count, cfg);
+      $("ap-gst").textContent = !j.on ? "· dimatikan" : j.connected ? "● bersambung" : "○ " + j.status;
+      $("ap-gst").className = j.connected ? "ok" : "";
+      $("ap-gon").checked = !!j.on; $("ap-gmode").value = j.mode || "gift";
+      if (root.activeElement !== $("ap-ggift")) $("ap-ggift").value = j.gift || "";
+      if (root.activeElement !== $("ap-gurl")) $("ap-gurl").value = j.url || "";
+      gCard.querySelector('[for="ap-ggift"], #ap-ggift').closest(".fld").hidden = j.mode === "likes";
+      const box = $("ap-glog"), html = `<b>Event terakhir</b>${(j.log || []).slice().reverse().map(x => `<code>${esc(x)}</code>`).join("") || `<span>${esc(j.status || "—")}</span>`}`;
+      if (box._h !== html) { box.innerHTML = html; box._h = html; }
+    }
+    const gPoll = () => { if (gCard.offsetParent === null) return; fetch("api/goalcfg", { headers: kHdr(), cache: "no-store" }).then(r => r.ok ? r.json() : null).then(gShow).catch(() => {}); };
+    setInterval(gPoll, 1500); gPoll();
+    gCard.querySelectorAll("[data-gadd]").forEach(b => b.addEventListener("click", () => gPost("add=" + b.dataset.gadd)));
+    $("ap-gset").addEventListener("click", () => { const v = prompt("Set kiraan kepada:", gLast ? gLast.count : 0); if (v != null && /^\d+$/.test(v.trim())) gPost("set=" + v.trim()); });
+    $("ap-greset").addEventListener("click", () => { if (confirm("Reset kiraan ke 0?")) gPost("reset=1"); });
+    $("ap-gon").addEventListener("change", e => gPost("on=" + (e.target.checked ? 1 : 0)));
+    $("ap-gmode").addEventListener("change", e => gPost("mode=" + e.target.value));
+    $("ap-ggift").addEventListener("change", e => gPost("gift=" + encodeURIComponent(e.target.value.trim())));
+    $("ap-gurl").addEventListener("change", e => gPost("url=" + encodeURIComponent(e.target.value.trim())));
+    $("ap-gshow").addEventListener("change", e => gSetCfg({ show: e.target.value }));
+    $("ap-glabel").addEventListener("change", e => gSetCfg({ label: e.target.value.trim().toUpperCase() || "HEART ME" }));
+    $("ap-gstart").addEventListener("change", e => gSetCfg({ start: Math.max(1, +e.target.value || 50) }));
+    $("ap-gstep").addEventListener("change", e => gSetCfg({ step: Math.max(1, +e.target.value || 50) }));
     // "send a gift" popup settings
     const GH_DEF = ["GIFT ALERT|Animasi keluar full skrin", "LIVE INTERAKTIF|Gift anda muncul di skrin", "GIFT ALERT|Ada lagu untuk gift tertentu"];
     const ghCfg = patch => Store.set(s => { s.giftHint = Object.assign({ on: true, every: 120 }, s.giftHint || {}, patch); });
@@ -799,6 +850,9 @@ ${embedded ? "" : `<header class="app-top">
       const lk = O.layoutOf && O.layoutOf("kiri"), sk = lk && O.stackLayout(lk, (s.hide || {}).l || {}, s.showBanner);
       if (sk && $("ap-ovpobs")) { const f = (n, r) => r ? `${n} ${r.x}, ${r.y} · ${r.w}×${r.h}` : ""; $("ap-ovpobs").textContent = ["OBS landscape: Game 384, 0 · 1536×1024", f("Facecam", sk.slots.face), f("Handcam", sk.slots.hand)].filter(Boolean).join(" · "); }
       $("ap-showq").checked = !!s.showQueue; $("ap-fx").checked = s.fx !== false; $("ap-fxs").checked = s.fxSound !== false;
+      { const hg = Object.assign({ show: "bar", label: "HEART ME", start: 50, step: 50 }, s.heartGoal || {}); $("ap-gshow").value = hg.show;
+        if (root.activeElement !== $("ap-glabel")) $("ap-glabel").value = hg.label; if (root.activeElement !== $("ap-gstart")) $("ap-gstart").value = hg.start; if (root.activeElement !== $("ap-gstep")) $("ap-gstep").value = hg.step;
+        if (gLast && gLast.ok) $("ap-gtarget").textContent = gTarget(gLast.count, hg); }
       { const gh = s.giftHint || {}; $("ap-ghon").checked = gh.on !== false; $("ap-ghevery").value = String(gh.every || 120); if (root.activeElement !== $("ap-ghmsgs")) $("ap-ghmsgs").value = (Array.isArray(gh.msgs) && gh.msgs.length ? gh.msgs : GH_DEF).join("\n"); } $("ap-kvoice").checked = s.fxVoice !== false; $("ap-open").setAttribute("aria-pressed", String(!s.mabarClosed)); $("ap-close").setAttribute("aria-pressed", String(!!s.mabarClosed)); $("ap-showb").checked = !!s.showBanner; $("ap-shows").checked = !s.song || s.song.on !== false;
       if (document.activeElement !== $("ap-song")) $("ap-song").value = (s.song && s.song.manual) || "";
       $("ap-pc").textContent = `${s.playing.length}/${max}`; $("ap-qc").textContent = s.queue.length;

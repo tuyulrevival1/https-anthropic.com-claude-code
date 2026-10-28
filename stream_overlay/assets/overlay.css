@@ -671,3 +671,17 @@
 @keyframes gh-in { 0% { opacity: 0; transform: translateX(var(--ghx, 0)) translateY(6px); } 100% { opacity: 1; transform: none; } }
 @keyframes gh-out { 0% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateX(var(--ghx, 0)); } }
 @keyframes gh-bar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* Heart Me goal pill in the LIVE bar */
+.ov-band .goal { color: #fff; gap: 8px; transition: color .3s; }
+.ov-band .goal svg { color: #ff3b5c; width: 20px; height: 20px; }
+.ov-band .goal .gl { font: 700 17px/1 var(--f-hud); letter-spacing: .16em; color: rgba(255,255,255,.62); white-space: nowrap; transition: color .3s; }
+.ov-band .goal .gc { font: 600 30px/1 var(--f-num); letter-spacing: .04em; padding-top: 3px; font-weight: 600; }
+.ov-band .goal .gb { display: block; width: 64px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.14); overflow: hidden; }
+.ov-band .goal .gb i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #e8364f, #e9c46a); transition: width .7s cubic-bezier(.2, .8, .2, 1); }
+.ov-band .goal.bump .gl { color: #fff; } .ov-band .goal.bump svg { animation: gl-beat .55s ease 2; } .ov-band .goal.bump .gc { animation: gl-pop .45s ease; }
+.ov-band .goal.done .gl, .ov-band .goal.done .gc { color: #e9c46a; } .ov-band .goal.done svg { color: #e9c46a; animation: gl-beat .5s ease 3; }
+.ov-band .goal.done .gb i { background: #e9c46a; box-shadow: 0 0 10px #e9c46a; }
+@keyframes gl-beat { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.35); } }
+@keyframes gl-pop { 0% { transform: scale(1.35); color: #ffd1d9; } 100% { transform: scale(1); } }
+.ov-band.has-goal .np .npw { width: 250px; } .ov-band.has-goal .np .nps { min-width: 250px; }

@@ -9,3 +9,4 @@ win / lose = tambah W/L sahaja. win-1 / lose-1 = tolak.
 START_OVERLAY.bat dan overlay (OBS) atau App mesti terbuka.
 kill-solo = efek SOLO KILL (SOLO_KILL.bat). Efek lain: kill-first, kill-savage, kill-maniac, kill-legendary ...
 gift-hint = popup "hantar gift" keluar sekarang (GIFT_POPUP.bat).
+goal-add = goal Heart Me +1 (GOAL_TAMBAH.bat).
