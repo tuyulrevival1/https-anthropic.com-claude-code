@@ -62,12 +62,12 @@ ${embedded ? "" : `<header class="app-top">
     </div>
     <div class="ghbox">
       <b class="ctest-h">Popup "hantar gift" 🎁</b>
-      <p class="muted">Kotak kecil muncul sekejap di tepi skrin game, tempat berlainan setiap kali, ajak penonton hantar gift tanpa anda sebut. Tak keluar masa efek kill / menang.</p>
+      <p class="muted">Kad kecil muncul 6 saat di tepi skrin game, tempat berlainan setiap kali: beritahu penonton gift keluar animasi, tanpa anda sebut. Tak keluar masa efek kill / menang.</p>
       <div class="row"><label class="tog"><input id="ap-ghon" type="checkbox"><span>Hidup</span></label>
         <label class="fld ghev">Setiap<select id="ap-ghevery"><option value="30">30 saat</option><option value="45">45 saat</option><option value="60">1 minit</option><option value="90">1.5 minit</option><option value="120">2 minit</option><option value="180">3 minit</option><option value="300">5 minit</option></select></label>
         <button class="btn small" type="button" id="ap-ghtest">Uji sekarang</button></div>
       <details class="ghmsg"><summary>Ayat popup (tukar ikut gift / lagu anda)</summary>
-        <p class="muted">Satu ayat setiap baris. Tajuk | ayat kecil. Popup tukar ayat setiap kali.</p>
+        <p class="muted">Satu baris setiap kad: <b>LABEL | ayat</b>. Pendek lebih baik. Kad tukar ayat setiap kali.</p>
         <textarea id="ap-ghmsgs" rows="6" spellcheck="false"></textarea>
         <div class="row"><button class="btn small" type="button" id="ap-ghsave">Simpan ayat</button><button class="btn small ghost" type="button" id="ap-ghreset">Ayat asal</button></div>
       </details>
@@ -638,8 +638,8 @@ ${embedded ? "" : `<header class="app-top">
     }, 1000);
     $("ap-fxs").addEventListener("change", e => Q.patch({ fxSound: e.target.checked }));
     // "send a gift" popup settings
-    const GH_DEF = ["FINGER HEART 💖|Animasi keluar! 🔥", "GIFT = LAGU 🎵|Cuba hantar 💖", "HANTAR 💖|Tengok apa jadi 👀", "FULL SKRIN 🔥|Hantar Finger Heart", "TEKAN 🎁|Bawah kanan ↘"];
-    const ghCfg = patch => Store.set(s => { s.giftHint = Object.assign({ on: true, every: 60 }, s.giftHint || {}, patch); });
+    const GH_DEF = ["GIFT ALERT|Animasi keluar full skrin", "LIVE INTERAKTIF|Gift anda muncul di skrin", "GIFT ALERT|Ada lagu untuk gift tertentu"];
+    const ghCfg = patch => Store.set(s => { s.giftHint = Object.assign({ on: true, every: 120 }, s.giftHint || {}, patch); });
     $("ap-ghon").addEventListener("change", e => ghCfg({ on: e.target.checked }));
     $("ap-ghevery").addEventListener("change", e => ghCfg({ every: +e.target.value }));
     $("ap-ghtest").addEventListener("click", () => { Store.set(s => { s.giftHintNow = Date.now(); }, { noHist: true }); toast("Popup gift dihantar ke overlay"); });
@@ -799,7 +799,7 @@ ${embedded ? "" : `<header class="app-top">
       const lk = O.layoutOf && O.layoutOf("kiri"), sk = lk && O.stackLayout(lk, (s.hide || {}).l || {}, s.showBanner);
       if (sk && $("ap-ovpobs")) { const f = (n, r) => r ? `${n} ${r.x}, ${r.y} · ${r.w}×${r.h}` : ""; $("ap-ovpobs").textContent = ["OBS landscape: Game 384, 0 · 1536×1024", f("Facecam", sk.slots.face), f("Handcam", sk.slots.hand)].filter(Boolean).join(" · "); }
       $("ap-showq").checked = !!s.showQueue; $("ap-fx").checked = s.fx !== false; $("ap-fxs").checked = s.fxSound !== false;
-      { const gh = s.giftHint || {}; $("ap-ghon").checked = gh.on !== false; $("ap-ghevery").value = String(gh.every || 60); if (root.activeElement !== $("ap-ghmsgs")) $("ap-ghmsgs").value = (Array.isArray(gh.msgs) && gh.msgs.length ? gh.msgs : GH_DEF).join("\n"); } $("ap-kvoice").checked = s.fxVoice !== false; $("ap-open").setAttribute("aria-pressed", String(!s.mabarClosed)); $("ap-close").setAttribute("aria-pressed", String(!!s.mabarClosed)); $("ap-showb").checked = !!s.showBanner; $("ap-shows").checked = !s.song || s.song.on !== false;
+      { const gh = s.giftHint || {}; $("ap-ghon").checked = gh.on !== false; $("ap-ghevery").value = String(gh.every || 120); if (root.activeElement !== $("ap-ghmsgs")) $("ap-ghmsgs").value = (Array.isArray(gh.msgs) && gh.msgs.length ? gh.msgs : GH_DEF).join("\n"); } $("ap-kvoice").checked = s.fxVoice !== false; $("ap-open").setAttribute("aria-pressed", String(!s.mabarClosed)); $("ap-close").setAttribute("aria-pressed", String(!!s.mabarClosed)); $("ap-showb").checked = !!s.showBanner; $("ap-shows").checked = !s.song || s.song.on !== false;
       if (document.activeElement !== $("ap-song")) $("ap-song").value = (s.song && s.song.manual) || "";
       $("ap-pc").textContent = `${s.playing.length}/${max}`; $("ap-qc").textContent = s.queue.length;
       if (qDrag) { pending.queue = true; } else {

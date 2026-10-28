@@ -353,13 +353,13 @@ Butang dalam kad tu = uji setiap efek. Stream Deck: fail `deck\SOLO_KILL.bat`, a
 | KDA dibaca salah / "?" | Lukis kotak KDA lebih ketat (nombor sahaja, tanpa ikon lain). |
 | Efek tak keluar | Hantar screenshot kad **Auto efek kill** (dengan **Tunjuk skrin** hidup) masa anda dapat kill. |
 
-## 14. Popup "hantar gift" 🎁
+## 14. Kad "Gift alert"
 
-Kotak kecil muncul sekejap (7 saat) di **tepi skrin game**, tempat berlainan setiap kali, ajak penonton hantar gift. Penonton tahu gift = animasi / lagu keluar, tanpa anda perlu sebut. Ia tak tutup tengah game, dan tak keluar masa efek kill / menang.
+Kad kecil gelap muncul 6 saat di **tepi skrin game**, tempat berlainan setiap kali, beritahu penonton bahawa gift keluar animasi di skrin, tanpa anda perlu sebut. Gaya tenang dan premium: label emas kecil + satu ayat. Tak tutup tengah game, dan tak keluar masa efek kill / menang.
 
-- Hidup / mati, dan setiap berapa lama: App › **Live** › **Popup "hantar gift"** (asal: setiap 1 minit).
+- Hidup / mati, dan setiap berapa lama: App › **Live** › **Popup "hantar gift"** (asal: setiap 2 minit).
 - **Uji sekarang** = keluar terus di overlay. Stream Deck: `deck\GIFT_POPUP.bat` (atau `http://localhost:8787/api/do/gift-hint`).
-- Tukar ayat: buka **Ayat popup**. Satu ayat setiap baris, `Tajuk | ayat kecil`. Contoh: `GIFT 🦁 | Singa keluar!`. Pendek lebih baik. Popup tukar ayat setiap kali.
+- Tukar ayat: buka **Ayat popup**. Satu baris setiap kad: `LABEL | ayat`. Contoh: `GIFT ALERT | Animasi keluar full skrin`. Pendek lebih baik.
 - Sembunyi untuk portrait atau landscape sahaja: **Tunjuk di overlay** › **Popup gift**.
 
 ## Masalah biasa

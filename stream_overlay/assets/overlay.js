@@ -466,7 +466,7 @@
   };
   // small "send a gift" popup (App > Live > Popup gift, Stream Deck gift-hint)
   ACTIONS["gift-hint"] = () => Store.set(s => { s.giftHintNow = Date.now(); }, { noHist: true });
-  const GH_MSGS = ["FINGER HEART 💖|Animasi keluar! 🔥", "GIFT = LAGU 🎵|Cuba hantar 💖", "HANTAR 💖|Tengok apa jadi 👀", "FULL SKRIN 🔥|Hantar Finger Heart", "TEKAN 🎁|Bawah kanan ↘"];
+  const GH_MSGS = ["GIFT ALERT|Animasi keluar full skrin", "LIVE INTERAKTIF|Gift anda muncul di skrin", "GIFT ALERT|Ada lagu untuk gift tertentu"];
   // MLBB kill announcements: from the PC screen reader (auto) or Stream Deck / App
   const FX_BOOT = Date.now();
   const KILL_TYPES = ["solo", "first", "double", "triple", "maniac", "savage", "shutdown", "spree", "monster", "mega", "unstoppable", "godlike", "legendary", "rampage", "wiped"];
@@ -1289,7 +1289,7 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
     }
 
     // "send a gift" popup: small, pops up for a few seconds at a different spot on the edge of the game every N seconds
-    const ghGift = `<svg class="gh-ico" viewBox="0 0 64 64"><g class="gh-lid"><rect x="8" y="16" width="48" height="12" rx="3" fill="#ff2e63"/><rect x="29" y="16" width="6" height="12" fill="#ffd34d"/><path d="M32 16c-6-10-17-8-14-1 2 4 9 3 14 1zm0 0c6-10 17-8 14-1-2 4-9 3-14 1z" fill="#ffd34d"/></g><rect x="11" y="28" width="42" height="28" rx="3" fill="#e0144a"/><rect x="29" y="28" width="6" height="28" fill="#ffd34d"/><circle class="gh-sp s1" cx="10" cy="10" r="2.6"/><circle class="gh-sp s2" cx="56" cy="8" r="2.2"/><circle class="gh-sp s3" cx="60" cy="30" r="1.8"/></svg>`;
+    const ghGift = `<svg class="gh-ico" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><rect x="5" y="12" width="22" height="6" rx="1"/><path d="M7 18v10h18V18M16 12v16M16 12c-2-4-7-6-8-3s5 3 8 3zm0 0c2-4 7-6 8-3s-5 3-8 3z"/></svg>`;
     let ghNext = Date.now() + 20000, ghIdx = 0, ghSpot = -1, ghSeen = Store.state.giftHintNow || 0;
     // emoji keep their own colours (the gold title gradient would otherwise paint them into a blob)
     const ghEm = t => esc(t).replace(/(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*)/gu, m => `<i class="em">${m}</i>`);
@@ -1303,22 +1303,22 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
       // spots on the sides / bottom of the game, never the middle (fractions of the game area)
       const spots = [[0, .2], [1, .2], [0, .45], [1, .45], [0, .68], [1, .68], [.5, .88]];
       let k; do { k = Math.floor(Math.random() * spots.length); } while (k === ghSpot && spots.length > 1); ghSpot = k;
-      const [ax, ay] = spots[k], w = Math.round(Math.min(g.w * .46, 470)), m = 22;
-      const e = el("div", "gh-pop " + (ax === 0 ? "gh-l" : ax === 1 ? "gh-r" : "gh-c"), `${ghGift}<div class="gh-t"><b>${ghEm(t1 || "")}</b>${t2 ? `<span>${esc(t2)}</span>` : ""}</div>`);
-      e.style.width = w + "px"; e.style.setProperty("--ghs", (w / 470).toFixed(3));
+      const [ax, ay] = spots[k], w = Math.round(Math.min(g.w * .46, 470)), m = 26;
+      const e = el("div", "gh-pop " + (ax === 0 ? "gh-l" : ax === 1 ? "gh-r" : "gh-c"), `<div class="gh-i">${ghGift}</div><div class="gh-t"><em>${ghEm(t1 || "")}</em>${t2 ? `<b>${ghEm(t2)}</b>` : ""}</div><i class="gh-bar"></i>`);
+      e.style.width = w + "px"; e.style.setProperty("--ghs", (w / 430).toFixed(3)); e.style.setProperty("--ghd", Math.max(3, +cfg.show || 6) + "s");
       e.style.left = (ax === 0 ? g.x + m : ax === 1 ? g.x + g.w - w - m : g.x + (g.w - w) / 2) + "px";
-      e.style.top = Math.round(g.y + g.h * ay - 55) + "px";
+      e.style.top = Math.round(g.y + g.h * ay - 40) + "px";
       stage.appendChild(e);
       // long title: shrink it until it fits on one line
       const tb = e.querySelector(".gh-t b"), tw = e.querySelector(".gh-t");
-      for (let f = 1; f > .6 && tb.scrollWidth > tw.clientWidth + 1; f -= .05) tb.style.fontSize = `calc(${(40 * f).toFixed(1)}px * var(--ghs, 1))`;
-      setTimeout(() => e.classList.add("out"), Math.max(3000, (+cfg.show || 7) * 1000));
-      setTimeout(() => e.remove(), Math.max(3000, (+cfg.show || 7) * 1000) + 700);
+      for (let f = 1; tb && f > .6 && tb.scrollWidth > tw.clientWidth + 1; f -= .05) tb.style.fontSize = `calc(${(30 * f).toFixed(1)}px * var(--ghs, 1))`;
+      setTimeout(() => e.classList.add("out"), Math.max(3000, (+cfg.show || 6) * 1000));
+      setTimeout(() => e.remove(), Math.max(3000, (+cfg.show || 6) * 1000) + 600);
     }
     tickers.push(() => {
       const s = Store.state, now = Date.now();
       if ((s.giftHintNow || 0) !== ghSeen) { ghSeen = s.giftHintNow || 0; if (now - ghSeen < 8000) giftHint(true); }
-      if (now >= ghNext) { ghNext = now + Math.max(20, +((s.giftHint || {}).every) || 60) * 1000; giftHint(false); }
+      if (now >= ghNext) { ghNext = now + Math.max(20, +((s.giftHint || {}).every) || 120) * 1000; giftHint(false); }
     });
 
     // auto kill from the PC screen reader: played straight away on every overlay (no trip through the App / state)
