@@ -1033,7 +1033,7 @@ $VS.done = $true
 $hookHits = New-Object System.Collections.ArrayList   # 15 cubaan webhook terakhir (untuk App > Status webhook)
 $cmds = New-Object System.Collections.ArrayList       # arahan Stream Deck menunggu overlay / App ambil
 $stateRev = [long]((Get-Date) - [DateTime]'2026-01-01').TotalMilliseconds   # naik setiap kali state disimpan (/api/rev)
-$deckActs = @('win', 'lose', 'win-1', 'lose-1', 'end-win', 'end-lose', 'end', 'timer-start', 'timer-pause', 'timer-reset', 'queue-on', 'queue-off', 'mabar-open', 'mabar-close', 'mabar-toggle', 'facecam-on', 'facecam-off', 'facecam-toggle', 'handcam-on', 'handcam-off', 'handcam-toggle', 'kill-solo', 'kill-first', 'kill-double', 'kill-triple', 'kill-maniac', 'kill-savage', 'kill-shutdown', 'kill-spree', 'kill-monster', 'kill-mega', 'kill-unstoppable', 'kill-godlike', 'kill-legendary', 'kill-rampage', 'kill-wiped', 'banner-on', 'banner-off', 'wl-reset', 'win-reset', 'lose-reset')
+$deckActs = @('win', 'lose', 'win-1', 'lose-1', 'end-win', 'end-lose', 'end', 'timer-start', 'timer-pause', 'timer-reset', 'queue-on', 'queue-off', 'mabar-open', 'mabar-close', 'mabar-toggle', 'facecam-on', 'facecam-off', 'facecam-toggle', 'handcam-on', 'handcam-off', 'handcam-toggle', 'gift-hint', 'kill-solo', 'kill-first', 'kill-double', 'kill-triple', 'kill-maniac', 'kill-savage', 'kill-shutdown', 'kill-spree', 'kill-monster', 'kill-mega', 'kill-unstoppable', 'kill-godlike', 'kill-legendary', 'kill-rampage', 'kill-wiped', 'banner-on', 'banner-off', 'wl-reset', 'win-reset', 'lose-reset')
 $fwdHeaders = @('x-forwarded-for', 'cf-connecting-ip', 'x-forwarded-host', 'forwarded', 'x-real-ip', 'tailscale-funnel-request')
 
 while ($true) {

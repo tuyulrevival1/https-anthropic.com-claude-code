@@ -361,3 +361,7 @@
 .app .kbox.live { border: 2px dashed #8a8a8a; background: none; } .app .kbox.live em { left: auto; right: -2px; top: auto; bottom: -18px; background: #8a8a8a; }
 .app .kbox.live.ok { border-color: #4fe38a; box-shadow: 0 0 10px #4fe38a; } .app .kbox.live.ok em { background: #4fe38a; }
 .app .killfx .kvis { align-items: center; gap: 10px; margin-top: 6px; font-size: 13px; } .app .killfx .tog.sm { padding: 4px 8px; }
+.app .ghbox { margin-top: 14px; padding-top: 12px; border-top: 1px solid #3a1420; }
+.app .ghbox .row { align-items: flex-end; gap: 8px; } .app .ghbox .ghev { width: 150px; flex: none; }
+.app .ghmsg { margin-top: 8px; } .app .ghmsg summary { cursor: pointer; font-weight: 700; color: var(--c-gold); }
+.app .ghmsg textarea { width: 100%; box-sizing: border-box; font: 14px/1.5 ui-monospace, Consolas, monospace; background: #0a0405; color: #fff; border: 1px solid #4a1a24; padding: 8px; }
