@@ -663,7 +663,7 @@
 .gh-pop .gh-ico { flex: none; width: calc(84px * var(--ghs, 1)); height: calc(84px * var(--ghs, 1)); filter: drop-shadow(0 0 8px rgba(255,211,77,.8)); animation: gh-wig 1.6s ease-in-out .5s infinite; overflow: visible; }
 .gh-pop .gh-lid { transform-box: fill-box; transform-origin: 10% 100%; animation: gh-lid 1.6s ease-in-out .5s infinite; }
 .gh-pop .gh-sp { fill: #fff6c2; opacity: 0; animation: gh-sp 1.6s ease-out .5s infinite; } .gh-pop .gh-sp.s2 { animation-delay: .7s; } .gh-pop .gh-sp.s3 { animation-delay: .9s; }
-.gh-pop .gh-t { display: flex; flex-direction: column; min-width: 0; line-height: 1.05; }
+.gh-pop .gh-t { flex: 1; display: flex; flex-direction: column; min-width: 0; line-height: 1.05; overflow: hidden; }
 .gh-pop .gh-t b { font: 400 calc(40px * var(--ghs, 1))/1 var(--f-disp); letter-spacing: .03em; white-space: nowrap; background: linear-gradient(180deg, #fff 10%, #ffe27a 55%, #ffb300 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 2px 0 #7a1030); }
 .gh-pop .gh-t span { margin-top: calc(6px * var(--ghs, 1)); font: 700 calc(29px * var(--ghs, 1))/1.05 "OV Raj", "Rajdhani", sans-serif; letter-spacing: .01em; color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.6); }
 .gh-pop.out { animation: gh-out .6s ease-in both; }

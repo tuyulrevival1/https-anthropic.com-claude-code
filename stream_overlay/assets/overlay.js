@@ -466,7 +466,7 @@
   };
   // small "send a gift" popup (App > Live > Popup gift, Stream Deck gift-hint)
   ACTIONS["gift-hint"] = () => Store.set(s => { s.giftHintNow = Date.now(); }, { noHist: true });
-  const GH_MSGS = ["HANTAR GIFT 🎁|Animasi FULL SKRIN 🔥", "GIFT = LAGU 🎵|Lagu + animasi terus main!", "CUBA 1 ROSE 🌹|Tengok apa jadi 👀", "SETIAP GIFT ✨|Ada efek sendiri, cuba!", "TEKAN 🎁|Butang gift bawah kanan ↘"];
+  const GH_MSGS = ["FINGER HEART 💖|Animasi keluar! 🔥", "GIFT = LAGU 🎵|Cuba hantar 💖", "HANTAR 💖|Tengok apa jadi 👀", "FULL SKRIN 🔥|Hantar Finger Heart", "TEKAN 🎁|Bawah kanan ↘"];
   // MLBB kill announcements: from the PC screen reader (auto) or Stream Deck / App
   const FX_BOOT = Date.now();
   const KILL_TYPES = ["solo", "first", "double", "triple", "maniac", "savage", "shutdown", "spree", "monster", "mega", "unstoppable", "godlike", "legendary", "rampage", "wiped"];
@@ -1309,6 +1309,9 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
       e.style.left = (ax === 0 ? g.x + m : ax === 1 ? g.x + g.w - w - m : g.x + (g.w - w) / 2) + "px";
       e.style.top = Math.round(g.y + g.h * ay - 55) + "px";
       stage.appendChild(e);
+      // long title: shrink it until it fits on one line
+      const tb = e.querySelector(".gh-t b"), tw = e.querySelector(".gh-t");
+      for (let f = 1; f > .6 && tb.scrollWidth > tw.clientWidth + 1; f -= .05) tb.style.fontSize = `calc(${(40 * f).toFixed(1)}px * var(--ghs, 1))`;
       setTimeout(() => e.classList.add("out"), Math.max(3000, (+cfg.show || 7) * 1000));
       setTimeout(() => e.remove(), Math.max(3000, (+cfg.show || 7) * 1000) + 700);
     }

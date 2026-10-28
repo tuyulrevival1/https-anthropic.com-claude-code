@@ -359,7 +359,7 @@ Kotak kecil muncul sekejap (7 saat) di **tepi skrin game**, tempat berlainan set
 
 - Hidup / mati, dan setiap berapa lama: App › **Live** › **Popup "hantar gift"** (asal: setiap 1 minit).
 - **Uji sekarang** = keluar terus di overlay. Stream Deck: `deck\GIFT_POPUP.bat` (atau `http://localhost:8787/api/do/gift-hint`).
-- Tukar ayat: buka **Ayat popup**. Satu ayat setiap baris, `Tajuk | ayat kecil`. Contoh: `GIFT 🦁 | Singa keluar full skrin!`. Popup tukar ayat setiap kali.
+- Tukar ayat: buka **Ayat popup**. Satu ayat setiap baris, `Tajuk | ayat kecil`. Contoh: `GIFT 🦁 | Singa keluar!`. Pendek lebih baik. Popup tukar ayat setiap kali.
 - Sembunyi untuk portrait atau landscape sahaja: **Tunjuk di overlay** › **Popup gift**.
 
 ## Masalah biasa

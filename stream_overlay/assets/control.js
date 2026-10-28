@@ -638,7 +638,7 @@ ${embedded ? "" : `<header class="app-top">
     }, 1000);
     $("ap-fxs").addEventListener("change", e => Q.patch({ fxSound: e.target.checked }));
     // "send a gift" popup settings
-    const GH_DEF = ["HANTAR GIFT 🎁|Animasi FULL SKRIN 🔥", "GIFT = LAGU 🎵|Lagu + animasi terus main!", "CUBA 1 ROSE 🌹|Tengok apa jadi 👀", "SETIAP GIFT ✨|Ada efek sendiri, cuba!", "TEKAN 🎁|Butang gift bawah kanan ↘"];
+    const GH_DEF = ["FINGER HEART 💖|Animasi keluar! 🔥", "GIFT = LAGU 🎵|Cuba hantar 💖", "HANTAR 💖|Tengok apa jadi 👀", "FULL SKRIN 🔥|Hantar Finger Heart", "TEKAN 🎁|Bawah kanan ↘"];
     const ghCfg = patch => Store.set(s => { s.giftHint = Object.assign({ on: true, every: 60 }, s.giftHint || {}, patch); });
     $("ap-ghon").addEventListener("change", e => ghCfg({ on: e.target.checked }));
     $("ap-ghevery").addEventListener("change", e => ghCfg({ every: +e.target.value }));
