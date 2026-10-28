@@ -104,9 +104,9 @@
             if (j.k) { if (killSeen != null && j.k !== killSeen && (j.ka || 0) < 3000) window.dispatchEvent(new CustomEvent("ov-kill", { detail: String(j.k).split(",")[1] })); killSeen = j.k; }
             else if (killSeen == null) killSeen = "";
             // Heart Me goal count from TikFinity / IndoFinity (counted by the PC server)
-            if (j.hg != null && +j.hg !== goalSeen) {
-              const g = { count: +j.hg, user: j.hgu || "", add: +j.hga || 0, first: goalSeen == null };
-              goalSeen = g.count; window.__ovGoal = g; window.dispatchEvent(new CustomEvent("ov-goal", { detail: g }));
+            if (j.hg != null && (+j.hg + "|" + (j.hgp || "")) !== goalSeen) {
+              const g = { count: +j.hg, user: j.hgu || "", add: +j.hga || 0, pic: j.hgp || "", first: goalSeen == null };
+              goalSeen = g.count + "|" + g.pic; window.__ovGoal = g; window.dispatchEvent(new CustomEvent("ov-goal", { detail: g }));
             }
             if (j.v) { if (verSeen == null) verSeen = j.v; else if (j.v !== verSeen && !reloading) { reloading = true; setTimeout(reloadNow, 3000); } }
             if (j.s !== lastRev || Date.now() - lastFull > 5000) { lastRev = j.s; lastFull = Date.now(); this.pull(); }
@@ -1126,7 +1126,7 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
     // [● LIVE 01:23:45]  (live duration)   ·   [clock 2:04 PM]  (time now)   ·   [YouTube viewers]
     const band = el("div", "ov-band", `<span class="sweep"></span><span class="live"><span class="dot"></span><span>LIVE</span><b class="timer" hidden>00:00:00</b></span>
 <span class="itm np" hidden><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="currentColor" stroke-width="2.6"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="17" cy="16" r="3" fill="currentColor"/></svg><span class="npw"><b class="npt"></b></span></span>
-<span class="itm goal" hidden><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.3-4.4-9.3-8.9C1.3 8.3 3.3 4.6 6.9 4.6c2.1 0 3.5 1.1 5.1 3 1.6-1.9 3-3 5.1-3 3.6 0 5.6 3.7 4.2 7-2 4.5-9.3 8.9-9.3 8.9z" fill="currentColor"/></svg><span class="gl">HEART ME</span><b class="gc">0/50</b><i class="gb"><i></i></i></span>
+<span class="itm goal" hidden><img class="gi" alt="" hidden><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.3-4.4-9.3-8.9C1.3 8.3 3.3 4.6 6.9 4.6c2.1 0 3.5 1.1 5.1 3 1.6-1.9 3-3 5.1-3 3.6 0 5.6 3.7 4.2 7-2 4.5-9.3 8.9-9.3 8.9z" fill="currentColor"/></svg><span class="gl">HEART ME</span><b class="gc">0/50</b><i class="gb"><i></i></i></span>
 <span class="itm clock"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg><b>--:--</b><small></small></span>
 <span class="itm yt" hidden><svg viewBox="0 0 24 24"><rect x="1" y="5" width="22" height="14" rx="4" fill="#ff0000"/><path d="M10 9l5 3-5 3z" fill="#fff"/></svg><b></b></span>`);
     band.style.top = L.band + "px"; if (L.bandX != null) { band.style.left = L.bandX + "px"; band.style.width = (L.bandW / (L.bandScale || 1)) + "px"; }
@@ -1136,7 +1136,13 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
     const ytEl = band.querySelector(".yt"), ytTxt = ytEl.querySelector("b");
     // Heart Me goal pill in the LIVE bar: "HEART ME 10/50"; a new one flashes "+1 NAME" in the pill; target steps up (50 -> 100 ...)
     const goalEl = band.querySelector(".goal"), goalL = goalEl.querySelector(".gl"), goalC = goalEl.querySelector(".gc"), goalB = goalEl.querySelector(".gb i");
-    let goalCount = window.__ovGoal ? window.__ovGoal.count : null, goalT1 = 0, goalT2 = 0, goalShowUntil = 0, goalBusy = false;
+    // real gift logo (e.g. Heart Me) from TikFinity; the drawn heart until it arrives / if it fails to load
+    const goalImg = goalEl.querySelector(".gi"), goalSvg = goalEl.querySelector("svg");
+    goalImg.onload = () => { goalImg.hidden = false; goalSvg.style.display = "none"; };
+    goalImg.onerror = () => { goalImg.hidden = true; goalSvg.style.display = ""; };
+    const goalPic = pic => { if (!pic) { goalImg.hidden = true; goalSvg.style.display = ""; goalImg.removeAttribute("src"); } else if (goalImg.getAttribute("src") !== pic) goalImg.src = pic; };
+    if (window.__ovGoal) goalPic(window.__ovGoal.pic);
+    let goalCount = window.__ovGoal ? window.__ovGoal.count : (opts.demo ? 10 : null), goalT1 = 0, goalT2 = 0, goalShowUntil = 0, goalBusy = false;
     const goalCfg = () => Object.assign({ show: "bar", label: "HEART ME", start: 50, step: 50 }, Store.state.heartGoal || {});
     const goalTarget = (c, cfg) => { const st = Math.max(1, +cfg.start || 50), sp = Math.max(1, +cfg.step || st); return c < st ? st : st + (Math.floor((c - st) / sp) + 1) * sp; };
     function goalPaint() {
@@ -1149,7 +1155,7 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
       goalB.style.width = Math.min(100, goalCount / t * 100).toFixed(1) + "%";
     }
     window.addEventListener("ov-goal", e => {
-      const g = e.detail, cfg = goalCfg(), prev = goalCount; goalCount = g.count;
+      const g = e.detail, cfg = goalCfg(), prev = goalCount; goalCount = g.count; goalPic(g.pic);
       if (g.first || prev == null || g.count <= prev) { goalPaint(); return; }
       const oldT = goalTarget(prev, cfg), reached = goalTarget(g.count, cfg) > oldT;
       if (cfg.show === "pop") goalShowUntil = Date.now() + (reached ? 8000 : 6000);
@@ -1333,7 +1339,9 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
     const ghEm = t => esc(t).replace(/(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*)/gu, m => `<i class="em">${m}</i>`);
     function giftHint(force) {
       const s = Store.state, cfg = s.giftHint || {};
-      if (!force && (cfg.on === false || hideOf(s).gift)) return;
+      // portrait only by default: landscape shows it only when switched on (Tunjuk di overlay > Landscape > Popup gift)
+      const ghOff = hideOf(s).gift || (land && (((s.hide || {}).l || {}).gift) !== false);
+      if (ghOff || (!force && cfg.on === false)) return;
       if (stage.querySelector(".fx-layer, .gh-pop")) { if (!force) ghNext = Date.now() + 4000; return; }   // never on top of a kill / win effect
       const g = (L.slots || []).find(x => x.id === "game") || { x: 0, y: 0, w: L.w || W, h: L.h || H };
       const list = (Array.isArray(cfg.msgs) && cfg.msgs.filter(Boolean).length ? cfg.msgs.filter(Boolean) : GH_MSGS);
@@ -1341,11 +1349,23 @@ ${[0, 1].map(j => { const g = (i + j) % 2 ? "L" : "R"; return `<g class="en-beam
       // spots on the sides / bottom of the game, never the middle (fractions of the game area)
       const spots = [[0, .2], [1, .2], [0, .45], [1, .45], [0, .68], [1, .68], [.5, .88]];
       let k; do { k = Math.floor(Math.random() * spots.length); } while (k === ghSpot && spots.length > 1); ghSpot = k;
-      const [ax, ay] = spots[k], w = Math.round(Math.min(g.w * .46, 470)), m = 26;
-      const e = el("div", "gh-pop " + (ax === 0 ? "gh-l" : ax === 1 ? "gh-r" : "gh-c"), `<div class="gh-i">${ghGift}</div><div class="gh-t"><em>${ghEm(t1 || "")}</em>${t2 ? `<b>${ghEm(t2)}</b>` : ""}</div><i class="gh-bar"></i>`);
-      e.style.width = w + "px"; e.style.setProperty("--ghs", (w / 430).toFixed(3)); e.style.setProperty("--ghd", Math.max(3, +cfg.show || 6) + "s");
-      e.style.left = (ax === 0 ? g.x + m : ax === 1 ? g.x + g.w - w - m : g.x + (g.w - w) / 2) + "px";
-      e.style.top = Math.round(g.y + g.h * ay - 40) + "px";
+      const [ax, ay] = spots[k], m = 26;
+      // preferred: right under the Mabar VIP panel (bottom left, away from the gameplay); landscape: over the bottom of that panel
+      const qp = panels.find(p => p.def.type === "queue"), qe = qp && !hideOf(s).mabar && qp.e.offsetWidth ? qp.e : null;
+      let w, left, top, side;
+      if (qe) {
+        const qx = qe.offsetLeft, qy = qe.offsetTop, qw = qe.offsetWidth, qh = qe.offsetHeight, ch = Math.round(qw * .2);
+        w = qw; left = qx; side = "gh-q";
+        // portrait: free space under the panel; landscape: the column is full, so sit inside the bottom of the panel
+        top = !land && qy + qh + 12 + ch <= (L.h || H) - 6 ? qy + qh + 12 : qy + qh - ch - 10;
+        if (land) { left = qx + 8; w = qw - 16; }
+      } else {
+        w = Math.round(Math.min(g.w * .46, 470)); side = ax === 0 ? "gh-l" : ax === 1 ? "gh-r" : "gh-c";
+        left = ax === 0 ? g.x + m : ax === 1 ? g.x + g.w - w - m : g.x + (g.w - w) / 2; top = Math.round(g.y + g.h * ay - 40);
+      }
+      const e = el("div", "gh-pop " + side, `<div class="gh-i"><i class="gh-ring"></i>${ghGift}</div><div class="gh-t"><em>${ghEm(t1 || "")}</em>${t2 ? `<b>${ghEm(t2)}</b>` : ""}</div><i class="gh-spark"></i><i class="gh-bar"></i>`);
+      e.style.width = w + "px"; e.style.setProperty("--ghs", Math.min(1.25, w / 430).toFixed(3)); e.style.setProperty("--ghd", Math.max(3, +cfg.show || 6) + "s");
+      e.style.left = left + "px"; e.style.top = top + "px";
       stage.appendChild(e);
       // long title: shrink it until it fits on one line
       const tb = e.querySelector(".gh-t b"), tw = e.querySelector(".gh-t");

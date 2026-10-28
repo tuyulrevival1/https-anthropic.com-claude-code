@@ -589,7 +589,7 @@ namespace SynoCap {
   // TikFinity / IndoFinity WebSocket (TikTok LIVE events): kira gift tertentu (contoh Heart Me) atau like
   public class LiveWs {
     public string Url = "ws://127.0.0.1:21213/", Mode = "gift", Gift = "Heart Me";
-    public long Count = 0, LastAdd = 0, LastAt = 0; public string LastUser = "";
+    public long Count = 0, LastAdd = 0, LastAt = 0; public string LastUser = "", Pic = "";
     public volatile string Status = "belum sambung"; public volatile bool Connected = false, Off = false; public int Seen = 0;
     readonly List<string> log = new List<string>(); readonly Dictionary<string, long> streak = new Dictionary<string, long>();
     Thread th; ClientWebSocket ws; volatile bool again = false;
@@ -644,6 +644,9 @@ namespace SynoCap {
       long rc = Num(j, "repeatCount"); if (rc < 0) rc = Num(j, "repeat_count"); if (rc <= 0) rc = 1;
       Note("gift " + name + " x" + rc + " " + u);
       if (Norm(name) != Norm(Gift)) return;
+      // gambar gift sebenar (contoh logo Heart Me) untuk pil di bar LIVE
+      string pic = Str(j, "giftPictureUrl") ?? Str(j, "gift_picture_url") ?? Str(j, "giftImage") ?? Str(j, "image");
+      if (!string.IsNullOrEmpty(pic) && pic.StartsWith("http")) Pic = pic;
       long gt = Num(j, "giftType"); int end = Flag(j, "repeatEnd"); if (end < 0) end = Flag(j, "repeat_end");
       string key = (Str(j, "uniqueId") ?? Str(j, "userId") ?? u) + "|" + Norm(name);
       lock (this) {
@@ -661,7 +664,8 @@ $capOk = $false
 try { Add-Type -TypeDefinition $capCs -ReferencedAssemblies System.Drawing -ErrorAction Stop; $capOk = $true } catch { Write-Host 'Pengesan kill (tangkap skrin) tak dapat dimuat.' -ForegroundColor DarkYellow }
 # ---------- goal Heart Me (TikFinity / IndoFinity WebSocket): kiraan di bar LIVE overlay ----------
 $goalFile = Join-Path $dataDir 'heartgoal.json'
-$live = $null; $goalSaved = -1; $goalOn = $true
+$live = $null; $goalSaved = -1; $goalOn = $true; $goalIcon = ''; $goalPicSaved = ''
+function GoalPic { if ($script:goalIcon) { return $script:goalIcon } elseif ($live) { return [string]$live.Pic } else { return '' } }
 if ($capOk) {
   try {
     $live = New-Object SynoCap.LiveWs
@@ -669,13 +673,14 @@ if ($capOk) {
       $gj = [System.IO.File]::ReadAllText($goalFile) | ConvertFrom-Json
       if ($gj.url) { $live.Url = [string]$gj.url }; if ($gj.mode) { $live.Mode = [string]$gj.mode }; if ($gj.gift) { $live.Gift = [string]$gj.gift }
       if ($null -ne $gj.count) { $live.Count = [long]$gj.count }; if ($gj.on -eq $false) { $goalOn = $false }
+      if ($gj.pic) { $live.Pic = [string]$gj.pic }; if ($gj.icon) { $goalIcon = [string]$gj.icon }
     }
     $live.Off = -not $goalOn; $goalSaved = $live.Count; $live.Start()
   } catch { $live = $null }
 }
 function Save-Goal {
   if (-not $live) { return }
-  try { $o = [ordered]@{ on = $script:goalOn; url = $live.Url; mode = $live.Mode; gift = $live.Gift; count = $live.Count }; [System.IO.File]::WriteAllText($goalFile, (ConvertTo-Json $o -Compress), (New-Object System.Text.UTF8Encoding $false)); $script:goalSaved = $live.Count } catch { }
+  try { $o = [ordered]@{ on = $script:goalOn; url = $live.Url; mode = $live.Mode; gift = $live.Gift; count = $live.Count; pic = $live.Pic; icon = $script:goalIcon }; [System.IO.File]::WriteAllText($goalFile, (ConvertTo-Json $o -Compress), (New-Object System.Text.UTF8Encoding $false)); $script:goalSaved = $live.Count; $script:goalPicSaved = $live.Pic } catch { }
 }
 $killFile = Join-Path $dataDir 'killfx.json'
 $killOld = Join-Path $dataDir 'killfx.txt'
@@ -1244,7 +1249,7 @@ while ($true) {
         $type = 'application/json'; $kev = ''
         if ($killShared.lastEv) { $kp = ([string]$killShared.lastEv).Split(','); $kev = ',"k":"' + $kp[0] + ',' + $kp[1] + '","ka":' + ([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() - [long]$kp[2]) }
         $hgs = ''
-        if ($live -and $goalOn) { if ($live.Count -ne $goalSaved) { Save-Goal }; $hgs = ',"hg":' + $live.Count + ',"hgu":' + (JsonStr ([string]$live.LastUser)) + ',"hga":' + $live.LastAdd + ',"hgt":' + $live.LastAt }
+        if ($live -and $goalOn) { if ($live.Count -ne $goalSaved -or $live.Pic -ne $goalPicSaved) { Save-Goal }; $hgs = ',"hg":' + $live.Count + ',"hgu":' + (JsonStr ([string]$live.LastUser)) + ',"hga":' + $live.LastAdd + ',"hgt":' + $live.LastAt + ',"hgp":' + (JsonStr (GoalPic)) }
         $body = ToBytes ('{"s":' + $stateRev + ',"c":' + ($cmds.Count + $killShared.events.Count) + ',"v":"' + (SiteVer) + '"' + $kev + $hgs + '}')
       } elseif ($path -eq 'api/cmds') {
         $type = 'application/json'
@@ -1295,7 +1300,8 @@ while ($true) {
               foreach ($pair in ([System.Text.Encoding]::UTF8.GetString($bodyBytes)) -split '&') { $kp = $pair.Split('=', 2); if ($kp.Count -eq 2) { $gf[$kp[0]] = [Uri]::UnescapeDataString($kp[1].Replace('+', ' ')) } }
               if ($gf.ContainsKey('url') -and $gf['url'] -match '^wss?://') { $live.Url = $gf['url'].Trim(); $live.Reconnect() }
               if ($gf.ContainsKey('mode')) { if ($gf['mode'] -eq 'likes') { $live.Mode = 'likes' } else { $live.Mode = 'gift' } }
-              if ($gf.ContainsKey('gift') -and $gf['gift'].Trim()) { $live.Gift = $gf['gift'].Trim() }
+              if ($gf.ContainsKey('gift') -and $gf['gift'].Trim()) { if ($gf['gift'].Trim() -ne $live.Gift) { $live.Pic = '' }; $live.Gift = $gf['gift'].Trim() }
+              if ($gf.ContainsKey('icon')) { $gi = $gf['icon'].Trim(); if ($gi -eq '' -or $gi -match '^https?://') { $goalIcon = $gi } }
               if ($gf.ContainsKey('on')) { $goalOn = ($gf['on'] -eq '1'); $live.Off = -not $goalOn; $live.Reconnect() }
               $gn = 0L
               if ($gf.ContainsKey('set') -and [long]::TryParse($gf['set'], [ref]$gn)) { $live.Set($gn) }
@@ -1305,7 +1311,7 @@ while ($true) {
             }
           }
           $gl = @(); foreach ($t in $live.Log()) { $gl += (JsonStr $t) }
-          $body = ToBytes ('{"ok":true,"on":' + ([string]$goalOn).ToLower() + ',"url":' + (JsonStr $live.Url) + ',"mode":' + (JsonStr $live.Mode) + ',"gift":' + (JsonStr $live.Gift) + ',"count":' + $live.Count + ',"status":' + (JsonStr ([string]$live.Status)) + ',"connected":' + ([string]$live.Connected).ToLower() + ',"seen":' + $live.Seen + ',"log":[' + ($gl -join ',') + ']}')
+          $body = ToBytes ('{"ok":true,"on":' + ([string]$goalOn).ToLower() + ',"url":' + (JsonStr $live.Url) + ',"mode":' + (JsonStr $live.Mode) + ',"gift":' + (JsonStr $live.Gift) + ',"count":' + $live.Count + ',"status":' + (JsonStr ([string]$live.Status)) + ',"connected":' + ([string]$live.Connected).ToLower() + ',"seen":' + $live.Seen + ',"pic":' + (JsonStr ([string]$live.Pic)) + ',"icon":' + (JsonStr $goalIcon) + ',"log":[' + ($gl -join ',') + ']}')
         }
       } elseif ($path -eq 'api/killbanners') {
         # gambar banner kill terakhir (untuk pilih logo hero dalam App)

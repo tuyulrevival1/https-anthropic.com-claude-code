@@ -370,3 +370,5 @@
 .app .goal .gbtns { gap: 6px; } .app .goal .grow { gap: 8px; align-items: flex-end; } .app .goal .grow .fld { flex: 1; min-width: 120px; }
 .app .goal .gconn { margin-top: 10px; } .app .goal .gconn summary { cursor: pointer; font-weight: 700; color: var(--c-gold); }
 .app .goal #ap-gst.ok { color: var(--c-win); } .app .goal [hidden] { display: none !important; }
+.app .goal .gicon { align-items: center; } .app .goal .gprev { flex: none; display: grid; place-items: center; width: 52px; height: 52px; border: 1px solid #4a1a24; background: #0a0405; color: #ff3b5c; font-size: 24px; }
+.app .goal .gprev img { width: 44px; height: 44px; object-fit: contain; }

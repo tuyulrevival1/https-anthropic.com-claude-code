@@ -353,19 +353,20 @@ Butang dalam kad tu = uji setiap efek. Stream Deck: fail `deck\SOLO_KILL.bat`, a
 | KDA dibaca salah / "?" | Lukis kotak KDA lebih ketat (nombor sahaja, tanpa ikon lain). |
 | Efek tak keluar | Hantar screenshot kad **Auto efek kill** (dengan **Tunjuk skrin** hidup) masa anda dapat kill. |
 
-## 14. Kad "Gift alert"
+## 14. Kad "Gift alert" (portrait)
 
-Kad kecil gelap muncul 6 saat di **tepi skrin game**, tempat berlainan setiap kali, beritahu penonton bahawa gift keluar animasi di skrin, tanpa anda perlu sebut. Gaya tenang dan premium: label emas kecil + satu ayat. Tak tutup tengah game, dan tak keluar masa efek kill / menang.
+Kad premium hitam-emas (bingkai emas berkilat, medalion emas, kilauan) muncul 6 saat **di bawah panel Mabar VIP (kiri bawah)**, beritahu penonton bahawa gift keluar animasi di skrin, tanpa anda perlu sebut. Tak sentuh gameplay, dan tak keluar masa efek kill / menang.
 
+- Untuk **portrait** sahaja secara asal. Landscape: hidupkan **Tunjuk di overlay** › **Landscape** › **Popup gift** (kad duduk dalam bahagian bawah panel Mabar VIP).
 - Hidup / mati, dan setiap berapa lama: App › **Live** › **Popup "hantar gift"** (asal: setiap 2 minit).
 - **Uji sekarang** = keluar terus di overlay. Stream Deck: `deck\GIFT_POPUP.bat` (atau `http://localhost:8787/api/do/gift-hint`).
 - Tukar ayat: buka **Ayat popup**. Satu baris setiap kad: `LABEL | ayat`. Contoh: `GIFT ALERT | Animasi keluar full skrin`. Pendek lebih baik.
-- Sembunyi untuk portrait atau landscape sahaja: **Tunjuk di overlay** › **Popup gift**.
 
 ## 15. Goal Heart Me (dari TikFinity / IndoFinity) dalam bar LIVE
 
 Kiraan **HEART ME 10/50** kecil dalam **bar LIVE** overlay (sebelah jam), portrait dan landscape. Tak perlu lagi letak widget TikFinity atas banner.
 
+- **Logo gift sebenar** (contoh logo Heart Me) diambil sendiri dari TikFinity bila gift tu masuk kali pertama. Boleh juga tampal URL ikon sendiri: **Sambungan** › **Ikon gift**.
 - Bila ada yang hantar: pil menyala dan tunjuk **+1 NAMA** sekejap.
 - Capai sasaran: **GOAL ✓** warna emas, kemudian sasaran naik sendiri (50 → 100 → 150…).
 - Server di PC kira sendiri dari **TikFinity** (app desktop mesti terbuka dan sambung ke live anda, alamat asal `ws://127.0.0.1:21213/`). IndoFinity: masukkan alamat WebSocket dari tetapan IndoFinity. Kiraan disimpan, tak hilang bila PC / server dibuka semula.

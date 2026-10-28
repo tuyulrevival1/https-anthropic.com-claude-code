@@ -109,6 +109,7 @@ ${embedded ? "" : `<header class="app-top">
       <div class="row grow"><label class="tog"><input id="ap-gon" type="checkbox"><span>Sambung</span></label>
         <label class="fld">Kira<select id="ap-gmode"><option value="gift">Gift tertentu</option><option value="likes">Like (tap skrin)</option></select></label>
         <label class="fld">Nama gift<input id="ap-ggift" placeholder="Heart Me" autocomplete="off"></label></div>
+      <div class="row grow gicon"><span class="gprev" id="ap-gprev"></span><label class="fld">Ikon gift (URL; kosong = auto dari TikFinity)<input id="ap-gicon" placeholder="auto: diambil bila gift pertama masuk" autocomplete="off" spellcheck="false"></label></div>
       <label class="fld">Alamat WebSocket<input id="ap-gurl" placeholder="ws://127.0.0.1:21213/" autocomplete="off" spellcheck="false"></label>
       <p class="muted">TikFinity: biarkan app TikFinity (desktop) terbuka dan sambung ke live anda, alamat asal <code>ws://127.0.0.1:21213/</code>. IndoFinity: masukkan alamat WebSocket dari tetapan IndoFinity. Nama gift mesti sama dengan yang keluar di "Event terakhir".</p>
       <div class="kdbg" id="ap-glog"><b>Event terakhir</b><span>—</span></div>
@@ -671,6 +672,9 @@ ${embedded ? "" : `<header class="app-top">
       $("ap-gon").checked = !!j.on; $("ap-gmode").value = j.mode || "gift";
       if (root.activeElement !== $("ap-ggift")) $("ap-ggift").value = j.gift || "";
       if (root.activeElement !== $("ap-gurl")) $("ap-gurl").value = j.url || "";
+      if (root.activeElement !== $("ap-gicon")) $("ap-gicon").value = j.icon || "";
+      const pic = j.icon || j.pic, pv = $("ap-gprev");
+      if (pv._p !== pic) { pv._p = pic; pv.innerHTML = pic ? `<img alt="ikon gift" src="${esc(pic)}">` : `<span class="muted">♥</span>`; }
       gCard.querySelector('[for="ap-ggift"], #ap-ggift').closest(".fld").hidden = j.mode === "likes";
       const box = $("ap-glog"), html = `<b>Event terakhir</b>${(j.log || []).slice().reverse().map(x => `<code>${esc(x)}</code>`).join("") || `<span>${esc(j.status || "—")}</span>`}`;
       if (box._h !== html) { box.innerHTML = html; box._h = html; }
@@ -684,6 +688,7 @@ ${embedded ? "" : `<header class="app-top">
     $("ap-gmode").addEventListener("change", e => gPost("mode=" + e.target.value));
     $("ap-ggift").addEventListener("change", e => gPost("gift=" + encodeURIComponent(e.target.value.trim())));
     $("ap-gurl").addEventListener("change", e => gPost("url=" + encodeURIComponent(e.target.value.trim())));
+    $("ap-gicon").addEventListener("change", e => gPost("icon=" + encodeURIComponent(e.target.value.trim())));
     $("ap-gshow").addEventListener("change", e => gSetCfg({ show: e.target.value }));
     $("ap-glabel").addEventListener("change", e => gSetCfg({ label: e.target.value.trim().toUpperCase() || "HEART ME" }));
     $("ap-gstart").addEventListener("change", e => gSetCfg({ start: Math.max(1, +e.target.value || 50) }));
@@ -845,7 +850,7 @@ ${embedded ? "" : `<header class="app-top">
       const newOrd = (s.orders || []).filter(o => o.rx > appOpen && o.src !== "manual").length;
       tabc("order", newOrd ? `${newOrd} baru` : "");
       $("ap-streak").textContent = s.streak >= 2 ? `Win streak ${s.streak}` : s.streak <= -2 ? `Lose streak ${-s.streak}` : "";
-      root.querySelectorAll(".ovp").forEach(i => { i.checked = !(((s.hide || {})[i.dataset.o] || {})[i.dataset.k]); });
+      root.querySelectorAll(".ovp").forEach(i => { const v = ((s.hide || {})[i.dataset.o] || {})[i.dataset.k]; i.checked = i.dataset.o === "l" && i.dataset.k === "gift" ? v === false : !v; });   // gift popup: landscape off unless switched on
       // where the cameras sit in the landscape column right now (they move up when one is off)
       const lk = O.layoutOf && O.layoutOf("kiri"), sk = lk && O.stackLayout(lk, (s.hide || {}).l || {}, s.showBanner);
       if (sk && $("ap-ovpobs")) { const f = (n, r) => r ? `${n} ${r.x}, ${r.y} · ${r.w}×${r.h}` : ""; $("ap-ovpobs").textContent = ["OBS landscape: Game 384, 0 · 1536×1024", f("Facecam", sk.slots.face), f("Handcam", sk.slots.hand)].filter(Boolean).join(" · "); }
