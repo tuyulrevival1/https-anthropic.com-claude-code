@@ -495,6 +495,24 @@ namespace SynoCap {
       }
       return best.ToString("0.000", CultureInfo.InvariantCulture) + "," + bx.ToString("0.0000", CultureInfo.InvariantCulture) + "," + by.ToString("0.0000", CultureInfo.InvariantCulture);
     }
+    // potong dengan latar telus dikekalkan (logo gift)
+    public static Bitmap CropRawA(Bitmap full, double fx, double fy, double fw, double fh) {
+      int W = full.Width, H = full.Height;
+      int cx = Math.Max(0, Math.Min(W - 2, (int)(W * fx))), cy = Math.Max(0, Math.Min(H - 2, (int)(H * fy)));
+      int cw = Math.Max(2, Math.Min(W - cx, (int)Math.Round(W * fw))), ch = Math.Max(2, Math.Min(H - cy, (int)Math.Round(H * fh)));
+      var b = new Bitmap(cw, ch, PixelFormat.Format32bppArgb);
+      using (var g = Graphics.FromImage(b)) { g.Clear(Color.Transparent); g.DrawImage(full, new Rectangle(0, 0, cw, ch), new Rectangle(cx, cy, cw, ch), GraphicsUnit.Pixel); }
+      return b;
+    }
+    // simpan sebagai PNG, kecilkan kalau terlalu besar (maks 256 px)
+    public static byte[] Png(Bitmap b, int max) {
+      double k = Math.Min(1.0, (double)max / Math.Max(b.Width, b.Height));
+      int w = Math.Max(1, (int)(b.Width * k)), h = Math.Max(1, (int)(b.Height * k));
+      using (var o = new Bitmap(w, h, PixelFormat.Format32bppArgb)) {
+        using (var g = Graphics.FromImage(o)) { g.Clear(Color.Transparent); g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic; g.DrawImage(b, 0, 0, w, h); }
+        using (var ms = new MemoryStream()) { o.Save(ms, ImageFormat.Png); return ms.ToArray(); }
+      }
+    }
     // gambar kecil (JPEG) untuk pratonton dalam App
     public static byte[] Thumb(Bitmap full, int maxW) {
       int w = Math.Min(maxW, full.Width), h = Math.Max(1, (int)((double)full.Height * w / full.Width));
@@ -568,8 +586,10 @@ namespace SynoCap {
       } catch (Exception e) { Error = "OBS: " + e.Message; Kill(); return null; }
     }
     // gambar source / scene (jpg). null kalau gagal (lihat Error)
-    public Bitmap Shot(string source, int width) {
-      string m = Request("GetSourceScreenshot", "{\"sourceName\":\"" + Esc(source) + "\",\"imageFormat\":\"jpg\",\"imageWidth\":" + width + ",\"imageCompressionQuality\":90}");
+    public Bitmap Shot(string source, int width) { return Shot(source, width, "jpg"); }
+    // fmt "png" = latar telus dikekalkan; width 0 = saiz asal source
+    public Bitmap Shot(string source, int width, string fmt) {
+      string m = Request("GetSourceScreenshot", "{\"sourceName\":\"" + Esc(source) + "\",\"imageFormat\":\"" + fmt + "\"" + (width > 0 ? ",\"imageWidth\":" + width : "") + (fmt == "jpg" ? ",\"imageCompressionQuality\":90" : "") + "}");
       if (m == null) return null;
       int i = m.IndexOf("base64,"); if (i < 0) { Error = "OBS: tiada gambar"; return null; }
       int j = m.IndexOf('"', i); if (j < 0) return null;
@@ -665,7 +685,9 @@ try { Add-Type -TypeDefinition $capCs -ReferencedAssemblies System.Drawing -Erro
 # ---------- goal Heart Me (TikFinity / IndoFinity WebSocket): kiraan di bar LIVE overlay ----------
 $goalFile = Join-Path $dataDir 'heartgoal.json'
 $live = $null; $goalSaved = -1; $goalOn = $true; $goalIcon = ''; $goalPicSaved = ''
-function GoalPic { if ($script:goalIcon) { return $script:goalIcon } elseif ($live) { return [string]$live.Pic } else { return '' } }
+# logo gift yang diambil dari skrin TikFinity / IndoFinity (data\goalicon.png) > URL sendiri > gambar dari event TikFinity
+$goalIconFile = Join-Path $dataDir 'goalicon.png'; $goalIconHas = (Test-Path -LiteralPath $goalIconFile); $goalIconVer = [DateTime]::UtcNow.Ticks; $goalShot = $null
+function GoalPic { if ($script:goalIconHas) { return 'api/goalicon?v=' + $script:goalIconVer } elseif ($script:goalIcon) { return $script:goalIcon } elseif ($live) { return [string]$live.Pic } else { return '' } }
 if ($capOk) {
   try {
     $live = New-Object SynoCap.LiveWs
@@ -1311,8 +1333,51 @@ while ($true) {
             }
           }
           $gl = @(); foreach ($t in $live.Log()) { $gl += (JsonStr $t) }
-          $body = ToBytes ('{"ok":true,"on":' + ([string]$goalOn).ToLower() + ',"url":' + (JsonStr $live.Url) + ',"mode":' + (JsonStr $live.Mode) + ',"gift":' + (JsonStr $live.Gift) + ',"count":' + $live.Count + ',"status":' + (JsonStr ([string]$live.Status)) + ',"connected":' + ([string]$live.Connected).ToLower() + ',"seen":' + $live.Seen + ',"pic":' + (JsonStr ([string]$live.Pic)) + ',"icon":' + (JsonStr $goalIcon) + ',"log":[' + ($gl -join ',') + ']}')
+          $body = ToBytes ('{"ok":true,"on":' + ([string]$goalOn).ToLower() + ',"url":' + (JsonStr $live.Url) + ',"mode":' + (JsonStr $live.Mode) + ',"gift":' + (JsonStr $live.Gift) + ',"count":' + $live.Count + ',"status":' + (JsonStr ([string]$live.Status)) + ',"connected":' + ([string]$live.Connected).ToLower() + ',"seen":' + $live.Seen + ',"pic":' + (JsonStr ([string]$live.Pic)) + ',"icon":' + (JsonStr $goalIcon) + ',"file":' + ([string]$goalIconHas).ToLower() + ',"shown":' + (JsonStr (GoalPic)) + ',"log":[' + ($gl -join ',') + ']}')
         }
+      } elseif ($path -eq 'api/goalshot') {
+        # gambar source OBS / tetingkap (contoh widget Heart Me TikFinity) untuk pilih logo gift
+        if (-not $okPin -or -not $capOk) { $status = '401 Unauthorized'; $body = ToBytes 'PIN' }
+        else {
+          $qsrc = ''; $qname = ''
+          foreach ($pair in $query -split '&') { $kp = $pair.Split('=', 2); if ($kp.Count -eq 2) { $vv = [Uri]::UnescapeDataString($kp[1].Replace('+', ' ')); if ($kp[0] -eq 'src') { $qsrc = $vv } elseif ($kp[0] -eq 'name') { $qname = $vv } } }
+          $gb = $null; $gerr = 'tiada gambar'
+          try {
+            if ($qsrc -eq 'obs') {
+              $ob = New-Object SynoCap.Obs
+              try { if ($ob.Connect([int]$killShared.obsPort, [string]$killShared.obsPass)) { $gb = $ob.Shot($qname, 0, 'png'); if (-not $gb) { $gerr = $ob.Error } } else { $gerr = $ob.Error } } finally { $ob.Dispose() }
+            } else { $ghow = ''; $gb = [SynoCap.Cap]::Snap($qname, [ref]$ghow); if (-not $gb) { $gerr = $ghow } }
+          } catch { $gerr = $_.Exception.Message }
+          if ($gb) { $goalShot = [SynoCap.Cap]::Png($gb, 4096); $type = 'image/jpeg'; $body = [SynoCap.Cap]::Thumb($gb, 1000); $gb.Dispose() }
+          else { $status = '404 Not Found'; $body = ToBytes $gerr }
+        }
+      } elseif ($path -eq 'api/goalicon') {
+        # logo gift: GET = PNG; POST = potong dari gambar tadi (x, y, w, h), upload (?raw=1), atau clear=1
+        if ($method -eq 'POST') {
+          $type = 'application/json'
+          if (-not $okPin -or -not $capOk) { $status = '401 Unauthorized'; $body = ToBytes '{"ok":false}' }
+          else {
+            try {
+              if ($query -match '(^|&)raw=1') {
+                $ib = [SynoCap.Cap]::FromBytes($bodyBytes); if (-not $ib) { throw 'Gambar tak dapat dibaca' }
+                [System.IO.File]::WriteAllBytes($goalIconFile, [SynoCap.Cap]::Png($ib, 256)); $ib.Dispose()
+              } else {
+                $gf = @{}
+                foreach ($pair in ([System.Text.Encoding]::UTF8.GetString($bodyBytes)) -split '&') { $kp = $pair.Split('=', 2); if ($kp.Count -eq 2) { $gf[$kp[0]] = [Uri]::UnescapeDataString($kp[1].Replace('+', ' ')) } }
+                if ($gf['clear'] -eq '1') { if (Test-Path -LiteralPath $goalIconFile) { Remove-Item -LiteralPath $goalIconFile -Force } }
+                else {
+                  if (-not $goalShot) { throw 'Ambil gambar dulu' }
+                  $ib = [SynoCap.Cap]::FromBytes($goalShot)
+                  $ic2 = [SynoCap.Cap]::CropRawA($ib, (KillNum $gf['x'] 0), (KillNum $gf['y'] 0), (KillNum $gf['w'] 0.1), (KillNum $gf['h'] 0.1))
+                  [System.IO.File]::WriteAllBytes($goalIconFile, [SynoCap.Cap]::Png($ic2, 256)); $ic2.Dispose(); $ib.Dispose()
+                }
+              }
+              $goalIconHas = (Test-Path -LiteralPath $goalIconFile); $goalIconVer = [DateTime]::UtcNow.Ticks
+              $body = ToBytes '{"ok":true}'
+            } catch { $body = ToBytes ('{"ok":false,"err":' + (JsonStr ([string]$_.Exception.Message)) + '}') }
+          }
+        } elseif ($goalIconHas -and (Test-Path -LiteralPath $goalIconFile)) { $type = 'image/png'; $body = [System.IO.File]::ReadAllBytes($goalIconFile) }
+        else { $status = '404 Not Found'; $body = ToBytes 'Tiada logo' }
       } elseif ($path -eq 'api/killbanners') {
         # gambar banner kill terakhir (untuk pilih logo hero dalam App)
         $type = 'application/json'

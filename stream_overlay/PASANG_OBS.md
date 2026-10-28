@@ -366,7 +366,7 @@ Kad premium hitam-emas (bingkai emas berkilat, medalion emas, kilauan) muncul 6 
 
 Kiraan **HEART ME 10/50** kecil dalam **bar LIVE** overlay (sebelah jam), portrait dan landscape. Tak perlu lagi letak widget TikFinity atas banner.
 
-- **Logo gift sebenar** (contoh logo Heart Me) diambil sendiri dari TikFinity bila gift tu masuk kali pertama. Boleh juga tampal URL ikon sendiri: **Sambungan** › **Ikon gift**.
+- **Logo Heart Me sebenar:** App › Goal Heart Me › **📷 Ambil dari skrin** › pilih source widget Heart Me TikFinity dalam OBS (atau tetingkap TikFinity / IndoFinity) › **Ambil gambar** › lukis kotak tepat atas logo. Logo disimpan di PC (`data\goalicon.png`) dan terus keluar di bar LIVE. Atau **⬆ Upload** gambar logo dari telefon. Tanpa logo: logo dari event TikFinity dipakai bila gift pertama masuk, atau ikon hati.
 - Bila ada yang hantar: pil menyala dan tunjuk **+1 NAMA** sekejap.
 - Capai sasaran: **GOAL ✓** warna emas, kemudian sasaran naik sendiri (50 → 100 → 150…).
 - Server di PC kira sendiri dari **TikFinity** (app desktop mesti terbuka dan sambung ke live anda, alamat asal `ws://127.0.0.1:21213/`). IndoFinity: masukkan alamat WebSocket dari tetapan IndoFinity. Kiraan disimpan, tak hilang bila PC / server dibuka semula.

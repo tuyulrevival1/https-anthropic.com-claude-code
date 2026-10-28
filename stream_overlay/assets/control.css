@@ -372,3 +372,6 @@
 .app .goal #ap-gst.ok { color: var(--c-win); } .app .goal [hidden] { display: none !important; }
 .app .goal .gicon { align-items: center; } .app .goal .gprev { flex: none; display: grid; place-items: center; width: 52px; height: 52px; border: 1px solid #4a1a24; background: #0a0405; color: #ff3b5c; font-size: 24px; }
 .app .goal .gprev img { width: 44px; height: 44px; object-fit: contain; }
+.app .goal .glogo { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 4px 0 10px; padding: 10px; border: 1px dashed #4a1a24; background: #0d0507; }
+.app .goal .glogo-t { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 140px; } .app .goal .glogo .gbtns { width: 100%; }
+.app .goal .gup { cursor: pointer; } .app .goal .gpicker { margin-bottom: 10px; } .app .goal .gshot img { background: #000; }

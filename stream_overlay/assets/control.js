@@ -104,12 +104,19 @@ ${embedded ? "" : `<header class="app-top">
     <div class="row gbtns"><button class="btn small ghost" type="button" data-gadd="-1">−1</button><button class="btn small" type="button" data-gadd="1">+1</button><button class="btn small" type="button" data-gadd="10">+10</button><button class="btn small ghost" type="button" id="ap-gset">Set…</button><button class="btn small ghost" type="button" id="ap-greset">Reset 0</button></div>
     <div class="row grow"><label class="fld">Paparan<select id="ap-gshow"><option value="bar">Sentiasa dalam bar LIVE</option><option value="pop">Muncul sekejap bila naik</option><option value="off">Tutup</option></select></label>
       <label class="fld">Label<input id="ap-glabel" maxlength="16" autocomplete="off"></label></div>
+    <div class="glogo"><span class="gprev" id="ap-gprev"></span><div class="glogo-t"><b>Logo gift</b><span class="muted" id="ap-glogos">—</span></div>
+      <div class="row gbtns"><button class="btn small" type="button" id="ap-gpick">📷 Ambil dari skrin</button><label class="btn small ghost gup">⬆ Upload<input type="file" accept="image/*" id="ap-gfile" hidden></label><button class="btn small ghost" type="button" id="ap-gclr" hidden>Padam logo</button></div></div>
+    <div class="gpicker" hidden>
+      <div class="row grow"><label class="fld">Ambil dari<select id="ap-gsrc"><option value="">— memuat… —</option></select></label><button class="btn small" type="button" id="ap-gsnap">Ambil gambar</button></div>
+      <div class="kshot gshot" id="ap-gshot"><img id="ap-gsimg" alt=""><i class="kbox hero" id="ap-gsbox" hidden><em>LOGO</em></i><span class="kmsg" id="ap-gsmsg">Pilih source widget Heart Me dalam OBS (atau tetingkap TikFinity / IndoFinity), tekan <b>Ambil gambar</b>.</span></div>
+      <p class="muted">Kemudian lukis kotak tepat di atas logo Heart Me. Logo disimpan di PC dan terus dipakai di bar LIVE.</p>
+    </div>
     <div class="row grow"><label class="fld">Sasaran pertama<input id="ap-gstart" type="number" min="1" inputmode="numeric"></label><label class="fld">Naik setiap<input id="ap-gstep" type="number" min="1" inputmode="numeric"></label></div>
     <details class="gconn"><summary>Sambungan TikFinity / IndoFinity</summary>
       <div class="row grow"><label class="tog"><input id="ap-gon" type="checkbox"><span>Sambung</span></label>
         <label class="fld">Kira<select id="ap-gmode"><option value="gift">Gift tertentu</option><option value="likes">Like (tap skrin)</option></select></label>
         <label class="fld">Nama gift<input id="ap-ggift" placeholder="Heart Me" autocomplete="off"></label></div>
-      <div class="row grow gicon"><span class="gprev" id="ap-gprev"></span><label class="fld">Ikon gift (URL; kosong = auto dari TikFinity)<input id="ap-gicon" placeholder="auto: diambil bila gift pertama masuk" autocomplete="off" spellcheck="false"></label></div>
+      <div class="row grow gicon"><label class="fld">Ikon gift (URL, pilihan)<input id="ap-gicon" placeholder="auto: diambil bila gift pertama masuk" autocomplete="off" spellcheck="false"></label></div>
       <label class="fld">Alamat WebSocket<input id="ap-gurl" placeholder="ws://127.0.0.1:21213/" autocomplete="off" spellcheck="false"></label>
       <p class="muted">TikFinity: biarkan app TikFinity (desktop) terbuka dan sambung ke live anda, alamat asal <code>ws://127.0.0.1:21213/</code>. IndoFinity: masukkan alamat WebSocket dari tetapan IndoFinity. Nama gift mesti sama dengan yang keluar di "Event terakhir".</p>
       <div class="kdbg" id="ap-glog"><b>Event terakhir</b><span>—</span></div>
@@ -673,8 +680,10 @@ ${embedded ? "" : `<header class="app-top">
       if (root.activeElement !== $("ap-ggift")) $("ap-ggift").value = j.gift || "";
       if (root.activeElement !== $("ap-gurl")) $("ap-gurl").value = j.url || "";
       if (root.activeElement !== $("ap-gicon")) $("ap-gicon").value = j.icon || "";
-      const pic = j.icon || j.pic, pv = $("ap-gprev");
-      if (pv._p !== pic) { pv._p = pic; pv.innerHTML = pic ? `<img alt="ikon gift" src="${esc(pic)}">` : `<span class="muted">♥</span>`; }
+      const pic = j.shown || j.icon || j.pic, pv = $("ap-gprev");
+      if (pv._p !== pic) { pv._p = pic; pv.innerHTML = pic ? `<img alt="logo gift" src="${esc(pic)}">` : `<span class="muted">♥</span>`; }
+      $("ap-glogos").textContent = j.file ? "Diambil dari skrin ✓" : j.icon ? "URL sendiri" : j.pic ? "Auto dari TikFinity" : "Belum ada: ikon hati dipakai";
+      $("ap-gclr").hidden = !j.file;
       gCard.querySelector('[for="ap-ggift"], #ap-ggift').closest(".fld").hidden = j.mode === "likes";
       const box = $("ap-glog"), html = `<b>Event terakhir</b>${(j.log || []).slice().reverse().map(x => `<code>${esc(x)}</code>`).join("") || `<span>${esc(j.status || "—")}</span>`}`;
       if (box._h !== html) { box.innerHTML = html; box._h = html; }
@@ -689,6 +698,46 @@ ${embedded ? "" : `<header class="app-top">
     $("ap-ggift").addEventListener("change", e => gPost("gift=" + encodeURIComponent(e.target.value.trim())));
     $("ap-gurl").addEventListener("change", e => gPost("url=" + encodeURIComponent(e.target.value.trim())));
     $("ap-gicon").addEventListener("change", e => gPost("icon=" + encodeURIComponent(e.target.value.trim())));
+    // gift logo: pick it from a screenshot of the TikFinity / IndoFinity widget (OBS source) or window, or upload a picture
+    const gPicker = gCard.querySelector(".gpicker"), gShot = $("ap-gshot");
+    const gIconDone = j => { if (j && j.ok) { toast("Logo gift disimpan ✓"); gPoll(); } else toast((j && j.err) || "Tak dapat simpan logo", 4000); };
+    $("ap-gpick").addEventListener("click", () => {
+      gPicker.hidden = !gPicker.hidden; if (gPicker.hidden) return;
+      const sel = $("ap-gsrc");
+      Promise.all([fetch("api/obssources", { headers: kHdr(), cache: "no-store" }).then(r => r.ok ? r.json() : null).catch(() => null), fetch("api/windows", { headers: kHdr(), cache: "no-store" }).then(r => r.ok ? r.json() : []).catch(() => [])]).then(([o, w]) => {
+        const obs = o && o.ok ? o.list : [], wins = (w || []).filter(t => !/^(Program Manager|Settings|Windows Input Experience)$/i.test(t));
+        const pref = t => /tikfinity|indofinity|heart|goal|like/i.test(t) ? 0 : 1, sort = a => a.slice().sort((x, y) => pref(x) - pref(y));
+        sel.innerHTML = (obs.length ? `<optgroup label="Source OBS">${sort(obs).map(t => `<option value="obs:${esc(t)}">${esc(t)}</option>`).join("")}</optgroup>` : "") + (wins.length ? `<optgroup label="Tetingkap PC">${sort(wins).map(t => `<option value="win:${esc(t)}">${esc(t)}</option>`).join("")}</optgroup>` : "") || `<option value="">Tiada source / tetingkap</option>`;
+      });
+      gShot.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+    $("ap-gsnap").addEventListener("click", () => {
+      const v = $("ap-gsrc").value; if (!v) return;
+      const i = v.indexOf(":"), src = v.slice(0, i), name = v.slice(i + 1);
+      $("ap-gsmsg").hidden = false; $("ap-gsmsg").textContent = "Mengambil gambar…";
+      fetch(`api/goalshot?src=${src}&name=${encodeURIComponent(name)}`, { headers: kHdr(), cache: "no-store" }).then(r => r.ok ? r.blob() : r.text().then(t => Promise.reject(t))).then(b => {
+        const img = $("ap-gsimg"); img.src = URL.createObjectURL(b); gShot.classList.add("on", "drawing"); $("ap-gsmsg").hidden = true; $("ap-gsbox").hidden = true;
+      }).catch(t => { $("ap-gsmsg").textContent = "Gagal: " + (typeof t === "string" ? t : "server tak dapat dihubungi"); });
+    });
+    let gStart = null;
+    const gPt = e => { const r = gShot.getBoundingClientRect(); return [Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), Math.max(0, Math.min(1, (e.clientY - r.top) / r.height))]; };
+    gShot.addEventListener("pointerdown", e => { if (!gShot.classList.contains("on")) return; e.preventDefault(); gShot.setPointerCapture(e.pointerId); gStart = gPt(e); });
+    gShot.addEventListener("pointermove", e => { if (!gStart) return; const [x, y] = gPt(e), b = $("ap-gsbox"); b.hidden = false; Object.assign(b.style, { left: pct(Math.min(x, gStart[0])), top: pct(Math.min(y, gStart[1])), width: pct(Math.abs(x - gStart[0])), height: pct(Math.abs(y - gStart[1])) }); });
+    gShot.addEventListener("pointerup", e => {
+      if (!gStart) return; const [x, y] = gPt(e), r = [Math.min(x, gStart[0]), Math.min(y, gStart[1]), Math.abs(x - gStart[0]), Math.abs(y - gStart[1])].map(v => v.toFixed(4)); gStart = null;
+      if (+r[2] < .005 || +r[3] < .005) return;
+      fetch("api/goalicon", { method: "POST", headers: kHdr(), body: `x=${r[0]}&y=${r[1]}&w=${r[2]}&h=${r[3]}` }).then(x => x.json()).then(gIconDone).catch(() => toast("Server tak dapat dihubungi"));
+    });
+    $("ap-gfile").addEventListener("change", e => {
+      const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
+      const img = new Image(); img.onload = () => {
+        const k = Math.min(1, 256 / Math.max(img.width, img.height)), c = document.createElement("canvas"); c.width = Math.max(1, Math.round(img.width * k)); c.height = Math.max(1, Math.round(img.height * k));
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob(b => fetch("api/goalicon?raw=1", { method: "POST", headers: Object.assign({ "Content-Type": "image/png" }, kHdr()), body: b }).then(x => x.json()).then(gIconDone).catch(() => toast("Server tak dapat dihubungi")), "image/png");
+      };
+      img.onerror = () => toast("Gambar tak dapat dibaca"); img.src = URL.createObjectURL(f);
+    });
+    $("ap-gclr").addEventListener("click", () => { if (confirm("Padam logo gift?")) fetch("api/goalicon", { method: "POST", headers: kHdr(), body: "clear=1" }).then(x => x.json()).then(() => gPoll()).catch(() => {}); });
     $("ap-gshow").addEventListener("change", e => gSetCfg({ show: e.target.value }));
     $("ap-glabel").addEventListener("change", e => gSetCfg({ label: e.target.value.trim().toUpperCase() || "HEART ME" }));
     $("ap-gstart").addEventListener("change", e => gSetCfg({ start: Math.max(1, +e.target.value || 50) }));
